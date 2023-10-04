@@ -51,6 +51,7 @@ namespace Chess
         void LoadFENString()
         {
             // start at 7th rank and 0th file (top left of board)
+            // (7th rank is actually 8th rank on board, 0th file is the a file)
             int file = 0;
             int rank = 7;
 
