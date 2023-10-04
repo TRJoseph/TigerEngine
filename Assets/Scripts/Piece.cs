@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Chess
 {
-    public static class Piece
+    public class Piece
     {
 
         // from lowest to highest piece value

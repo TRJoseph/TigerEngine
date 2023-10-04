@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using UnityEngine;
 
 namespace Chess
@@ -11,17 +12,23 @@ namespace Chess
         [SerializeField] private Tile tilePrefab;
 
         [SerializeField] private Transform _cam;
-        private string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
+
+        public GameObject chessPiecePrefab;
+
+
+        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
 
         // Start is called before the first frame update
         void Start()
         {
             GenerateGrid();
+            LoadFENString();
+            RenderPiecesOnBoard();
         }
 
         void GenerateGrid()
         {
-            int file = 0;
+            int file = 0 ;
             int rank = 0;
             for (file = 0; file < 8; file++)
             {
@@ -33,7 +40,7 @@ namespace Chess
 
                     tile.SetTileColor(isLightSquare);
 
-                    tile.name = $"Tile {file} {rank}";
+                    tile.name = $"Tile file: {file} rank: {rank}";
                 }
             }
 
@@ -50,12 +57,12 @@ namespace Chess
             // dictionary to hold the piece types
             var pieceType = new Dictionary<char, int>()
             {
-                ['k'] = Chess.Piece.King,
-                ['q'] = Chess.Piece.Queen,
-                ['r'] = Chess.Piece.Rook,
-                ['b'] = Chess.Piece.Bishop,
-                ['n'] = Chess.Piece.Knight,
-                ['p'] = Chess.Piece.Pawn
+                ['k'] = Piece.King,
+                ['q'] = Piece.Queen,
+                ['r'] = Piece.Rook,
+                ['b'] = Piece.Bishop,
+                ['n'] = Piece.Knight,
+                ['p'] = Piece.Pawn
             };
 
             // loop through the FEN string
@@ -63,7 +70,7 @@ namespace Chess
             {
 
                 // if the character is a number
-                if (Char.IsDigit(FENString[i]))
+                if (char.IsDigit(FENString[i]))
                 {
                     // skip that many files
                     file += int.Parse(FENString[i].ToString());
@@ -76,15 +83,15 @@ namespace Chess
                     // reset the file
                     file = 0;
                 }
-                else if (Char.IsLetter(FENString[i]))
+                else if (char.IsLetter(FENString[i]))
                 {
                     // get the piece type
-                    int piece = pieceType[Char.ToLower(FENString[i])];
+                    int piece = pieceType[char.ToLower(FENString[i])];
                     // get the piece color
-                    int pieceColor = Char.IsUpper(FENString[i]) ? Chess.Piece.White : Chess.Piece.Black;
+                    int pieceColor = char.IsUpper(FENString[i]) ? Piece.White : Piece.Black;
 
                     // represented in binary with or operator
-                    Chess.Board.Squares[rank * 8 + file] = piece | pieceColor;
+                    Board.Squares[rank * 8 + file] = piece | pieceColor;
 
                     file++;
                 }
@@ -95,7 +102,48 @@ namespace Chess
         // render sprites onto board
         void RenderPiecesOnBoard()
         {
+            for(int rank = 7; rank >= 0; rank--)
+            {
+                for(int file = 0; file < 8; file++)
+                {
+                    int encodedPiece = Board.Squares[rank * 8 + file];
 
+                    int decodedPieceColor = encodedPiece & 24;
+                    int decodedPiece = encodedPiece & 7;
+
+                    if(decodedPiece != Piece.Empty)
+                    {
+                        GameObject piece = Instantiate(chessPiecePrefab, new Vector3(file, rank, -1), Quaternion.identity);
+                        PieceRender renderScript = piece.GetComponent<PieceRender>();
+                        Sprite pieceSprite = GetSpriteForPiece(decodedPiece, decodedPieceColor, renderScript);
+                        piece.GetComponent<SpriteRenderer>().sprite = pieceSprite;
+                        
+                        // this may be removed for a better alternative for sizing the pieces
+                        piece.transform.localScale = new Vector3(0.125f, 0.125f, 1f);
+                    }
+                }
+            }
+        }
+
+        private Sprite GetSpriteForPiece(int decodedPiece, int decodedPieceColor, PieceRender renderScript)
+        {
+            switch (decodedPiece)
+            {
+                case Piece.Pawn:
+                    return (decodedPieceColor == Piece.White) ? renderScript.whitePawn : renderScript.blackPawn;
+                case Piece.Knight:
+                    return (decodedPieceColor == Piece.White) ? renderScript.whiteKnight : renderScript.blackKnight;
+                case Piece.Bishop:
+                    return (decodedPieceColor == Piece.White) ? renderScript.whiteBishop : renderScript.blackBishop;
+                case Piece.Rook:
+                    return (decodedPieceColor == Piece.White) ? renderScript.whiteRook : renderScript.blackRook;
+                case Piece.Queen:
+                    return (decodedPieceColor == Piece.White) ? renderScript.whiteQueen : renderScript.blackQueen;
+                case Piece.King:
+                    return (decodedPieceColor == Piece.White) ? renderScript.whiteKing : renderScript.blackKing;
+                default:
+                    return null;  // For the 'Empty' piece or any unexpected value
+            }
         }
 
     }
