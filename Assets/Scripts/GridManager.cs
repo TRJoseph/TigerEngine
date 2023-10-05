@@ -20,10 +20,12 @@ namespace Chess
         // Forsyth-Edwards Notation representing positions in a chess game
         private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
 
+
+        // this array holds all the tiles in the game
+        public Tile[,] chessTiles = new Tile[8, 8];
+
         // this will control the turn based movement
-        public bool whiteToMove = true;
-
-
+        public static bool whiteToMove = true;
 
         // Start is called before the first frame update
         void Start()
@@ -35,7 +37,7 @@ namespace Chess
 
         void GenerateGrid()
         {
-            int file = 0 ;
+            int file = 0;
             int rank = 0;
             for (file = 0; file < 8; file++)
             {
@@ -48,6 +50,8 @@ namespace Chess
                     tile.SetTileColor(isLightSquare);
 
                     tile.name = $"Tile file: {file} rank: {rank}";
+
+                    chessTiles[file, rank] = tile;
                 }
             }
 
@@ -110,24 +114,33 @@ namespace Chess
         // render sprites onto board
         void RenderPiecesOnBoard()
         {
-            for(int rank = 7; rank >= 0; rank--)
+            for (int rank = 0; rank < 8; rank++)
             {
-                for(int file = 0; file < 8; file++)
+                for (int file = 0; file < 8; file++)
                 {
                     int encodedPiece = Board.Squares[rank * 8 + file];
 
                     int decodedPieceColor = encodedPiece & 24;
                     int decodedPiece = encodedPiece & 7;
 
-                    if(decodedPiece != Piece.Empty)
+                    if (decodedPiece != Piece.Empty)
                     {
                         GameObject piece = Instantiate(chessPiecePrefab, new Vector3(file, rank, -1), Quaternion.identity);
                         PieceRender renderScript = piece.GetComponent<PieceRender>();
                         Sprite pieceSprite = GetSpriteForPiece(decodedPiece, decodedPieceColor, renderScript);
                         piece.GetComponent<SpriteRenderer>().sprite = pieceSprite;
-                        
+                        renderScript.isWhitePiece = decodedPieceColor == Piece.White;
+
                         // this may be removed for a better alternative for sizing the pieces
                         piece.transform.localScale = new Vector3(0.125f, 0.125f, 1f);
+
+
+
+                        // set tile to occupied by piece
+                        chessTiles[file, rank].OccupyingPiece = piece;
+
+                        // set piece to occupy tile
+                        renderScript.occupiedTile = chessTiles[file, rank];
                     }
                 }
             }

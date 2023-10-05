@@ -7,6 +7,9 @@ namespace Chess
 {
     public class PieceRender : MonoBehaviour
     {
+        public bool isWhitePiece;
+        public Tile occupiedTile;
+
         [Header("White Piece Sprites")]
         public Sprite whitePawn;
         public Sprite whiteKnight;
