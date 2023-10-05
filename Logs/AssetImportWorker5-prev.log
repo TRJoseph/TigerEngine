@@ -1,0 +1,222 @@
+Using pre-set license
+Built from '2022.3/staging' branch; Version is '2022.3.10f1 (ff3792e53c62) revision 16725906'; Using compiler version '192829333'; Build Type 'Release'
+OS: 'Windows 11  (10.0.22621) 64bit Core' Language: 'en' Physical Memory: 31904 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1, IsPro: 1
+
+COMMAND LINE ARGUMENTS:
+D:\2022.3.10f1\Editor\Unity.exe
+-adb2
+-batchMode
+-noUpm
+-name
+AssetImportWorker5
+-projectPath
+C:/Users/josep/Projects/TigerEngine
+-logFile
+Logs/AssetImportWorker5.log
+-srvPort
+38451
+Successfully changed project path to: C:/Users/josep/Projects/TigerEngine
+C:/Users/josep/Projects/TigerEngine
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gfx=262144"
+Player connection [10996] Host "[IP] 192.168.10.71 [Port] 0 [Flags] 2 [Guid] 301295938 [EditorId] 301295938 [Version] 1048832 [Id] WindowsEditor(7,Thomas-Desktop) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" joined multi-casting on [225.0.0.222:54997]...
+
+Player connection [10996] Host "[IP] 192.168.10.71 [Port] 0 [Flags] 2 [Guid] 301295938 [EditorId] 301295938 [Version] 1048832 [Id] WindowsEditor(7,Thomas-Desktop) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" joined alternative multi-casting on [225.0.0.222:34997]...
+
+[Physics::Module] Initialized MultithreadedJobDispatcher with 15 workers.
+Refreshing native plugins compatible for Editor in 4.56 ms, found 3 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Initialize engine version: 2022.3.10f1 (ff3792e53c62)
+[Subsystems] Discovering subsystems at path D:/2022.3.10f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path C:/Users/josep/Projects/TigerEngine/Assets
+GfxDevice: creating device client; threaded=0; jobified=0
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: NVIDIA GeForce RTX 3060 (ID=0x2503)
+    Vendor:   NVIDIA
+    VRAM:     12129 MB
+    Driver:   31.0.15.3742
+Initialize mono
+Mono path[0] = 'D:/2022.3.10f1/Editor/Data/Managed'
+Mono path[1] = 'D:/2022.3.10f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
+Mono config path = 'D:/2022.3.10f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56960
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: D:/2022.3.10f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.001723 seconds.
+- Loaded All Assemblies, in  0.191 seconds
+Native extension for WindowsStandalone target not found
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.147 seconds
+Domain Reload Profiling: 339ms
+	BeginReloadAssembly (60ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (0ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (0ms)
+	RebuildCommonClasses (19ms)
+	RebuildNativeTypeToScriptingClass (7ms)
+	initialDomainReloadingComplete (26ms)
+	LoadAllAssembliesAndSetupDomain (78ms)
+		LoadAssemblies (60ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (77ms)
+			TypeCache.Refresh (76ms)
+				TypeCache.ScanAssembly (69ms)
+			ScanForSourceGeneratedMonoScriptInfo (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (148ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (113ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (5ms)
+			SetLoadedEditorAssemblies (5ms)
+			RefreshPlugins (0ms)
+			BeforeProcessingInitializeOnLoad (2ms)
+			ProcessInitializeOnLoadAttributes (74ms)
+			ProcessInitializeOnLoadMethodAttributes (27ms)
+			AfterProcessingInitializeOnLoad (0ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (0ms)
+========================================================================
+Worker process is ready to serve import requests
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.308 seconds
+Refreshing native plugins compatible for Editor in 1.75 ms, found 3 plugins.
+Native extension for WindowsStandalone target not found
+Package Manager log level set to [2]
+[Package Manager] Server::EnsureServerProcessIsRunning -- launch failed, reason: Unity was launched with the -noUpm command-line argument
+[Package Manager] UpmClient::Send -- Unable to send message (not connected to UPM process).
+[Package Manager] Cannot connect to Unity Package Manager local server
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.309 seconds
+Domain Reload Profiling: 617ms
+	BeginReloadAssembly (91ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (3ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (15ms)
+	RebuildCommonClasses (18ms)
+	RebuildNativeTypeToScriptingClass (7ms)
+	initialDomainReloadingComplete (23ms)
+	LoadAllAssembliesAndSetupDomain (169ms)
+		LoadAssemblies (147ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (73ms)
+			TypeCache.Refresh (62ms)
+				TypeCache.ScanAssembly (55ms)
+			ScanForSourceGeneratedMonoScriptInfo (7ms)
+			ResolveRequiredComponents (3ms)
+	FinalizeReload (309ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (227ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (2ms)
+			SetLoadedEditorAssemblies (2ms)
+			RefreshPlugins (0ms)
+			BeforeProcessingInitializeOnLoad (32ms)
+			ProcessInitializeOnLoadAttributes (176ms)
+			ProcessInitializeOnLoadMethodAttributes (13ms)
+			AfterProcessingInitializeOnLoad (1ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (4ms)
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.04 seconds
+Refreshing native plugins compatible for Editor in 2.44 ms, found 3 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Unloading 3018 Unused Serialized files (Serialized files now loaded: 0)
+Unloading 33 unused Assets / (47.5 KB). Loaded Objects now: 3480.
+Memory consumption went from 112.7 MB to 112.6 MB.
+Total: 3.049100 ms (FindLiveObjects: 0.204600 ms CreateObjectMapping: 0.077400 ms MarkObjects: 2.685700 ms  DeleteObjects: 0.080800 ms)
+
+AssetImportParameters requested are different than current active one (requested -> active):
+  custom:scripting/monoscript/fileName/UdpSocket.cs: 8c0d397a479fd27af2dbb174e2e93898 -> 7555d065f81d23e6604acb91cf79ddd6
+  custom:scripting/monoscript/fileName/Image.cs: 27f7fe2eed0ee693ad26142088b47cca -> f32195bbbc1ca9edcb6c8c6185597e40
+  custom:scripting/monoscript/fileName/Cli.cs: be16a0a8bb16d1ef9d2560a778c2da7b -> d287e08b50f2cb135aa4d7f8e01b7ef9
+  custom:scripting/monoscript/fileName/KnownAssemblies.cs: eeea5c54de119292c9e35e827e39077b -> 286bea9f8fcee5e392f6fc0f0cd541c8
+  custom:container-demuxer-ogg: 62fdf1f143b41e24485cea50d1cbac27 -> 
+  custom:scripting/monoscript/fileName/SolutionProjectEntry.cs: ad134947b839971a55dcc89fa7def608 -> 68cea09e9af09443edf61e18806ac1c2
+  custom:scripting/monoscript/fileName/TcpListener.cs: 2e837178dd3ee07b0dd871ea47f79d1c -> 940bfdac0e91ad2884e6359468f2782a
+  custom:scripting/monoscript/fileName/TcpClient.cs: 62f63a757b531974565dd3360d33c3e2 -> a949cfd4c46427829913ee0195fa0103
+  custom:video-codec-MediaFoundation-h265: 746d11721c4dcdbdad8f713fa42b33f4 -> 
+  custom:scripting/monoscript/fileName/FileUtility.cs: 71f27212df47cad3593aaf64e7d40726 -> 2d70b80c72be1fb3b2b89ce0939e8cef
+  custom:video-decoder-ogg-theora: a1e56fd34408186e4bbccfd4996cb3dc -> 
+  custom:framework-win-MediaFoundation: 216162199b28c13a410421893ffa2e32 -> 
+  custom:scripting/monoscript/fileName/Messenger.cs: e5d3a13331933d43889756e46bbd2d7d -> f4ebc46d09b2b4de489946914db2aae0
+  custom:scripting/monoscript/fileName/ProcessRunner.cs: 091011eda0e59a4b13abcb3f2a437c71 -> 932a2a80cb9a3539199f645deff3c585
+  custom:scripting/monoscript/fileName/ExceptionEventArgs.cs: e02709200f0b16494a1611966a13889c -> 27cb4c00a4137b184e01164606c88685
+  custom:scripting/monoscript/fileName/ProjectGeneration.cs: bb5717a1e7f4805d404d6376681e94b3 -> 7c3150a04cd2de8ef9bdd48a0f99701a
+  custom:scripting/monoscript/fileName/Symbols.cs: 45ec383a13e5ac18bbf85f25db5b131e -> 27613575e8bda8a6448f80ff27c488f9
+  custom:scripting/monoscript/fileName/VersionPair.cs: 83d1d4ad8ea7a98456de1bf0e51c2809 -> 88b4a0b7e953537f26ded0a68cf4c238
+  custom:CustomObjectIndexerAttribute: 756ad292c208cfabdd7b50bc23989ffe -> 
+  custom:scripting/monoscript/fileName/TestResultAdaptor.cs: 16f5b03abe348a2daca79e8d44a65466 -> fb4db3971d5379750cda884e7e44e3e4
+  custom:scripting/monoscript/fileName/VisualStudioEditor.cs: 0723bb91171820644eb6c92edfe7a716 -> 21e59f688ad500ab61aca318850ec505
+  custom:scripting/monoscript/fileName/VisualStudioInstallation.cs: 0d67d8617dccb9ec1e3d5b40231d5c9c -> 41612f13db7783c8635801ab159c1079
+  custom:container-demuxer-webm: 4f35f7cbe854078d1ac9338744f61a02 -> 
+  custom:scripting/monoscript/fileName/Solution.cs: 0ce897859916f31a23b527b10b82ea1c -> 8bc97d0abd509f39b67b3a5bbac1b9a1
+  custom:scripting/monoscript/fileName/GUIDProvider.cs: 42851dcbdcf2b3e052b42a23bdc10c5e -> cdd3f47e4fe593d2dfdf9915fa537e3f
+  custom:container-muxer-webm: aa71ff27fc2769a1b78a27578f13a17b -> 
+  custom:video-decoder-webm-vp8: 9c59270c3fd7afecdb556c50c9e8de78 -> 
+  custom:scripting/monoscript/fileName/MessageEventArgs.cs: ff5ca0eb4b435cf92aa845f4d510328b -> 528473bbcee3623fe954627c6bfadd2e
+  custom:SearchIndexIgnoredProperties: e643bd26f0fe6173181afceb89e7c659 -> 
+  custom:scripting/monoscript/fileName/ProjectProperties.cs: b180a07572fd00ffb8a37c98ca6e2b49 -> 407063898a13eaad2cd100e43551c6b5
+  custom:AudioImporter_EditorPlatform: d09bf68614088b80899f8185d706f6e7 -> 
+  custom:scripting/monoscript/fileName/UnityInstallation.cs: b5b03b3b3e06c1a279a8d0206f524a8c -> 0ba30d4545f2c34a9323456723b5dbfe
+  custom:scripting/monoscript/fileName/SolutionParser.cs: d75126b0174a0c9995bacb91f692ba43 -> 240a75b5fc2682997268aa77e6a1dd86
+  custom:scripting/monoscript/fileName/TestAdaptor.cs: 4286d6ce850b7e57b6ad1d9b342a9979 -> 486cec8559bad7c56adc699f165feb67
+  custom:scripting/monoscript/fileName/Discovery.cs: a176473c385aca596348ba07cbef9e40 -> 1ae9199a0deb7c5f12573b8e12630fb0
+  custom:scripting/monoscript/fileName/VisualStudioIntegration.cs: cfa3622c505da8be2039caefbb88d122 -> f9e623c49f9f20ea97a4519aa48d72d4
+  custom:scripting/monoscript/fileName/FileIOProvider.cs: 1ce0476a672b5b71a81d6ee006010383 -> 304525d180d2b661ce338fc8a3225752
+  custom:video-encoder-webm-vp8: eb34c28f22e8b96e1ab97ce403110664 -> 
+  custom:audio-decoder-ogg-vorbis: bf7c407c2cedff20999df2af8eb42d56 -> 
+  custom:scripting/monoscript/fileName/SolutionProperties.cs: e56a3118082c5b341d1dc42cac5ce89b -> ab8751e49ae2f3d9994444a0a38619bd
+  custom:scripting/monoscript/fileName/TestRunnerApiListener.cs: 6c187faf0bd0f433a681c31e7512bd7e -> cc17cec8825a8f933d6ecbd68d51f1de
+  custom:scripting/monoscript/fileName/AssemblyNameProvider.cs: 8a1484c9df9576b6e700d22f66f04285 -> 170b0fd934f78f2e6a09342014bfa1fc
+  custom:scripting/monoscript/fileName/Serializer.cs: 93add3d414874bb21069d5380b7e3260 -> d7df1b97d0a3bd0bb98fd4d2d5bf5d29
+  custom:scripting/monoscript/fileName/Message.cs: dae271262c0220d8340d0a3b5a902790 -> 671a789acb2c7a93d0b620fe02979957
+  custom:scripting/monoscript/fileName/Deserializer.cs: 5a795d9395ad7e35e14ed6e294af204a -> 1cc72e9ed2428cc6d6ce2d4d2ad7b02b
+  custom:audio-encoder-webm-vorbis: bf7c407c2cedff20999df2af8eb42d56 -> 
+  custom:scripting/monoscript/fileName/TestRunnerCallbacks.cs: 3af5d6a10f138e57c289f4f7d34ae28c -> 5627cb9f4ed769fba607b0cab8e9e63d
+  custom:scripting/monoscript/fileName/AsyncOperation.cs: 8f6297df34271fdb1ce2d9607ec6261d -> 90647cc400823b41df847a6cbfc29026
+  custom:scripting/monoscript/fileName/UsageUtility.cs: 8b1af87d43264a213340a26d31d1dfd4 -> 5ed3d13206b2b96245ce59a5c83beed1
+Editor requested this worker to shutdown with reason: Scaling down because of idle timeout
+TcpMessagingSession - receive error: operation aborted. errorcode: 995, details: The I/O operation has been aborted because of either a thread exit or an application request.
+AssetImportWorker is now disconnected from the server
+Process exiting
+Exiting without the bug reporter. Application will terminate with return code 0

@@ -13,10 +13,17 @@ namespace Chess
 
         [SerializeField] private Transform _cam;
 
+
+        // this game object holds all the sprites for each chess piece
         public GameObject chessPiecePrefab;
 
-
+        // Forsyth-Edwards Notation representing positions in a chess game
         private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
+
+        // this will control the turn based movement
+        public bool whiteToMove = true;
+
+
 
         // Start is called before the first frame update
         void Start()
@@ -145,6 +152,14 @@ namespace Chess
                 default:
                     return null;  // For the 'Empty' piece or any unexpected value
             }
+        }
+
+        void MakeMove()
+        {
+            // swap to blacks move
+            whiteToMove = !whiteToMove;
+
+
         }
 
     }
