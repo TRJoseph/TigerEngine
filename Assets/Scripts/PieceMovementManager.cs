@@ -27,6 +27,11 @@ namespace Chess
 
         private void OnMouseDown()
         {
+            // sets the original position of the piece for resetting if a move was not made
+            originalPosition = transform.position;
+
+
+            // this prevents white from attempting to make a move on blacks turn and vice versa
             if (GridManager.whiteToMove)
             {
                 if (!transform.GetComponent<PieceRender>().isWhitePiece)
@@ -43,7 +48,6 @@ namespace Chess
             }
 
             isDragging = true;
-            originalPosition = transform.position;
             Vector3 mousePos = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, -Camera.main.transform.position.z));
             offset = transform.position - mousePos;
         }
@@ -76,8 +80,6 @@ namespace Chess
             {
                 // check if tile is occupied by friendly piece or by enemy piece
 
-                // if occupied by friendly piece, snap back to original position
-
 
                 GameObject pieceOnTile = closestSquare.GetComponent<Tile>().OccupyingPiece;
 
@@ -85,6 +87,7 @@ namespace Chess
                 // if user attempts to move a piece to the same tile, return
                 if (pieceOnTile == transform.gameObject)
                 {
+                    transform.position = originalPosition;
                     return;
                 }
 
@@ -93,6 +96,7 @@ namespace Chess
                 {
                     if (GridManager.whiteToMove)
                     {
+                        // if occupied by friendly piece, snap back to original position
                         if (pieceOnTile.GetComponent<PieceRender>().isWhitePiece)
                         {
                             transform.position = originalPosition;
@@ -108,7 +112,7 @@ namespace Chess
                     }
                     else
                     {
-                        // must be blacks move
+                        // must be blacks move, if occupied by friendly piece, snap back to original position
                         if (!pieceOnTile.GetComponent<PieceRender>().isWhitePiece)
                         {
                             transform.position = originalPosition;
@@ -125,11 +129,6 @@ namespace Chess
 
                     }
                 }
-
-                // if occupied by enemy piece, destroy enemy piece and snap to tile
-
-                // if there is no piece on the tile
-
 
 
                 /* 

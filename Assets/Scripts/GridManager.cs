@@ -103,7 +103,7 @@ namespace Chess
                     int pieceColor = char.IsUpper(FENString[i]) ? Piece.White : Piece.Black;
 
                     // represented in binary with or operator
-                    Board.Squares[rank * 8 + file] = piece | pieceColor;
+                    Board.Squares[rank * 8 + file] = pieceColor | piece;
 
                     file++;
                 }
