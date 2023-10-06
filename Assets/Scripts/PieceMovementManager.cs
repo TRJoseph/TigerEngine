@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -77,7 +78,16 @@ namespace Chess
 
                 // if occupied by friendly piece, snap back to original position
 
+
                 GameObject pieceOnTile = closestSquare.GetComponent<Tile>().OccupyingPiece;
+
+
+                // if user attempts to move a piece to the same tile, return
+                if (pieceOnTile == transform.gameObject)
+                {
+                    return;
+                }
+
                 // if there is a piece on the tile
                 if (pieceOnTile != null)
                 {
