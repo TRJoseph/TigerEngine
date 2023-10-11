@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using UnityEngine;
+using TMPro;
 
 namespace Chess
 {
@@ -12,6 +13,14 @@ namespace Chess
         [SerializeField] private Tile tilePrefab;
 
         [SerializeField] private Transform _cam;
+
+
+        // this holds the UI elements for the scene
+        public Canvas Canvas;
+
+        // holds all the rank and file labels
+        public List<TextMeshProUGUI> tileFileLabels = new List<TextMeshProUGUI>();
+        public List<TextMeshProUGUI> tileRankLabels = new List<TextMeshProUGUI>();
 
 
         // this game object holds all the sprites for each chess piece
@@ -41,6 +50,12 @@ namespace Chess
             int rank = 0;
             for (file = 0; file < 8; file++)
             {
+                // instantiates labels for each file
+                TextMeshProUGUI fileLabel = Instantiate(tileFileLabels[file]);
+                fileLabel.transform.position = new Vector3(file, -1, -1);
+                fileLabel.transform.SetParent(Canvas.transform, true);
+                fileLabel.transform.localScale = new Vector3(1f, 1f, 1f);
+
                 for (rank = 0; rank < 8; rank++)
                 {
                     var tile = Instantiate(tilePrefab, new Vector3(file, rank, 0), Quaternion.identity);
@@ -52,6 +67,14 @@ namespace Chess
                     tile.name = $"Tile file: {file} rank: {rank}";
 
                     chessTiles[file, rank] = tile;
+
+                    if(file  == 0)
+                    {
+                        TextMeshProUGUI rankLabel = Instantiate(tileRankLabels[rank]);
+                        rankLabel.transform.position = new Vector3(-1, rank, -1);
+                        rankLabel.transform.SetParent(Canvas.transform, true);
+                        rankLabel.transform.localScale = new Vector3(1f, 1f, 1f);
+                    }
                 }
             }
 
