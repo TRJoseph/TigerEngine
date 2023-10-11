@@ -134,8 +134,6 @@ namespace Chess
                         // this may be removed for a better alternative for sizing the pieces
                         piece.transform.localScale = new Vector3(0.125f, 0.125f, 1f);
 
-
-
                         // set tile to occupied by piece
                         chessTiles[file, rank].OccupyingPiece = piece;
 

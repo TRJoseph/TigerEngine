@@ -8,7 +8,7 @@ namespace Chess
 {
     public class PieceMovementManager : MonoBehaviour
     {
-
+        public UIController uicontroller;
         private bool isDragging;
         private Vector3 offset;
 
@@ -150,6 +150,12 @@ namespace Chess
                 transform.position = new Vector3(closestSquare.position.x, closestSquare.position.y, transform.position.z);
 
                 GridManager.whiteToMove = !GridManager.whiteToMove;
+
+                // update the internal board state when a move is made
+                Board.updateInternalState(originalPosition.x, originalPosition.y, transform.position.x, transform.position.y);
+
+                uicontroller.UpdateMoveStatusText(GridManager.whiteToMove);
+
             }
         }
     }
