@@ -8,7 +8,6 @@ namespace Chess
 {
     public class PieceMovementManager : MonoBehaviour
     {
-        public UIController uicontroller;
         private bool isDragging;
         private Vector3 offset;
 
@@ -154,8 +153,10 @@ namespace Chess
                 // update the internal board state when a move is made
                 Board.updateInternalState(originalPosition.x, originalPosition.y, transform.position.x, transform.position.y);
 
-                uicontroller.UpdateMoveStatusText(GridManager.whiteToMove);
 
+                // TODO COME UP WITH BETTER WAY TO DO THIS
+                // there will only be one instance of the UI controller so this is okay to do (for now)
+                UIController.Instance.UpdateMoveStatusText(GridManager.whiteToMove);
             }
         }
     }

@@ -39,3 +39,4 @@ UserSettings/
 *.bak.*
 *.sw?
 
+/Logs/shadercompiler-UnityShaderCompiler.exe0.log
