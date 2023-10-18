@@ -134,6 +134,32 @@ namespace Chess
 
         }
 
+
+        // use later 
+        // west, north, east, south
+        static int[] cardinalOffsets = { -1, 8, 1, -8 };
+
+        // northwest, northeast, southeast, southwest
+        static int[] interCardinalDirections = { 7, 9, -7, -9};
+
+        void CalculateDistanceToEdge()
+        {
+            int file = 0;
+            int rank = 0;
+            for (file = 0; file < 8; file++)
+            {
+                for (rank = 0; rank < 8; rank++)
+                {
+                    // Board.Squares[rank * 8 + file];
+                    // chessTiles[file, rank]
+
+                    // 
+                }
+            }
+
+
+        }
+
         // render sprites onto board
         void RenderPiecesOnBoard()
         {

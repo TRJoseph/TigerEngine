@@ -151,7 +151,7 @@ namespace Chess
                 GridManager.whiteToMove = !GridManager.whiteToMove;
 
                 // update the internal board state when a move is made
-                Board.updateInternalState(originalPosition.x, originalPosition.y, transform.position.x, transform.position.y);
+                Board.UpdateInternalState(originalPosition.x, originalPosition.y, transform.position.x, transform.position.y);
 
 
                 // TODO COME UP WITH BETTER WAY TO DO THIS
