@@ -46,6 +46,8 @@ namespace Chess
                 }
             }
 
+            Board.CalculateLegalMoves(transform);
+
             isDragging = true;
             Vector3 mousePos = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, -Camera.main.transform.position.z));
             offset = transform.position - mousePos;

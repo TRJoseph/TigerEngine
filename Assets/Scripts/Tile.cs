@@ -9,6 +9,21 @@ public class Tile : MonoBehaviour
 
     public GameObject OccupyingPiece;
 
+    public struct Distances
+    {
+        public int DistanceNorth;
+        public int DistanceSouth;
+        public int DistanceEast;
+        public int DistanceWest;
+
+        public int DistanceNorthWest;
+        public int DistanceNorthEast;
+        public int DistanceSouthWest;
+        public int DistanceSouthEast;
+
+    } public Distances distances;
+
+
     public void SetTileColor(bool isLightSquare)
     {
         _spriteRenderer.color = isLightSquare ? _lightColor : _darkColor;

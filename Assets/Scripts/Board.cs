@@ -21,6 +21,12 @@ namespace Chess
 
         public static List<LegalMove> legalMoves;
 
+        // west, north, east, south
+        static readonly int[] cardinalOffsets = { -1, 8, 1, -8 };
+
+        // northwest, northeast, southeast, southwest
+        static readonly int[] interCardinalDirections = { 7, 9, -7, -9 };
+
 
         public static void UpdateInternalState(float originalXPosition, float originalYPosition, float newXPosition, float newYPosition)
         {
@@ -40,9 +46,44 @@ namespace Chess
 
         }
 
-
-        public static void CalculateLegalMoves()
+        private static void calculateRookMoves(Tile.Distances currentTileDistances)
         {
+            
+
+        }
+
+        private static void calculateBishopMoves()
+        {
+
+        }
+
+
+        public static void CalculateLegalMoves(Transform pieceObject)
+        {
+            int internalGamePiece = Squares[(int)pieceObject.position.y * 8 + (int)pieceObject.position.x];
+
+            // this holds the distance to the edge of the board for each tile so the algorithm knows when the edge of the board has been reached
+            Tile.Distances currentTileDistances = GridManager.chessTiles[(int)pieceObject.position.y, (int)pieceObject.position.x].distances;
+
+            int decodedPiece = internalGamePiece & 7;
+
+            switch (decodedPiece)
+            {
+                case Piece.Rook:
+                    calculateRookMoves(currentTileDistances);
+                    break;
+                case Piece.Bishop:
+                    calculateBishopMoves();
+                    break;
+                case Piece.Queen:
+                    // queen contains both movesets of a bishop and a rook
+                    calculateRookMoves(currentTileDistances);
+                    calculateBishopMoves();
+                    break;
+                default:
+                    return;
+            }
+
 
         }
     }

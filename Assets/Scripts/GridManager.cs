@@ -31,7 +31,7 @@ namespace Chess
 
 
         // this array holds all the tiles in the game
-        public Tile[,] chessTiles = new Tile[8, 8];
+        public static Tile[,] chessTiles = new Tile[8, 8];
 
         // this will control the turn based movement
         public static bool whiteToMove = true;
@@ -41,6 +41,7 @@ namespace Chess
         {
             GenerateGrid();
             LoadFENString();
+            CalculateDistanceToEdge();
             RenderPiecesOnBoard();
         }
 
@@ -135,25 +136,25 @@ namespace Chess
         }
 
 
-        // use later 
-        // west, north, east, south
-        static int[] cardinalOffsets = { -1, 8, 1, -8 };
-
-        // northwest, northeast, southeast, southwest
-        static int[] interCardinalDirections = { 7, 9, -7, -9};
-
         void CalculateDistanceToEdge()
         {
-            int file = 0;
-            int rank = 0;
-            for (file = 0; file < 8; file++)
+
+            // calculates from bottom left across each file, then up each rank
+            for (int rank = 0; rank < 8; rank++)
             {
-                for (rank = 0; rank < 8; rank++)
+                for (int file = 0; file < 8; file++)
                 {
                     // Board.Squares[rank * 8 + file];
-                    // chessTiles[file, rank]
+                    chessTiles[file, rank].distances.DistanceNorth = 7 - rank;
+                    chessTiles[file, rank].distances.DistanceSouth = rank;
+                    chessTiles[file, rank].distances.DistanceWest = file;
+                    chessTiles[file, rank].distances.DistanceEast = 7 - file;
 
-                    // 
+                    chessTiles[file, rank].distances.DistanceNorthWest = Math.Min(chessTiles[file, rank].distances.DistanceNorth, chessTiles[file, rank].distances.DistanceWest);
+                    chessTiles[file, rank].distances.DistanceNorthEast = Math.Min(chessTiles[file, rank].distances.DistanceNorth, chessTiles[file, rank].distances.DistanceEast);
+                    chessTiles[file, rank].distances.DistanceSouthWest = Math.Min(chessTiles[file, rank].distances.DistanceSouth, chessTiles[file, rank].distances.DistanceWest);
+                    chessTiles[file, rank].distances.DistanceSouthEast = Math.Min(chessTiles[file, rank].distances.DistanceSouth, chessTiles[file, rank].distances.DistanceEast);
+
                 }
             }
 
