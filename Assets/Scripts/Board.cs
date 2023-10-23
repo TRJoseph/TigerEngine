@@ -19,7 +19,7 @@ namespace Chess
             public int endSquare;
         }
 
-        public static List<LegalMove> legalMoves;
+        public static List<LegalMove> legalMoves = new List<LegalMove>();
 
         // west, north, east, south
         static readonly int[] cardinalOffsets = { -1, 8, 1, -8 };
@@ -46,9 +46,14 @@ namespace Chess
 
         }
 
-        private static void calculateRookMoves(Tile.Distances currentTileDistances)
+        private static void calculateRookMoves(Tile.Distances currentTileDistances, int startSquare)
         {
-            
+
+            // calculate legal moves north (TODO still need to stop loop when enemy piece or friendly piece is seen)
+            for (int i = 0, northOffset = cardinalOffsets[1]; i < currentTileDistances.DistanceNorth; i++, northOffset += cardinalOffsets[1])
+            {
+                legalMoves.Add(new LegalMove { startSquare = startSquare, endSquare = startSquare + northOffset });
+            }
 
         }
 
@@ -60,24 +65,26 @@ namespace Chess
 
         public static void CalculateLegalMoves(Transform pieceObject)
         {
-            int internalGamePiece = Squares[(int)pieceObject.position.y * 8 + (int)pieceObject.position.x];
+            int startSquare = (int)pieceObject.position.y * 8 + (int)pieceObject.position.x;
+            int internalGamePiece = Squares[startSquare];
 
             // this holds the distance to the edge of the board for each tile so the algorithm knows when the edge of the board has been reached
             Tile.Distances currentTileDistances = GridManager.chessTiles[(int)pieceObject.position.y, (int)pieceObject.position.x].distances;
 
+            Console.WriteLine(currentTileDistances.DistanceNorth);
             int decodedPiece = internalGamePiece & 7;
 
             switch (decodedPiece)
             {
                 case Piece.Rook:
-                    calculateRookMoves(currentTileDistances);
+                    calculateRookMoves(currentTileDistances, startSquare);
                     break;
                 case Piece.Bishop:
                     calculateBishopMoves();
                     break;
                 case Piece.Queen:
                     // queen contains both movesets of a bishop and a rook
-                    calculateRookMoves(currentTileDistances);
+                    calculateRookMoves(currentTileDistances, startSquare);
                     calculateBishopMoves();
                     break;
                 default:
