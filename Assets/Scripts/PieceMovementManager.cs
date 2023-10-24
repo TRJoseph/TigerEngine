@@ -57,6 +57,8 @@ namespace Chess
         {
             isDragging = false;
 
+            Board.ClearListMoves();
+
             SnapToNearestSquare();
         }
 

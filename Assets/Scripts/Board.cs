@@ -46,20 +46,40 @@ namespace Chess
 
         }
 
-        private static void calculateRookMoves(Tile.Distances currentTileDistances, int startSquare)
+        private static void calculateRookMoves(Tile.Distances currentTileDistances, int startSquare, int decodedColor)
         {
 
             // calculate legal moves north (TODO still need to stop loop when enemy piece or friendly piece is seen)
             for (int i = 0, northOffset = cardinalOffsets[1]; i < currentTileDistances.DistanceNorth; i++, northOffset += cardinalOffsets[1])
             {
+                //if a square is occupied by a piece of the same color, stop the loop
+                //by a different color, add the move and stop the loop(capturing the piece)
+                 if (Squares[startSquare + northOffset] != Piece.Empty)
+                {
+                    if (decodedColor == (Squares[startSquare + northOffset] & 24))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        legalMoves.Add(new LegalMove { startSquare = startSquare, endSquare = startSquare + northOffset });
+                        break;
+                    }
+                }
                 legalMoves.Add(new LegalMove { startSquare = startSquare, endSquare = startSquare + northOffset });
             }
+            
 
         }
 
         private static void calculateBishopMoves()
         {
 
+        }
+
+        public static void ClearListMoves()
+        {
+            legalMoves.Clear();
         }
 
 
@@ -69,22 +89,23 @@ namespace Chess
             int internalGamePiece = Squares[startSquare];
 
             // this holds the distance to the edge of the board for each tile so the algorithm knows when the edge of the board has been reached
-            Tile.Distances currentTileDistances = GridManager.chessTiles[(int)pieceObject.position.y, (int)pieceObject.position.x].distances;
+            Tile.Distances currentTileDistances = GridManager.chessTiles[(int)pieceObject.position.x, (int)pieceObject.position.y].distances;
 
             Console.WriteLine(currentTileDistances.DistanceNorth);
             int decodedPiece = internalGamePiece & 7;
+            int decodedColor = internalGamePiece & 24;
 
             switch (decodedPiece)
             {
                 case Piece.Rook:
-                    calculateRookMoves(currentTileDistances, startSquare);
+                    calculateRookMoves(currentTileDistances, startSquare, decodedColor);
                     break;
                 case Piece.Bishop:
                     calculateBishopMoves();
                     break;
                 case Piece.Queen:
                     // queen contains both movesets of a bishop and a rook
-                    calculateRookMoves(currentTileDistances, startSquare);
+                    calculateRookMoves(currentTileDistances, startSquare, decodedColor);
                     calculateBishopMoves();
                     break;
                 default:
