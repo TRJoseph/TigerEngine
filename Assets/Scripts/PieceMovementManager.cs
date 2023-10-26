@@ -8,6 +8,10 @@ namespace Chess
 {
     public class PieceMovementManager : MonoBehaviour
     {
+
+        // this holds the overlay that is placed on top of tiles to represent a legal move in the position
+        [SerializeField] private GameObject highlightOverlayPrefab;
+
         private bool isDragging;
         private Vector3 offset;
 
@@ -46,7 +50,10 @@ namespace Chess
                 }
             }
 
-            Board.CalculateLegalMoves(transform);
+            List<Board.LegalMove> legalMoves = Board.CalculateLegalMoves(transform);
+
+            DisplayLegalMoves(legalMoves);
+
 
             isDragging = true;
             Vector3 mousePos = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, -Camera.main.transform.position.z));
@@ -163,5 +170,17 @@ namespace Chess
                 UIController.Instance.UpdateMoveStatusText(GridManager.whiteToMove);
             }
         }
+
+
+        private void DisplayLegalMoves(List<Board.LegalMove> legalMoves)
+        {
+            foreach(Board.LegalMove move in legalMoves)
+            {
+                GameObject overlay = Instantiate(highlightOverlayPrefab, move.endTile.transform.position, Quaternion.identity);
+                overlay.transform.SetParent(move.endTile.transform);
+            }
+
+        }
+
     }
 }

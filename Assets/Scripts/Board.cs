@@ -15,8 +15,11 @@ namespace Chess
         // this structure will hold a move that can be executed
         public struct LegalMove
         {
+            // 'startSquare' and 'endSquare' holds the internal board start square and end square 
             public int startSquare;
             public int endSquare;
+
+            public Tile endTile;
         }
 
         public static List<LegalMove> legalMoves = new List<LegalMove>();
@@ -46,11 +49,11 @@ namespace Chess
 
         }
 
-        private static void calculateRookMoves(Tile.Distances currentTileDistances, int startSquare, int decodedColor)
+        private static void calculateRookMoves(Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
         {
 
             // calculate legal moves north (TODO still need to stop loop when enemy piece or friendly piece is seen)
-            for (int i = 0, northOffset = cardinalOffsets[1]; i < currentTileDistances.DistanceNorth; i++, northOffset += cardinalOffsets[1])
+            for (int i = 1, northOffset = cardinalOffsets[1]; i <= currentTile.distances.DistanceNorth; i++, northOffset += cardinalOffsets[1])
             {
                 //if a square is occupied by a piece of the same color, stop the loop
                 //by a different color, add the move and stop the loop(capturing the piece)
@@ -62,11 +65,15 @@ namespace Chess
                     }
                     else
                     {
-                        legalMoves.Add(new LegalMove { startSquare = startSquare, endSquare = startSquare + northOffset });
+                        legalMoves.Add(new LegalMove { startSquare = startSquare, endSquare = startSquare + northOffset, 
+                            endTile = GridManager.chessTiles[xPos, yPos + i]
+                    });
                         break;
                     }
                 }
-                legalMoves.Add(new LegalMove { startSquare = startSquare, endSquare = startSquare + northOffset });
+                legalMoves.Add(new LegalMove { startSquare = startSquare, endSquare = startSquare + northOffset,
+                    endTile = GridManager.chessTiles[xPos, yPos + i]
+                });
             }
             
 
@@ -83,36 +90,40 @@ namespace Chess
         }
 
 
-        public static void CalculateLegalMoves(Transform pieceObject)
+        public static List<LegalMove> CalculateLegalMoves(Transform pieceObject)
         {
             int startSquare = (int)pieceObject.position.y * 8 + (int)pieceObject.position.x;
             int internalGamePiece = Squares[startSquare];
 
-            // this holds the distance to the edge of the board for each tile so the algorithm knows when the edge of the board has been reached
-            Tile.Distances currentTileDistances = GridManager.chessTiles[(int)pieceObject.position.x, (int)pieceObject.position.y].distances;
+            int xTilePos = (int)pieceObject.position.x;
+            int yTilePos = (int)pieceObject.position.y;
 
-            Console.WriteLine(currentTileDistances.DistanceNorth);
+
+            // this holds the distance to the edge of the board for each tile so the algorithm knows when the edge of the board has been reached
+            Tile currentTile = GridManager.chessTiles[xTilePos, yTilePos];
+
+
             int decodedPiece = internalGamePiece & 7;
             int decodedColor = internalGamePiece & 24;
 
             switch (decodedPiece)
             {
                 case Piece.Rook:
-                    calculateRookMoves(currentTileDistances, startSquare, decodedColor);
+                    calculateRookMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
                     break;
                 case Piece.Bishop:
                     calculateBishopMoves();
                     break;
                 case Piece.Queen:
                     // queen contains both movesets of a bishop and a rook
-                    calculateRookMoves(currentTileDistances, startSquare, decodedColor);
+                    calculateRookMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
                     calculateBishopMoves();
                     break;
                 default:
-                    return;
+                    return null;
             }
 
-
+            return legalMoves;
         }
     }
 }

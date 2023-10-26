@@ -99,6 +99,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9775eb1d9ff7fee498e6b806a1dfe19a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isWhitePiece: 0
+  occupiedTile: {fileID: 0}
   whitePawn: {fileID: 21300000, guid: 04ad197ea29e64376a3f7a68ea600205, type: 3}
   whiteKnight: {fileID: 21300000, guid: 3e892b83bd4dc4a2eb4aeef8cfcdf3ef, type: 3}
   whiteBishop: {fileID: 21300000, guid: 0ed41237d853b414785adf9c2efd7b01, type: 3}
@@ -123,6 +125,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8d6148f435b4dd842bcd2673ce3c56ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  highlightOverlayPrefab: {fileID: 5593409470330700248, guid: eca842774a1b21b4cb95eda8fc1fa63c, type: 3}
 --- !u!61 &4856654104109232585
 BoxCollider2D:
   m_ObjectHideFlags: 0

@@ -215,14 +215,6 @@ namespace Chess
             }
         }
 
-        void MakeMove()
-        {
-            // swap to blacks move
-            whiteToMove = !whiteToMove;
-
-
-        }
-
     }
 
 }
