@@ -28,7 +28,7 @@ namespace Chess
         static readonly int[] cardinalOffsets = { -1, 8, 1, -8 };
 
         // northwest, northeast, southeast, southwest
-        static readonly int[] interCardinalDirections = { 7, 9, -7, -9 };
+        static readonly int[] interCardinalOffsets = { 7, 9, -7, -9 };
 
 
         public static void UpdateInternalState(float originalXPosition, float originalYPosition, float newXPosition, float newYPosition)
@@ -49,6 +49,11 @@ namespace Chess
 
         }
 
+        private static void calculatePawnMoves()
+        {
+
+        }
+
         private static void calculateRookMoves(Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
         {
 
@@ -57,7 +62,7 @@ namespace Chess
             {
                 //if a square is occupied by a piece of the same color, stop the loop
                 //by a different color, add the move and stop the loop(capturing the piece)
-                 if (Squares[startSquare + northOffset] != Piece.Empty)
+                if (Squares[startSquare + northOffset] != Piece.Empty)
                 {
                     if (decodedColor == (Squares[startSquare + northOffset] & 24))
                     {
@@ -65,22 +70,216 @@ namespace Chess
                     }
                     else
                     {
-                        legalMoves.Add(new LegalMove { startSquare = startSquare, endSquare = startSquare + northOffset, 
+                        legalMoves.Add(new LegalMove
+                        {
+                            startSquare = startSquare,
+                            endSquare = startSquare + northOffset,
                             endTile = GridManager.chessTiles[xPos, yPos + i]
-                    });
+                        });
                         break;
                     }
                 }
-                legalMoves.Add(new LegalMove { startSquare = startSquare, endSquare = startSquare + northOffset,
+                legalMoves.Add(new LegalMove
+                {
+                    startSquare = startSquare,
+                    endSquare = startSquare + northOffset,
                     endTile = GridManager.chessTiles[xPos, yPos + i]
                 });
             }
-            
+
+            for (int i = 1, southOffset = cardinalOffsets[3]; i <= currentTile.distances.DistanceSouth; i++, southOffset += cardinalOffsets[3])
+            {
+                if (Squares[startSquare + southOffset] != Piece.Empty)
+                {
+                    if (decodedColor == (Squares[startSquare + southOffset] & 24))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        legalMoves.Add(new LegalMove
+                        {
+                            startSquare = startSquare,
+                            endSquare = startSquare + southOffset,
+                            endTile = GridManager.chessTiles[xPos, yPos - i]
+                        });
+                        break;
+                    }
+                }
+                legalMoves.Add(new LegalMove
+                {
+                    startSquare = startSquare,
+                    endSquare = startSquare + southOffset,
+                    endTile = GridManager.chessTiles[xPos, yPos - i]
+                });
+            }
+
+            for (int i = 1, eastOffset = cardinalOffsets[2]; i <= currentTile.distances.DistanceEast; i++, eastOffset += cardinalOffsets[2])
+            {
+                if (Squares[startSquare + eastOffset] != Piece.Empty)
+                {
+                    if (decodedColor == (Squares[startSquare + eastOffset] & 24))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        legalMoves.Add(new LegalMove
+                        {
+                            startSquare = startSquare,
+                            endSquare = startSquare + eastOffset,
+                            endTile = GridManager.chessTiles[xPos + i, yPos]
+                        });
+                        break;
+                    }
+                }
+                legalMoves.Add(new LegalMove
+                {
+                    startSquare = startSquare,
+                    endSquare = startSquare + eastOffset,
+                    endTile = GridManager.chessTiles[xPos + i, yPos]
+                });
+            }
+
+            for (int i = 1, westOffset = cardinalOffsets[0]; i <= currentTile.distances.DistanceWest; i++, westOffset += cardinalOffsets[0])
+            {
+                if (Squares[startSquare + westOffset] != Piece.Empty)
+                {
+                    if (decodedColor == (Squares[startSquare + westOffset] & 24))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        legalMoves.Add(new LegalMove
+                        {
+                            startSquare = startSquare,
+                            endSquare = startSquare + westOffset,
+                            endTile = GridManager.chessTiles[xPos - i, yPos]
+                        });
+                        break;
+                    }
+                }
+                legalMoves.Add(new LegalMove
+                {
+                    startSquare = startSquare,
+                    endSquare = startSquare + westOffset,
+                    endTile = GridManager.chessTiles[xPos - i, yPos]
+                });
+            }
 
         }
 
-        private static void calculateBishopMoves()
+        private static void calculateBishopMoves(Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
         {
+            // calculate legal moves northwest
+            for (int i = 1, northWestOffset = interCardinalOffsets[0]; i <= currentTile.distances.DistanceNorthWest; i++, northWestOffset += interCardinalOffsets[0])
+            {
+                if (Squares[startSquare + northWestOffset] != Piece.Empty)
+                {
+                    if (decodedColor == (Squares[startSquare + northWestOffset] & 24))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        legalMoves.Add(new LegalMove
+                        {
+                            startSquare = startSquare,
+                            endSquare = startSquare + northWestOffset,
+                            endTile = GridManager.chessTiles[xPos - i, yPos + i]
+                        });
+                        break;
+                    }
+                }
+                legalMoves.Add(new LegalMove
+                {
+                    startSquare = startSquare,
+                    endSquare = startSquare + northWestOffset,
+                    endTile = GridManager.chessTiles[xPos - i, yPos + i]
+                });
+            }
+
+            for (int i = 1, northEastOffset = interCardinalOffsets[1]; i <= currentTile.distances.DistanceNorthEast; i++, northEastOffset += interCardinalOffsets[1])
+            {
+                if (Squares[startSquare + northEastOffset] != Piece.Empty)
+                {
+                    if (decodedColor == (Squares[startSquare + northEastOffset] & 24))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        legalMoves.Add(new LegalMove
+                        {
+                            startSquare = startSquare,
+                            endSquare = startSquare + northEastOffset,
+                            endTile = GridManager.chessTiles[xPos + i, yPos + i]
+                        });
+                        break;
+                    }
+                }
+                legalMoves.Add(new LegalMove
+                {
+                    startSquare = startSquare,
+                    endSquare = startSquare + northEastOffset,
+                    endTile = GridManager.chessTiles[xPos + i, yPos + i]
+                });
+            }
+
+            for (int i = 1, southWestOffset = interCardinalOffsets[3]; i <= currentTile.distances.DistanceSouthWest; i++, southWestOffset += interCardinalOffsets[3])
+            {
+                if (Squares[startSquare + southWestOffset] != Piece.Empty)
+                {
+                    if (decodedColor == (Squares[startSquare + southWestOffset] & 24))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        legalMoves.Add(new LegalMove
+                        {
+                            startSquare = startSquare,
+                            endSquare = startSquare + southWestOffset,
+                            endTile = GridManager.chessTiles[xPos - i, yPos - i]
+                        });
+                        break;
+                    }
+                }
+                legalMoves.Add(new LegalMove
+                {
+                    startSquare = startSquare,
+                    endSquare = startSquare + southWestOffset,
+                    endTile = GridManager.chessTiles[xPos - i, yPos - i]
+                });
+            }
+
+            for (int i = 1, southEastOffset = interCardinalOffsets[2]; i <= currentTile.distances.DistanceSouthEast; i++, southEastOffset += interCardinalOffsets[2])
+            {
+                if (Squares[startSquare + southEastOffset] != Piece.Empty)
+                {
+                    if (decodedColor == (Squares[startSquare + southEastOffset] & 24))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        legalMoves.Add(new LegalMove
+                        {
+                            startSquare = startSquare,
+                            endSquare = startSquare + southEastOffset,
+                            endTile = GridManager.chessTiles[xPos + i, yPos - i]
+                        });
+                        break;
+                    }
+                }
+                legalMoves.Add(new LegalMove
+                {
+                    startSquare = startSquare,
+                    endSquare = startSquare + southEastOffset,
+                    endTile = GridManager.chessTiles[xPos + i, yPos - i]
+                });
+            }
 
         }
 
@@ -108,16 +307,23 @@ namespace Chess
 
             switch (decodedPiece)
             {
+                case Piece.Pawn:
+                    calculatePawnMoves();
+                    break;
+                case Piece.Knight:
+                    break;
                 case Piece.Rook:
                     calculateRookMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
                     break;
                 case Piece.Bishop:
-                    calculateBishopMoves();
+                    calculateBishopMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
                     break;
                 case Piece.Queen:
                     // queen contains both movesets of a bishop and a rook
                     calculateRookMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
-                    calculateBishopMoves();
+                    calculateBishopMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
+                    break;
+                case Piece.King:
                     break;
                 default:
                     return legalMoves;
