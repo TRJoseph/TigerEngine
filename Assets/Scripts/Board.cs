@@ -120,7 +120,7 @@ namespace Chess
                     calculateBishopMoves();
                     break;
                 default:
-                    return null;
+                    return legalMoves;
             }
 
             return legalMoves;

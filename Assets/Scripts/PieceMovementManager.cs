@@ -66,6 +66,10 @@ namespace Chess
 
             Board.ClearListMoves();
 
+            /* this might be moved to after SnapToNearestSquare, checking if a the 
+             * move attempted was actually valid, determining whether or not to remove the highlights*/
+            RemoveLegalMoveHighlights();
+
             SnapToNearestSquare();
         }
 
@@ -182,5 +186,14 @@ namespace Chess
 
         }
 
+
+        private void RemoveLegalMoveHighlights() {
+            GameObject[] highlights = GameObject.FindGameObjectsWithTag("Highlight");
+
+            foreach(GameObject highlight in highlights)
+            {
+                Destroy(highlight);
+            }
+}
     }
 }
