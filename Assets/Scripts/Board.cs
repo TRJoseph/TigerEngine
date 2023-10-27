@@ -91,12 +91,7 @@ namespace Chess
                     // checks if the square in front of the pawn is empty
                     if (Squares[startSquare + whitePawnOffsets[1]] == Piece.Empty)
                     {
-                        legalMoves.Add(new LegalMove
-                        {
-                            startSquare = startSquare,
-                            endSquare = startSquare + whitePawnOffsets[1],
-                            endTile = GridManager.chessTiles[xPos, yPos + 1]
-                        });
+                        AddLegalMove(startSquare, whitePawnOffsets[1], GridManager.chessTiles[xPos, yPos + 1]);
                     }
 
                     checkWhitePawnCaptures(startSquare, xPos, yPos);
