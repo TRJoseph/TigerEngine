@@ -30,16 +30,17 @@ namespace Chess
         // northwest, northeast, southeast, southwest
         static readonly int[] interCardinalOffsets = { 7, 9, -7, -9 };
 
+        static readonly int[] whitePawnOffsets = { 7, 8, 9 };
+
+        static readonly int[] blackPawnOffsets = { -9, -8, -7 };
 
         public static void UpdateInternalState(float originalXPosition, float originalYPosition, float newXPosition, float newYPosition)
         {
-
-            // Debug.Log("originalXPosition: " + originalXPosition + " originalYPosition: " + originalYPosition);
-
-            // Debug.Log("xValue: " + newXPosition + " yValue: " + newYPosition);
-
             // grab current piece and store it
             int currentPiece = Squares[(int)originalYPosition * 8 + (int)originalXPosition];
+
+            // when the piece has moved, set the 6th bit to 1
+            currentPiece = currentPiece | 32;
 
             // removing the piece from its old position
             Squares[(int)originalYPosition * 8 + (int)originalXPosition] = Piece.Empty;
@@ -49,8 +50,100 @@ namespace Chess
 
         }
 
-        private static void calculatePawnMoves()
+        private static void AddLegalMove(int startSquare, int endSquare, Tile endTile)
         {
+            legalMoves.Add(new LegalMove
+            {
+                startSquare = startSquare,
+                endSquare = endSquare,
+                endTile = endTile
+            });
+        }
+
+        private static void checkWhitePawnCaptures(int startSquare, int xPos, int yPos)
+        {
+            // square one square northWest, checking if an enemy piece is there available for capture
+            if (Squares[startSquare + whitePawnOffsets[0]] != Piece.Empty && (Squares[startSquare + whitePawnOffsets[0]] & 24) == Piece.Black)
+            {
+                AddLegalMove(startSquare, whitePawnOffsets[0], GridManager.chessTiles[xPos - 1, yPos + 1]);
+            }
+            // square one square northEast, checking if an enemy piece is there available for capture
+            if (Squares[startSquare + whitePawnOffsets[2]] != Piece.Empty && (Squares[startSquare + whitePawnOffsets[2]] & 24) == Piece.Black)
+            {
+                AddLegalMove(startSquare, whitePawnOffsets[2], GridManager.chessTiles[xPos + 1, yPos + 1]);
+            }
+        }
+
+        private static void checkBlackPawnCapture()
+        {
+
+        }
+
+        private static void calculatePawnMoves(int startSquare, int decodedColor, int decodedPieceStatus, int xPos, int yPos)
+        {
+            // if white pawn
+            if (decodedColor == 8)
+            {
+                if (decodedPieceStatus == 32)
+                {
+                    // if pawn has moved, legal moves is only a one square advance
+
+                    // checks if the square in front of the pawn is empty
+                    if (Squares[startSquare + whitePawnOffsets[1]] == Piece.Empty)
+                    {
+                        legalMoves.Add(new LegalMove
+                        {
+                            startSquare = startSquare,
+                            endSquare = startSquare + whitePawnOffsets[1],
+                            endTile = GridManager.chessTiles[xPos, yPos + 1]
+                        });
+                    }
+
+                    checkWhitePawnCaptures(startSquare, xPos, yPos);
+
+                }
+                else
+                {
+                    // if pawn has not moved, legal moves is a two square advance
+
+
+                    if (Squares[startSquare + whitePawnOffsets[1]] == Piece.Empty)
+                    {
+                        legalMoves.Add(new LegalMove
+                        {
+                            startSquare = startSquare,
+                            endSquare = startSquare + whitePawnOffsets[1],
+                            endTile = GridManager.chessTiles[xPos, yPos + 1]
+                        });
+                    }
+                    if (Squares[startSquare + (2 * whitePawnOffsets[1])] == Piece.Empty)
+                    {
+                        legalMoves.Add(new LegalMove
+                        {
+                            startSquare = startSquare,
+                            endSquare = startSquare + (2 * whitePawnOffsets[1]),
+                            endTile = GridManager.chessTiles[xPos, yPos + 2]
+                        });
+                    }
+
+                    checkWhitePawnCaptures(startSquare, xPos, yPos);
+                }
+
+
+            }
+            else
+            {
+                // if black pawn
+                if (decodedPieceStatus == 32)
+                {
+                    // if pawn has moved, legal moves is only a one square advance
+                }
+                else
+                {
+                    // if pawn has not moved, legal moves is a two square advance
+
+                }
+            }
 
         }
 
@@ -305,10 +398,13 @@ namespace Chess
             int decodedPiece = internalGamePiece & 7;
             int decodedColor = internalGamePiece & 24;
 
+            // if = 32, piece has moved, if 0, piece has not moved
+            int decodedPieceStatus = internalGamePiece & 32;
+
             switch (decodedPiece)
             {
                 case Piece.Pawn:
-                    calculatePawnMoves();
+                    calculatePawnMoves(startSquare, decodedColor, decodedPieceStatus, xTilePos, yTilePos);
                     break;
                 case Piece.Knight:
                     break;

@@ -20,5 +20,8 @@ namespace Chess
         public const int White = 8;
         public const int Black = 16;
 
+        // if this piece has moved this value should decode to 32
+        public const int hasMoved = 32;
+
     }
 }
