@@ -32,6 +32,9 @@ namespace Chess
 
         static readonly int[] pawnOffsets = { 7, 8, 9 };
 
+        static readonly int[,] knightOffsets = { { 17, -15, 15, -17 }, { 10, -6, 6, -10 } };
+
+
         public static void UpdateInternalState(float originalXPosition, float originalYPosition, float newXPosition, float newYPosition)
         {
             // grab current piece and store it
@@ -113,10 +116,11 @@ namespace Chess
                     if (Squares[startSquare + pawnOffsets[1]] == Piece.Empty)
                     {
                         AddLegalMove(startSquare, startSquare + pawnOffsets[1], GridManager.chessTiles[xPos, yPos + 1]);
-                    }
-                    if (Squares[startSquare + (2 * pawnOffsets[1])] == Piece.Empty)
-                    {
-                        AddLegalMove(startSquare, startSquare + (2 * pawnOffsets[1]), GridManager.chessTiles[xPos, yPos + 2]);
+
+                        if (Squares[startSquare + (2 * pawnOffsets[1])] == Piece.Empty)
+                        {
+                            AddLegalMove(startSquare, startSquare + (2 * pawnOffsets[1]), GridManager.chessTiles[xPos, yPos + 2]);
+                        }
                     }
 
                     checkWhitePawnCaptures(startSquare, xPos, yPos);
@@ -145,15 +149,61 @@ namespace Chess
                     if (Squares[startSquare - pawnOffsets[1]] == Piece.Empty)
                     {
                         AddLegalMove(startSquare, startSquare - pawnOffsets[1], GridManager.chessTiles[xPos, yPos - 1]);
-                    }
-                    if (Squares[startSquare - (2 * pawnOffsets[1])] == Piece.Empty)
-                    {
-                        AddLegalMove(startSquare, startSquare - (2 * pawnOffsets[1]), GridManager.chessTiles[xPos, yPos - 2]);
+
+                        if (Squares[startSquare - (2 * pawnOffsets[1])] == Piece.Empty)
+                        {
+                            AddLegalMove(startSquare, startSquare - (2 * pawnOffsets[1]), GridManager.chessTiles[xPos, yPos - 2]);
+                        }
                     }
 
                     checkBlackPawnCaptures(startSquare, xPos, yPos);
                 }
             }
+
+        }
+
+
+        private static void calculateKnightMovesHelper(Tile currentTile, int[] xOffsets, int[] yOffsets, int knightOffsetIndex, int startSquare, int decodedColor, int xPos, int yPos)
+        {
+            for (int i = 0; i < 2; i++) // Loop for x
+            {
+                int xOffset = xOffsets[i];
+                if (xOffset <= currentTile.distances.DistanceEast && xOffset >= -currentTile.distances.DistanceWest)
+                {
+                    for (int j = 0; j < 2; j++) // Loop for y
+                    {
+                        int yOffset = yOffsets[j];
+                        if (yOffset <= currentTile.distances.DistanceNorth && yOffset >= -currentTile.distances.DistanceSouth)
+                        {
+
+                            int offsetIndex = (i * 2 + j); // Calculate the offset index based on i and j
+
+                            if (Squares[startSquare + knightOffsets[knightOffsetIndex, offsetIndex]] != Piece.Empty)
+                            {
+                                if (decodedColor == (Squares[startSquare + knightOffsets[knightOffsetIndex, offsetIndex]] & 24))
+                                {
+                                    // same color piece
+                                    continue;
+                                }
+                            }
+
+                            AddLegalMove(startSquare, startSquare + knightOffsets[knightOffsetIndex, offsetIndex], GridManager.chessTiles[xPos + xOffset, yPos + yOffset]);
+                        }
+                    }
+                }
+            }
+        }
+        private static void calculateKnightMoves(Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
+        {
+
+            // {(𝑥±1,𝑦±2}∪{𝑥±2,y±1} represents available knight moves
+
+            int[] xOffsets = { 1, -1 };
+            int[] yOffsets = { 2, -2 };
+
+            calculateKnightMovesHelper(currentTile, xOffsets, yOffsets, 0, startSquare, decodedColor, xPos, yPos);
+            calculateKnightMovesHelper(currentTile, yOffsets, xOffsets, 1, startSquare, decodedColor, xPos, yPos);
+
 
         }
 
@@ -339,6 +389,7 @@ namespace Chess
                     calculatePawnMoves(startSquare, decodedColor, decodedPieceStatus, xTilePos, yTilePos);
                     break;
                 case Piece.Knight:
+                    calculateKnightMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
                     break;
                 case Piece.Rook:
                     calculateRookMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
