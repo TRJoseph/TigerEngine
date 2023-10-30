@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -23,6 +24,8 @@ namespace Chess
         }
 
         public static List<LegalMove> legalMoves = new List<LegalMove>();
+
+        private enum Direction { North, South, East, West, NorthWest, NorthEast, SouthWest, SouthEast };
 
         // west, north, east, south
         static readonly int[] cardinalOffsets = { -1, 8, 1, -8 };
@@ -61,7 +64,7 @@ namespace Chess
             });
         }
 
-        private static void checkWhitePawnCaptures(int startSquare, int xPos, int yPos)
+        private static void CheckWhitePawnCaptures(int startSquare, int xPos, int yPos)
         {
             // square one square northWest, checking if an enemy piece is there available for capture
             if (Squares[startSquare + pawnOffsets[0]] != Piece.Empty && (Squares[startSquare + pawnOffsets[0]] & 24) == Piece.Black)
@@ -75,7 +78,7 @@ namespace Chess
             }
         }
 
-        private static void checkBlackPawnCaptures(int startSquare, int xPos, int yPos)
+        private static void CheckBlackPawnCaptures(int startSquare, int xPos, int yPos)
         {
             // square one square southEast, checking if an enemy piece is there available for capture
             if (Squares[startSquare - pawnOffsets[0]] != Piece.Empty && (Squares[startSquare - pawnOffsets[0]] & 24) == Piece.White)
@@ -90,7 +93,7 @@ namespace Chess
             }
         }
 
-        private static void calculatePawnMoves(int startSquare, int decodedColor, int decodedPieceStatus, int xPos, int yPos)
+        private static void CalculatePawnMoves(int startSquare, int decodedColor, int decodedPieceStatus, int xPos, int yPos)
         {
             // if white pawn
             if (decodedColor == 8)
@@ -105,7 +108,7 @@ namespace Chess
                         AddLegalMove(startSquare, startSquare + pawnOffsets[1], GridManager.chessTiles[xPos, yPos + 1]);
                     }
 
-                    checkWhitePawnCaptures(startSquare, xPos, yPos);
+                    CheckWhitePawnCaptures(startSquare, xPos, yPos);
 
                 }
                 else
@@ -123,7 +126,7 @@ namespace Chess
                         }
                     }
 
-                    checkWhitePawnCaptures(startSquare, xPos, yPos);
+                    CheckWhitePawnCaptures(startSquare, xPos, yPos);
                 }
 
 
@@ -140,7 +143,7 @@ namespace Chess
                         AddLegalMove(startSquare, startSquare - pawnOffsets[1], GridManager.chessTiles[xPos, yPos - 1]);
                     }
 
-                    checkBlackPawnCaptures(startSquare, xPos, yPos);
+                    CheckBlackPawnCaptures(startSquare, xPos, yPos);
 
                 }
                 else
@@ -156,14 +159,14 @@ namespace Chess
                         }
                     }
 
-                    checkBlackPawnCaptures(startSquare, xPos, yPos);
+                    CheckBlackPawnCaptures(startSquare, xPos, yPos);
                 }
             }
 
         }
 
 
-        private static void calculateKnightMovesHelper(Tile currentTile, int[] xOffsets, int[] yOffsets, int knightOffsetIndex, int startSquare, int decodedColor, int xPos, int yPos)
+        private static void CalculateKnightMovesHelper(Tile currentTile, int[] xOffsets, int[] yOffsets, int knightOffsetIndex, int startSquare, int decodedColor, int xPos, int yPos)
         {
             for (int i = 0; i < 2; i++) // Loop for x
             {
@@ -193,7 +196,7 @@ namespace Chess
                 }
             }
         }
-        private static void calculateKnightMoves(Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
+        private static void CalculateKnightMoves(Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
         {
 
             // {(𝑥±1,𝑦±2}∪{𝑥±2,y±1} represents available knight moves
@@ -201,159 +204,111 @@ namespace Chess
             int[] xOffsets = { 1, -1 };
             int[] yOffsets = { 2, -2 };
 
-            calculateKnightMovesHelper(currentTile, xOffsets, yOffsets, 0, startSquare, decodedColor, xPos, yPos);
-            calculateKnightMovesHelper(currentTile, yOffsets, xOffsets, 1, startSquare, decodedColor, xPos, yPos);
+            CalculateKnightMovesHelper(currentTile, xOffsets, yOffsets, 0, startSquare, decodedColor, xPos, yPos);
+            CalculateKnightMovesHelper(currentTile, yOffsets, xOffsets, 1, startSquare, decodedColor, xPos, yPos);
 
 
         }
-
-        private static void calculateRookMoves(Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
+        
+        private static void CalculateSlidingPiecesMoves(int piece, Direction direction, Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
         {
+            // direction offset
+            int dOffset = 0, distance = 0;
+            int yHighLightOffset = 0, xHighLightOffset = 0;
 
-            // calculate legal moves north
-            for (int i = 1, northOffset = cardinalOffsets[1]; i <= currentTile.distances.DistanceNorth; i++, northOffset += cardinalOffsets[1])
+            // limits search algorithm to one square if the sliding piece is the king
+            int kingLimits = (piece == Piece.King ? 1 : int.MaxValue);
+
+            switch(direction)
+            {
+                case Direction.North:
+                    dOffset = cardinalOffsets[1];
+                    distance = currentTile.distances.DistanceNorth;
+                    yHighLightOffset = 1;
+                    break;
+                case Direction.South:
+                    dOffset = cardinalOffsets[3];
+                    distance = currentTile.distances.DistanceSouth;
+                    yHighLightOffset = -1;
+                    break;
+                case Direction.East:
+                    dOffset = cardinalOffsets[2];
+                    distance = currentTile.distances.DistanceEast;
+                    xHighLightOffset = 1;
+                    break;
+                case Direction.West:
+                    dOffset = cardinalOffsets[0];
+                    distance = currentTile.distances.DistanceWest;
+                    xHighLightOffset = -1;
+                    break;
+                case Direction.NorthWest:
+                    dOffset = interCardinalOffsets[0];
+                    distance = currentTile.distances.DistanceNorthWest;
+                    xHighLightOffset = -1;
+                    yHighLightOffset = 1;
+                    break;
+                case Direction.NorthEast:
+                    dOffset = interCardinalOffsets[1];
+                    distance = currentTile.distances.DistanceNorthEast;
+                    xHighLightOffset = 1;
+                    yHighLightOffset = 1;
+                    break;
+                case Direction.SouthWest:
+                    dOffset = interCardinalOffsets[3];
+                    distance = currentTile.distances.DistanceSouthWest;
+                    xHighLightOffset = -1;
+                    yHighLightOffset = -1;
+                    break;
+                case Direction.SouthEast:
+                    dOffset = interCardinalOffsets[2];
+                    distance = currentTile.distances.DistanceSouthEast;
+                    xHighLightOffset = 1;
+                    yHighLightOffset = -1;
+                    break;
+            }
+
+            for (int i = 1, offset = dOffset; i <= distance && i <= kingLimits; i++, offset += dOffset)
             {
                 //if a square is occupied by a piece of the same color, stop the loop
                 //by a different color, add the move and stop the loop(capturing the piece)
-                if (Squares[startSquare + northOffset] != Piece.Empty)
+                if (Squares[startSquare + offset] != Piece.Empty)
                 {
-                    if (decodedColor == (Squares[startSquare + northOffset] & 24))
+                    if (decodedColor == (Squares[startSquare + offset] & 24))
                     {
                         break;
                     }
                     else
                     {
-                        AddLegalMove(startSquare, startSquare + northOffset, GridManager.chessTiles[xPos, yPos + i]);
+                        AddLegalMove(startSquare, startSquare + offset, GridManager.chessTiles[xPos + (i * xHighLightOffset), yPos + (i * yHighLightOffset)]);
                         break;
                     }
                 }
-                AddLegalMove(startSquare, startSquare + northOffset, GridManager.chessTiles[xPos, yPos + i]);
-            }
-
-            for (int i = 1, southOffset = cardinalOffsets[3]; i <= currentTile.distances.DistanceSouth; i++, southOffset += cardinalOffsets[3])
-            {
-                if (Squares[startSquare + southOffset] != Piece.Empty)
-                {
-                    if (decodedColor == (Squares[startSquare + southOffset] & 24))
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        AddLegalMove(startSquare, startSquare + southOffset, GridManager.chessTiles[xPos, yPos - i]);
-                        break;
-                    }
-                }
-                AddLegalMove(startSquare, startSquare + southOffset, GridManager.chessTiles[xPos, yPos - i]);
-            }
-
-            for (int i = 1, eastOffset = cardinalOffsets[2]; i <= currentTile.distances.DistanceEast; i++, eastOffset += cardinalOffsets[2])
-            {
-                if (Squares[startSquare + eastOffset] != Piece.Empty)
-                {
-                    if (decodedColor == (Squares[startSquare + eastOffset] & 24))
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        AddLegalMove(startSquare, startSquare + eastOffset, GridManager.chessTiles[xPos + i, yPos]);
-                        break;
-                    }
-                }
-                AddLegalMove(startSquare, startSquare + eastOffset, GridManager.chessTiles[xPos + i, yPos]);
-            }
-
-            for (int i = 1, westOffset = cardinalOffsets[0]; i <= currentTile.distances.DistanceWest; i++, westOffset += cardinalOffsets[0])
-            {
-                if (Squares[startSquare + westOffset] != Piece.Empty)
-                {
-                    if (decodedColor == (Squares[startSquare + westOffset] & 24))
-                    {
-                        break;
-                    }
-                    else
-                    {
-
-                        AddLegalMove(startSquare, startSquare + westOffset, GridManager.chessTiles[xPos - i, yPos]);
-                        break;
-                    }
-                }
-                AddLegalMove(startSquare, startSquare + westOffset, GridManager.chessTiles[xPos - i, yPos]);
+                AddLegalMove(startSquare, startSquare + offset, GridManager.chessTiles[xPos + (i * xHighLightOffset), yPos + (i * yHighLightOffset)]);
             }
 
         }
 
-        private static void calculateBishopMoves(Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
+        private static void CalculateRookMoves(Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
         {
-            // calculate legal moves northwest
-            for (int i = 1, northWestOffset = interCardinalOffsets[0]; i <= currentTile.distances.DistanceNorthWest; i++, northWestOffset += interCardinalOffsets[0])
-            {
-                if (Squares[startSquare + northWestOffset] != Piece.Empty)
-                {
-                    if (decodedColor == (Squares[startSquare + northWestOffset] & 24))
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        AddLegalMove(startSquare, startSquare + northWestOffset, GridManager.chessTiles[xPos - i, yPos + i]);
-                        break;
-                    }
-                }
-                AddLegalMove(startSquare, startSquare + northWestOffset, GridManager.chessTiles[xPos - i, yPos + i]);
-            }
+            CalculateSlidingPiecesMoves(Piece.Rook, Direction.North, currentTile, startSquare, decodedColor, xPos, yPos);
+            CalculateSlidingPiecesMoves(Piece.Rook, Direction.South, currentTile, startSquare, decodedColor, xPos, yPos);
+            CalculateSlidingPiecesMoves(Piece.Rook, Direction.East, currentTile, startSquare, decodedColor, xPos, yPos);
+            CalculateSlidingPiecesMoves(Piece.Rook, Direction.West, currentTile, startSquare, decodedColor, xPos, yPos);
 
-            for (int i = 1, northEastOffset = interCardinalOffsets[1]; i <= currentTile.distances.DistanceNorthEast; i++, northEastOffset += interCardinalOffsets[1])
-            {
-                if (Squares[startSquare + northEastOffset] != Piece.Empty)
-                {
-                    if (decodedColor == (Squares[startSquare + northEastOffset] & 24))
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        AddLegalMove(startSquare, startSquare + northEastOffset, GridManager.chessTiles[xPos + i, yPos + i]);
-                        break;
-                    }
-                }
-                AddLegalMove(startSquare, startSquare + northEastOffset, GridManager.chessTiles[xPos + i, yPos + i]);
-            }
+        }
 
-            for (int i = 1, southWestOffset = interCardinalOffsets[3]; i <= currentTile.distances.DistanceSouthWest; i++, southWestOffset += interCardinalOffsets[3])
-            {
-                if (Squares[startSquare + southWestOffset] != Piece.Empty)
-                {
-                    if (decodedColor == (Squares[startSquare + southWestOffset] & 24))
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        AddLegalMove(startSquare, startSquare + southWestOffset, GridManager.chessTiles[xPos - i, yPos - i]);
-                        break;
-                    }
-                }
-                AddLegalMove(startSquare, startSquare + southWestOffset, GridManager.chessTiles[xPos - i, yPos - i]);
-            }
+        private static void CalculateBishopMoves(Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
+        {
+            CalculateSlidingPiecesMoves(Piece.Bishop, Direction.NorthWest, currentTile, startSquare, decodedColor, xPos, yPos);
+            CalculateSlidingPiecesMoves(Piece.Bishop, Direction.NorthEast, currentTile, startSquare, decodedColor, xPos, yPos);
+            CalculateSlidingPiecesMoves(Piece.Bishop, Direction.SouthWest, currentTile, startSquare, decodedColor, xPos, yPos);
+            CalculateSlidingPiecesMoves(Piece.Bishop, Direction.SouthEast, currentTile, startSquare, decodedColor, xPos, yPos);
+        }
 
-            for (int i = 1, southEastOffset = interCardinalOffsets[2]; i <= currentTile.distances.DistanceSouthEast; i++, southEastOffset += interCardinalOffsets[2])
-            {
-                if (Squares[startSquare + southEastOffset] != Piece.Empty)
-                {
-                    if (decodedColor == (Squares[startSquare + southEastOffset] & 24))
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        AddLegalMove(startSquare, startSquare + southEastOffset, GridManager.chessTiles[xPos + i, yPos - i]);
-
-                        break;
-                    }
-                }
-                AddLegalMove(startSquare, startSquare + southEastOffset, GridManager.chessTiles[xPos + i, yPos - i]);
+        private static void CalculateKingMoves(Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
+        {
+            foreach (Direction direction in Enum.GetValues(typeof(Direction))) {
+                CalculateSlidingPiecesMoves(Piece.King, direction, currentTile, startSquare, decodedColor, xPos, yPos);
             }
 
         }
@@ -386,23 +341,24 @@ namespace Chess
             switch (decodedPiece)
             {
                 case Piece.Pawn:
-                    calculatePawnMoves(startSquare, decodedColor, decodedPieceStatus, xTilePos, yTilePos);
+                    CalculatePawnMoves(startSquare, decodedColor, decodedPieceStatus, xTilePos, yTilePos);
                     break;
                 case Piece.Knight:
-                    calculateKnightMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
+                    CalculateKnightMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
                     break;
                 case Piece.Rook:
-                    calculateRookMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
+                    CalculateRookMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
                     break;
                 case Piece.Bishop:
-                    calculateBishopMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
+                    CalculateBishopMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
                     break;
                 case Piece.Queen:
                     // queen contains both movesets of a bishop and a rook
-                    calculateRookMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
-                    calculateBishopMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
+                    CalculateRookMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
+                    CalculateBishopMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
                     break;
                 case Piece.King:
+                    CalculateKingMoves(currentTile, startSquare, decodedColor, xTilePos, yTilePos);
                     break;
                 default:
                     return legalMoves;
