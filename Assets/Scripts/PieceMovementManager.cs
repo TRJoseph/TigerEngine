@@ -58,8 +58,9 @@ namespace Chess
                     {
                         legalMove = true;
                     }
+                    OnPieceMouseUp(legalMove);
                 }
-                OnPieceMouseUp(legalMove);
+
             }
         }
 
