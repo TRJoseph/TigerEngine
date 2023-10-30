@@ -160,7 +160,7 @@ namespace Chess
         private static void calculateRookMoves(Tile currentTile, int startSquare, int decodedColor, int xPos, int yPos)
         {
 
-            // calculate legal moves north (TODO still need to stop loop when enemy piece or friendly piece is seen)
+            // calculate legal moves north
             for (int i = 1, northOffset = cardinalOffsets[1]; i <= currentTile.distances.DistanceNorth; i++, northOffset += cardinalOffsets[1])
             {
                 //if a square is occupied by a piece of the same color, stop the loop
