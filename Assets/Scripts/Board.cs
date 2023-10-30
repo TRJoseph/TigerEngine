@@ -30,9 +30,7 @@ namespace Chess
         // northwest, northeast, southeast, southwest
         static readonly int[] interCardinalOffsets = { 7, 9, -7, -9 };
 
-        static readonly int[] whitePawnOffsets = { 7, 8, 9 };
-
-        static readonly int[] blackPawnOffsets = { -9, -8, -7 };
+        static readonly int[] pawnOffsets = { 7, 8, 9 };
 
         public static void UpdateInternalState(float originalXPosition, float originalYPosition, float newXPosition, float newYPosition)
         {
@@ -63,20 +61,30 @@ namespace Chess
         private static void checkWhitePawnCaptures(int startSquare, int xPos, int yPos)
         {
             // square one square northWest, checking if an enemy piece is there available for capture
-            if (Squares[startSquare + whitePawnOffsets[0]] != Piece.Empty && (Squares[startSquare + whitePawnOffsets[0]] & 24) == Piece.Black)
+            if (Squares[startSquare + pawnOffsets[0]] != Piece.Empty && (Squares[startSquare + pawnOffsets[0]] & 24) == Piece.Black)
             {
-                AddLegalMove(startSquare, whitePawnOffsets[0], GridManager.chessTiles[xPos - 1, yPos + 1]);
+                AddLegalMove(startSquare, startSquare + pawnOffsets[0], GridManager.chessTiles[xPos - 1, yPos + 1]);
             }
             // square one square northEast, checking if an enemy piece is there available for capture
-            if (Squares[startSquare + whitePawnOffsets[2]] != Piece.Empty && (Squares[startSquare + whitePawnOffsets[2]] & 24) == Piece.Black)
+            if (Squares[startSquare + pawnOffsets[2]] != Piece.Empty && (Squares[startSquare + pawnOffsets[2]] & 24) == Piece.Black)
             {
-                AddLegalMove(startSquare, whitePawnOffsets[2], GridManager.chessTiles[xPos + 1, yPos + 1]);
+                AddLegalMove(startSquare, startSquare + pawnOffsets[2], GridManager.chessTiles[xPos + 1, yPos + 1]);
             }
         }
 
-        private static void checkBlackPawnCapture()
+        private static void checkBlackPawnCaptures(int startSquare, int xPos, int yPos)
         {
+            // square one square southEast, checking if an enemy piece is there available for capture
+            if (Squares[startSquare - pawnOffsets[0]] != Piece.Empty && (Squares[startSquare - pawnOffsets[0]] & 24) == Piece.White)
+            {
+                AddLegalMove(startSquare, startSquare - pawnOffsets[0], GridManager.chessTiles[xPos + 1, yPos - 1]);
+            }
 
+            // square one square southWest, checking if an enemy piece is there available for capture
+            if (Squares[startSquare - pawnOffsets[2]] != Piece.Empty && (Squares[startSquare - pawnOffsets[2]] & 24) == Piece.White)
+            {
+                AddLegalMove(startSquare, startSquare - pawnOffsets[2], GridManager.chessTiles[xPos - 1, yPos - 1]);
+            }
         }
 
         private static void calculatePawnMoves(int startSquare, int decodedColor, int decodedPieceStatus, int xPos, int yPos)
@@ -89,9 +97,9 @@ namespace Chess
                     // if pawn has moved, legal moves is only a one square advance
 
                     // checks if the square in front of the pawn is empty
-                    if (Squares[startSquare + whitePawnOffsets[1]] == Piece.Empty)
+                    if (Squares[startSquare + pawnOffsets[1]] == Piece.Empty)
                     {
-                        AddLegalMove(startSquare, whitePawnOffsets[1], GridManager.chessTiles[xPos, yPos + 1]);
+                        AddLegalMove(startSquare, startSquare + pawnOffsets[1], GridManager.chessTiles[xPos, yPos + 1]);
                     }
 
                     checkWhitePawnCaptures(startSquare, xPos, yPos);
@@ -102,23 +110,13 @@ namespace Chess
                     // if pawn has not moved, legal moves is a two square advance
 
 
-                    if (Squares[startSquare + whitePawnOffsets[1]] == Piece.Empty)
+                    if (Squares[startSquare + pawnOffsets[1]] == Piece.Empty)
                     {
-                        legalMoves.Add(new LegalMove
-                        {
-                            startSquare = startSquare,
-                            endSquare = startSquare + whitePawnOffsets[1],
-                            endTile = GridManager.chessTiles[xPos, yPos + 1]
-                        });
+                        AddLegalMove(startSquare, startSquare + pawnOffsets[1], GridManager.chessTiles[xPos, yPos + 1]);
                     }
-                    if (Squares[startSquare + (2 * whitePawnOffsets[1])] == Piece.Empty)
+                    if (Squares[startSquare + (2 * pawnOffsets[1])] == Piece.Empty)
                     {
-                        legalMoves.Add(new LegalMove
-                        {
-                            startSquare = startSquare,
-                            endSquare = startSquare + (2 * whitePawnOffsets[1]),
-                            endTile = GridManager.chessTiles[xPos, yPos + 2]
-                        });
+                        AddLegalMove(startSquare, startSquare + (2 * pawnOffsets[1]), GridManager.chessTiles[xPos, yPos + 2]);
                     }
 
                     checkWhitePawnCaptures(startSquare, xPos, yPos);
@@ -132,11 +130,28 @@ namespace Chess
                 if (decodedPieceStatus == 32)
                 {
                     // if pawn has moved, legal moves is only a one square advance
+
+                    if (Squares[startSquare - pawnOffsets[1]] == Piece.Empty)
+                    {
+                        AddLegalMove(startSquare, startSquare - pawnOffsets[1], GridManager.chessTiles[xPos, yPos - 1]);
+                    }
+
+                    checkBlackPawnCaptures(startSquare, xPos, yPos);
+
                 }
                 else
                 {
                     // if pawn has not moved, legal moves is a two square advance
+                    if (Squares[startSquare - pawnOffsets[1]] == Piece.Empty)
+                    {
+                        AddLegalMove(startSquare, startSquare - pawnOffsets[1], GridManager.chessTiles[xPos, yPos - 1]);
+                    }
+                    if (Squares[startSquare - (2 * pawnOffsets[1])] == Piece.Empty)
+                    {
+                        AddLegalMove(startSquare, startSquare - (2 * pawnOffsets[1]), GridManager.chessTiles[xPos, yPos - 2]);
+                    }
 
+                    checkBlackPawnCaptures(startSquare, xPos, yPos);
                 }
             }
 
@@ -158,21 +173,11 @@ namespace Chess
                     }
                     else
                     {
-                        legalMoves.Add(new LegalMove
-                        {
-                            startSquare = startSquare,
-                            endSquare = startSquare + northOffset,
-                            endTile = GridManager.chessTiles[xPos, yPos + i]
-                        });
+                        AddLegalMove(startSquare, startSquare + northOffset, GridManager.chessTiles[xPos, yPos + i]);
                         break;
                     }
                 }
-                legalMoves.Add(new LegalMove
-                {
-                    startSquare = startSquare,
-                    endSquare = startSquare + northOffset,
-                    endTile = GridManager.chessTiles[xPos, yPos + i]
-                });
+                AddLegalMove(startSquare, startSquare + northOffset, GridManager.chessTiles[xPos, yPos + i]);
             }
 
             for (int i = 1, southOffset = cardinalOffsets[3]; i <= currentTile.distances.DistanceSouth; i++, southOffset += cardinalOffsets[3])
@@ -185,21 +190,11 @@ namespace Chess
                     }
                     else
                     {
-                        legalMoves.Add(new LegalMove
-                        {
-                            startSquare = startSquare,
-                            endSquare = startSquare + southOffset,
-                            endTile = GridManager.chessTiles[xPos, yPos - i]
-                        });
+                        AddLegalMove(startSquare, startSquare + southOffset, GridManager.chessTiles[xPos, yPos - i]);
                         break;
                     }
                 }
-                legalMoves.Add(new LegalMove
-                {
-                    startSquare = startSquare,
-                    endSquare = startSquare + southOffset,
-                    endTile = GridManager.chessTiles[xPos, yPos - i]
-                });
+                AddLegalMove(startSquare, startSquare + southOffset, GridManager.chessTiles[xPos, yPos - i]);
             }
 
             for (int i = 1, eastOffset = cardinalOffsets[2]; i <= currentTile.distances.DistanceEast; i++, eastOffset += cardinalOffsets[2])
@@ -212,21 +207,11 @@ namespace Chess
                     }
                     else
                     {
-                        legalMoves.Add(new LegalMove
-                        {
-                            startSquare = startSquare,
-                            endSquare = startSquare + eastOffset,
-                            endTile = GridManager.chessTiles[xPos + i, yPos]
-                        });
+                        AddLegalMove(startSquare, startSquare + eastOffset, GridManager.chessTiles[xPos + i, yPos]);
                         break;
                     }
                 }
-                legalMoves.Add(new LegalMove
-                {
-                    startSquare = startSquare,
-                    endSquare = startSquare + eastOffset,
-                    endTile = GridManager.chessTiles[xPos + i, yPos]
-                });
+                AddLegalMove(startSquare, startSquare + eastOffset, GridManager.chessTiles[xPos + i, yPos]);
             }
 
             for (int i = 1, westOffset = cardinalOffsets[0]; i <= currentTile.distances.DistanceWest; i++, westOffset += cardinalOffsets[0])
@@ -239,21 +224,12 @@ namespace Chess
                     }
                     else
                     {
-                        legalMoves.Add(new LegalMove
-                        {
-                            startSquare = startSquare,
-                            endSquare = startSquare + westOffset,
-                            endTile = GridManager.chessTiles[xPos - i, yPos]
-                        });
+
+                        AddLegalMove(startSquare, startSquare + westOffset, GridManager.chessTiles[xPos - i, yPos]);
                         break;
                     }
                 }
-                legalMoves.Add(new LegalMove
-                {
-                    startSquare = startSquare,
-                    endSquare = startSquare + westOffset,
-                    endTile = GridManager.chessTiles[xPos - i, yPos]
-                });
+                AddLegalMove(startSquare, startSquare + westOffset, GridManager.chessTiles[xPos - i, yPos]);
             }
 
         }
@@ -271,21 +247,11 @@ namespace Chess
                     }
                     else
                     {
-                        legalMoves.Add(new LegalMove
-                        {
-                            startSquare = startSquare,
-                            endSquare = startSquare + northWestOffset,
-                            endTile = GridManager.chessTiles[xPos - i, yPos + i]
-                        });
+                        AddLegalMove(startSquare, startSquare + northWestOffset, GridManager.chessTiles[xPos - i, yPos + i]);
                         break;
                     }
                 }
-                legalMoves.Add(new LegalMove
-                {
-                    startSquare = startSquare,
-                    endSquare = startSquare + northWestOffset,
-                    endTile = GridManager.chessTiles[xPos - i, yPos + i]
-                });
+                AddLegalMove(startSquare, startSquare + northWestOffset, GridManager.chessTiles[xPos - i, yPos + i]);
             }
 
             for (int i = 1, northEastOffset = interCardinalOffsets[1]; i <= currentTile.distances.DistanceNorthEast; i++, northEastOffset += interCardinalOffsets[1])
@@ -298,21 +264,11 @@ namespace Chess
                     }
                     else
                     {
-                        legalMoves.Add(new LegalMove
-                        {
-                            startSquare = startSquare,
-                            endSquare = startSquare + northEastOffset,
-                            endTile = GridManager.chessTiles[xPos + i, yPos + i]
-                        });
+                        AddLegalMove(startSquare, startSquare + northEastOffset, GridManager.chessTiles[xPos + i, yPos + i]);
                         break;
                     }
                 }
-                legalMoves.Add(new LegalMove
-                {
-                    startSquare = startSquare,
-                    endSquare = startSquare + northEastOffset,
-                    endTile = GridManager.chessTiles[xPos + i, yPos + i]
-                });
+                AddLegalMove(startSquare, startSquare + northEastOffset, GridManager.chessTiles[xPos + i, yPos + i]);
             }
 
             for (int i = 1, southWestOffset = interCardinalOffsets[3]; i <= currentTile.distances.DistanceSouthWest; i++, southWestOffset += interCardinalOffsets[3])
@@ -325,21 +281,11 @@ namespace Chess
                     }
                     else
                     {
-                        legalMoves.Add(new LegalMove
-                        {
-                            startSquare = startSquare,
-                            endSquare = startSquare + southWestOffset,
-                            endTile = GridManager.chessTiles[xPos - i, yPos - i]
-                        });
+                        AddLegalMove(startSquare, startSquare + southWestOffset, GridManager.chessTiles[xPos - i, yPos - i]);
                         break;
                     }
                 }
-                legalMoves.Add(new LegalMove
-                {
-                    startSquare = startSquare,
-                    endSquare = startSquare + southWestOffset,
-                    endTile = GridManager.chessTiles[xPos - i, yPos - i]
-                });
+                AddLegalMove(startSquare, startSquare + southWestOffset, GridManager.chessTiles[xPos - i, yPos - i]);
             }
 
             for (int i = 1, southEastOffset = interCardinalOffsets[2]; i <= currentTile.distances.DistanceSouthEast; i++, southEastOffset += interCardinalOffsets[2])
@@ -352,21 +298,12 @@ namespace Chess
                     }
                     else
                     {
-                        legalMoves.Add(new LegalMove
-                        {
-                            startSquare = startSquare,
-                            endSquare = startSquare + southEastOffset,
-                            endTile = GridManager.chessTiles[xPos + i, yPos - i]
-                        });
+                        AddLegalMove(startSquare, startSquare + southEastOffset, GridManager.chessTiles[xPos + i, yPos - i]);
+
                         break;
                     }
                 }
-                legalMoves.Add(new LegalMove
-                {
-                    startSquare = startSquare,
-                    endSquare = startSquare + southEastOffset,
-                    endTile = GridManager.chessTiles[xPos + i, yPos - i]
-                });
+                AddLegalMove(startSquare, startSquare + southEastOffset, GridManager.chessTiles[xPos + i, yPos - i]);
             }
 
         }
