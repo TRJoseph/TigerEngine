@@ -138,6 +138,7 @@ namespace Chess
                 if (pieceOnTile == selectedPiece.transform.gameObject || !legalMove)
                 {
                     selectedPiece.transform.position = originalPosition;
+                    selectedPiece = null;
                     return;
                 }
 
