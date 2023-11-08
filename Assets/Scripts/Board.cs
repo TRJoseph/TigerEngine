@@ -1,5 +1,6 @@
 using JetBrains.Annotations;
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -44,8 +45,6 @@ namespace Chess
         }
 
         public static List<LegalMove> legalMoves = new List<LegalMove>();
-
-        public static List<LegalMove> allLegalMoves = new List<LegalMove>();
 
         private enum Direction { North, South, East, West, NorthWest, NorthEast, SouthWest, SouthEast };
 
@@ -230,7 +229,7 @@ namespace Chess
 
 
         }
-        
+
         private static void CalculateSlidingPiecesMoves(int piece, Direction direction, int startSquare, int decodedColor)
         {
             // direction offset
@@ -239,7 +238,7 @@ namespace Chess
             // limits search algorithm to one square if the sliding piece is the king
             int kingLimits = (piece == Piece.King ? 1 : int.MaxValue);
 
-            switch(direction)
+            switch (direction)
             {
                 case Direction.North:
                     dOffset = cardinalOffsets[1];
@@ -315,8 +314,58 @@ namespace Chess
 
         private static void CalculateKingMoves(int startSquare, int decodedColor)
         {
-            foreach (Direction direction in Enum.GetValues(typeof(Direction))) {
+            foreach (Direction direction in Enum.GetValues(typeof(Direction)))
+            {
                 CalculateSlidingPiecesMoves(Piece.King, direction, startSquare, decodedColor);
+            }
+
+        }
+
+        private static void CheckKingSideCastle(int startSquare)
+        {
+            // decodes piece move status; if king or rook on kingside has moved, castling not allowed
+            if ((Squares[startSquare].encodedPiece & 32) == 32 || ((Squares[startSquare + 3].encodedPiece & 32) == 32))
+            {
+                return;
+            }
+
+            // check if squares king is leaving, crossing-over, or finishing on are not under attack
+
+            // TODO: refine the 'legalMoves' filtering logic to exclude moves that jeopardize the king's safety when castling
+            // currently, 'legalMoves' includes friendly moves that incorrectly indicate the king's path as safe for traversal during castling
+            // need to ensure that moves do not put the king into or through check
+            for (int i = startSquare; i < (startSquare + 3); i++)
+            {
+                // if (legalMoves.Any(move => move.endSquare == i))
+                // {
+                //     return;
+                // }
+            }
+
+            // check for empty squares between rook and king
+            for (int i = startSquare + 1; i < (startSquare + 3); i++)
+            {
+                if (Squares[i].encodedPiece != Piece.Empty)
+                {
+                    return;
+                }
+
+            }
+
+
+            /* TODO, this legal move needs to have some extra functionality built in some how to move the rook as well,
+            maybe a flag in the legal move marking a special move */
+            AddLegalMove(startSquare, startSquare + 2);
+
+
+        }
+
+        private static void CheckQueenSideCastle(int startSquare)
+        {
+            // decodes piece move status; if king or rook on queenside has moved, castling not allowed
+            if ((Squares[startSquare].encodedPiece & 32) == 32 || ((Squares[startSquare - 4].encodedPiece & 32) == 32))
+            {
+                return;
             }
 
         }
@@ -330,16 +379,17 @@ namespace Chess
         {
 
             // this calculates 
-            for(int startSquare = 0; startSquare < BoardSize; startSquare++)
+            for (int startSquare = 0; startSquare < BoardSize; startSquare++)
             {
-                if(whiteToMove)
+                if (whiteToMove)
                 {
                     if ((Squares[startSquare].encodedPiece & 24) == 8)
                     {
                         CalculateLegalMoves(startSquare, Squares[startSquare].encodedPiece);
                     }
 
-                } else
+                }
+                else
                 {
                     if ((Squares[startSquare].encodedPiece & 24) == 16)
                     {
@@ -354,7 +404,7 @@ namespace Chess
 
         public static List<LegalMove> CalculateLegalMoves(int startSquare, int internalGamePiece)
         {
-            
+
 
             int decodedPiece = internalGamePiece & 7;
             int decodedColor = internalGamePiece & 24;
@@ -383,6 +433,10 @@ namespace Chess
                     break;
                 case Piece.King:
                     CalculateKingMoves(startSquare, decodedColor);
+
+                    // check for castling ability
+                    CheckKingSideCastle(startSquare);
+                    CheckQueenSideCastle(startSquare);
                     break;
                 default:
                     return legalMoves;
