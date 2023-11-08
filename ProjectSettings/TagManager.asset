@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 2
   tags:
   - ChessTile
+  - Highlight
   layers:
   - Default
   - TransparentFX

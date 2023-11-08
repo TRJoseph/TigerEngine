@@ -127,7 +127,7 @@ namespace Chess
                     int pieceColor = char.IsUpper(FENString[i]) ? Piece.White : Piece.Black;
 
                     // represented in binary with or operator
-                    Board.Squares[rank * 8 + file] = pieceColor | piece;
+                    Board.Squares[rank * 8 + file].encodedPiece = pieceColor | piece;
 
                     file++;
                 }
@@ -145,15 +145,27 @@ namespace Chess
                 for (int file = 0; file < 8; file++)
                 {
                     // Board.Squares[rank * 8 + file];
-                    chessTiles[file, rank].distances.DistanceNorth = 7 - rank;
-                    chessTiles[file, rank].distances.DistanceSouth = rank;
-                    chessTiles[file, rank].distances.DistanceWest = file;
-                    chessTiles[file, rank].distances.DistanceEast = 7 - file;
+                    //chessTiles[file, rank].distances.DistanceNorth = 7 - rank;
+                    //chessTiles[file, rank].distances.DistanceSouth = rank;
+                    //chessTiles[file, rank].distances.DistanceWest = file;
+                    //chessTiles[file, rank].distances.DistanceEast = 7 - file;
 
-                    chessTiles[file, rank].distances.DistanceNorthWest = Math.Min(chessTiles[file, rank].distances.DistanceNorth, chessTiles[file, rank].distances.DistanceWest);
-                    chessTiles[file, rank].distances.DistanceNorthEast = Math.Min(chessTiles[file, rank].distances.DistanceNorth, chessTiles[file, rank].distances.DistanceEast);
-                    chessTiles[file, rank].distances.DistanceSouthWest = Math.Min(chessTiles[file, rank].distances.DistanceSouth, chessTiles[file, rank].distances.DistanceWest);
-                    chessTiles[file, rank].distances.DistanceSouthEast = Math.Min(chessTiles[file, rank].distances.DistanceSouth, chessTiles[file, rank].distances.DistanceEast);
+                    //chessTiles[file, rank].distances.DistanceNorthWest = Math.Min(chessTiles[file, rank].distances.DistanceNorth, chessTiles[file, rank].distances.DistanceWest);
+                    //chessTiles[file, rank].distances.DistanceNorthEast = Math.Min(chessTiles[file, rank].distances.DistanceNorth, chessTiles[file, rank].distances.DistanceEast);
+                    //chessTiles[file, rank].distances.DistanceSouthWest = Math.Min(chessTiles[file, rank].distances.DistanceSouth, chessTiles[file, rank].distances.DistanceWest);
+                    //chessTiles[file, rank].distances.DistanceSouthEast = Math.Min(chessTiles[file, rank].distances.DistanceSouth, chessTiles[file, rank].distances.DistanceEast);
+
+                    int currentSquareIndex = rank * 8 + file;
+
+                    Board.Squares[currentSquareIndex].DistanceNorth = 7 - rank;
+                    Board.Squares[currentSquareIndex].DistanceSouth = rank;
+                    Board.Squares[currentSquareIndex].DistanceWest = file;
+                    Board.Squares[currentSquareIndex].DistanceEast = 7 - file;
+
+                    Board.Squares[currentSquareIndex].DistanceNorthWest = Math.Min(Board.Squares[currentSquareIndex].DistanceNorth, Board.Squares[currentSquareIndex].DistanceWest);
+                    Board.Squares[currentSquareIndex].DistanceNorthEast = Math.Min(Board.Squares[currentSquareIndex].DistanceNorth, Board.Squares[currentSquareIndex].DistanceEast);
+                    Board.Squares[currentSquareIndex].DistanceSouthWest = Math.Min(Board.Squares[currentSquareIndex].DistanceSouth, Board.Squares[currentSquareIndex].DistanceWest);
+                    Board.Squares[currentSquareIndex].DistanceSouthEast = Math.Min(Board.Squares[currentSquareIndex].DistanceSouth, Board.Squares[currentSquareIndex].DistanceEast);
 
                 }
             }
@@ -168,7 +180,7 @@ namespace Chess
             {
                 for (int file = 0; file < 8; file++)
                 {
-                    int encodedPiece = Board.Squares[rank * 8 + file];
+                    int encodedPiece = Board.Squares[rank * 8 + file].encodedPiece;
 
                     int decodedPieceColor = encodedPiece & 24;
                     int decodedPiece = encodedPiece & 7;

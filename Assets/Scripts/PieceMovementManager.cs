@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -18,6 +19,11 @@ namespace Chess
         private Vector3 offset;
 
         private Vector3 originalPosition;
+
+        void Start()
+        {
+            Board.CalculateAllLegalMoves(GridManager.whiteToMove);
+        }
 
         void Update()
         {
@@ -86,8 +92,8 @@ namespace Chess
                 }
             }
 
-            List<Board.LegalMove> legalMoves = Board.CalculateLegalMoves(selectedPiece.transform);
-            DisplayLegalMoves(legalMoves);
+
+            DisplayLegalMoves(selectedPiece.transform.position.x, selectedPiece.transform.position.y);
 
             isDragging = true;
             Vector3 mousePos = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, -Camera.main.transform.position.z));
@@ -97,9 +103,6 @@ namespace Chess
         private void OnPieceMouseUp(bool legalMove)
         {
             isDragging = false;
-
-
-            Board.ClearListMoves();
 
             /* this might be moved to after SnapToNearestSquare, checking if a the 
              * move attempted was actually valid, determining whether or not to remove the highlights*/
@@ -202,9 +205,13 @@ namespace Chess
 
                 GridManager.whiteToMove = !GridManager.whiteToMove;
 
+                // wipe the available moves once a move is executed
+                Board.ClearListMoves();
+
                 // update the internal board state when a move is made
                 Board.UpdateInternalState(originalPosition.x, originalPosition.y, selectedPiece.transform.position.x, selectedPiece.transform.position.y);
 
+                Board.CalculateAllLegalMoves(GridManager.whiteToMove);
 
                 // TODO COME UP WITH BETTER WAY TO DO THIS
                 // there will only be one instance of the UI controller so this is okay to do (for now)
@@ -213,14 +220,21 @@ namespace Chess
         }
 
 
-        private void DisplayLegalMoves(List<Board.LegalMove> legalMoves)
+        private void DisplayLegalMoves(float xPos, float yPos)
         {
-            foreach (Board.LegalMove move in legalMoves)
-            {
-                GameObject overlay = Instantiate(highlightOverlayPrefab, move.endTile.transform.position, Quaternion.identity);
-                overlay.transform.SetParent(move.endTile.transform);
-            }
 
+            var selectedPiece = Board.Squares[(int)yPos * 8 + (int)xPos];
+
+            int selectedPieceSquare = (int)yPos * 8 + (int)xPos;
+
+            foreach (var move in Board.legalMoves)
+            {
+                if(selectedPieceSquare == move.startSquare)
+                {
+                    Vector2 newPos2 = new Vector2(move.endSquare % 8, move.endSquare / 8);
+                    GameObject overlay2 = Instantiate(highlightOverlayPrefab, newPos2, Quaternion.identity);
+                }
+            }
         }
 
 
