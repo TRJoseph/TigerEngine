@@ -1,7 +1,8 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Data.SqlTypes;
+using System.Diagnostics.Tracing;
+using System.Runtime.CompilerServices;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -215,11 +216,11 @@ namespace Chess
             // update who's move it is
             GridManager.whiteToMove = !GridManager.whiteToMove;
 
-            // wipe the available moves once a move is executed
-            Board.ClearListMoves();
-
             // update the internal board state when a move is made
             Board.UpdateInternalState(originalPosition.x, originalPosition.y, selectedPiece.transform.position.x, selectedPiece.transform.position.y);
+
+            // wipe the available moves once a move is executed
+            Board.ClearListMoves();
 
             Board.CalculateAllLegalMoves(GridManager.whiteToMove);
 
@@ -228,6 +229,68 @@ namespace Chess
             UIController.Instance.UpdateMoveStatusText(GridManager.whiteToMove);
         }
 
+        private static void DoKingSideCastle(int oldRookXPos, int oldRookYPos)
+        {
+
+            /* This section will be handling king side castling*/
+            int newKingSideRookXpos = oldRookXPos - 2;
+
+            // grab piece, if null, break expression
+            PieceRender kingSideRook = FindChessPieceGameObject(oldRookXPos, oldRookYPos) ?? throw new Exception();
+
+            // grab tile, if null, break expression
+            Tile newTile = FindTileGameObject(newKingSideRookXpos, oldRookYPos) ?? throw new Exception();
+
+            // set current king-side rook tile (which will now be the old tile in the corner) to null (empty)
+            kingSideRook.occupiedTile.OccupyingPiece = null;
+
+            // set rook piece's occupied tile to the new tile that it is now on
+            kingSideRook.occupiedTile = newTile;
+            kingSideRook.transform.position = new Vector3(newKingSideRookXpos, oldRookYPos);
+
+            // set new tile's currently occupied piece to the kingside rook
+            newTile.OccupyingPiece = kingSideRook.gameObject;
+
+            /* ************ */
+        }
+
+        public static void UpdateFrontEndSpecialMove(int oldRookXPos, int oldRookYPos)
+        {
+
+            // this const is temporary until the other
+            const bool dokingsidecastle = true;
+
+            if (dokingsidecastle)
+            {
+                DoKingSideCastle(oldRookXPos, oldRookYPos);
+            }
+
+
+        }
+
+        private static PieceRender FindChessPieceGameObject(int xPos, int yPos)
+        {
+            // Assuming each piece has a script that holds its board position and type
+            foreach (var piece in GameObject.FindObjectsOfType<PieceRender>())
+            {
+                if (piece.transform.position.x == xPos && piece.transform.position.y == yPos)
+                {
+                    return piece;
+                }
+            }
+            return null;
+        }
+
+        private static Tile FindTileGameObject(int xPos, int yPos)
+        {
+            foreach (var tile in GameObject.FindObjectsOfType<Tile>())
+            {
+                if (tile.transform.position.x == xPos && tile.transform.position.y == yPos)
+                    return tile;
+            }
+
+            return null;
+        }
 
         private void DisplayLegalMoves(float xPos, float yPos)
         {
@@ -245,7 +308,6 @@ namespace Chess
                 }
             }
         }
-
 
         private void RemoveLegalMoveHighlights()
         {

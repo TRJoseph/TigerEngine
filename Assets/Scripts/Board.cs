@@ -41,7 +41,10 @@ namespace Chess
             public int startSquare;
             public int endSquare;
 
-            public Tile endTile;
+
+            // special move flags
+            public bool? castling;
+            public bool? enPassant;
         }
 
         public static List<LegalMove> legalMoves = new List<LegalMove>();
@@ -61,6 +64,7 @@ namespace Chess
 
         public static void UpdateInternalState(float originalXPosition, float originalYPosition, float newXPosition, float newYPosition)
         {
+            int newPieceMove = (int)newYPosition * 8 + (int)newXPosition;
             // grab current piece and store it
             int currentPiece = Squares[(int)originalYPosition * 8 + (int)originalXPosition].encodedPiece;
 
@@ -71,16 +75,39 @@ namespace Chess
             Squares[(int)originalYPosition * 8 + (int)originalXPosition].encodedPiece = Piece.Empty;
 
             // placing the piece in its new position
-            Squares[(int)newYPosition * 8 + (int)newXPosition].encodedPiece = currentPiece;
+            Squares[newPieceMove].encodedPiece = currentPiece;
+
+            // check for special move flags
+
+            // TODO: fix for queenside castling (may need to have two special move flags, one for kingside and one for queenside) and add en passant check
+            if (legalMoves.Any(move => move.endSquare == newPieceMove && move.castling == true))
+            {
+
+                // grab rook in the corner on kingside
+                int cornerRook = Squares[newPieceMove + 1].encodedPiece;
+
+                Squares[newPieceMove + 1].encodedPiece = Piece.Empty;
+
+                // update move and piece move status
+                Squares[newPieceMove - 1].encodedPiece = cornerRook | 32;
+
+                // TODO, add extra parameters to the UpdateFrontEndSpecialMove to handle other special moves
+                // updates front end board representation
+                PieceMovementManager.UpdateFrontEndSpecialMove((int)newXPosition + 1, (int)newYPosition);
+
+            }
 
         }
 
-        private static void AddLegalMove(int startSquare, int endSquare)
+        private static void AddLegalMove(int startSquare, int endSquare, bool? castling, bool? enPassant)
         {
             legalMoves.Add(new LegalMove
             {
                 startSquare = startSquare,
-                endSquare = endSquare
+                endSquare = endSquare,
+                castling = castling,
+                enPassant = enPassant
+
             });
         }
 
@@ -89,12 +116,12 @@ namespace Chess
             // square one square northWest, checking if an enemy piece is there available for capture
             if (Squares[startSquare + pawnOffsets[0]].encodedPiece != Piece.Empty && (Squares[startSquare + pawnOffsets[0]].encodedPiece & 24) == Piece.Black)
             {
-                AddLegalMove(startSquare, startSquare + pawnOffsets[0]);
+                AddLegalMove(startSquare, startSquare + pawnOffsets[0], false, false);
             }
             // square one square northEast, checking if an enemy piece is there available for capture
             if (Squares[startSquare + pawnOffsets[2]].encodedPiece != Piece.Empty && (Squares[startSquare + pawnOffsets[2]].encodedPiece & 24) == Piece.Black)
             {
-                AddLegalMove(startSquare, startSquare + pawnOffsets[2]);
+                AddLegalMove(startSquare, startSquare + pawnOffsets[2], false, false);
             }
         }
 
@@ -103,13 +130,13 @@ namespace Chess
             // square one square southEast, checking if an enemy piece is there available for capture
             if (Squares[startSquare - pawnOffsets[0]].encodedPiece != Piece.Empty && (Squares[startSquare - pawnOffsets[0]].encodedPiece & 24) == Piece.White)
             {
-                AddLegalMove(startSquare, startSquare - pawnOffsets[0]);
+                AddLegalMove(startSquare, startSquare - pawnOffsets[0], false, false);
             }
 
             // square one square southWest, checking if an enemy piece is there available for capture
             if (Squares[startSquare - pawnOffsets[2]].encodedPiece != Piece.Empty && (Squares[startSquare - pawnOffsets[2]].encodedPiece & 24) == Piece.White)
             {
-                AddLegalMove(startSquare, startSquare - pawnOffsets[2]);
+                AddLegalMove(startSquare, startSquare - pawnOffsets[2], false, false);
             }
         }
 
@@ -125,7 +152,7 @@ namespace Chess
                     // checks if the square in front of the pawn is empty
                     if (Squares[startSquare + pawnOffsets[1]].encodedPiece == Piece.Empty)
                     {
-                        AddLegalMove(startSquare, startSquare + pawnOffsets[1]);
+                        AddLegalMove(startSquare, startSquare + pawnOffsets[1], false, false);
                     }
 
                     CheckWhitePawnCaptures(startSquare);
@@ -138,11 +165,11 @@ namespace Chess
 
                     if (Squares[startSquare + pawnOffsets[1]].encodedPiece == Piece.Empty)
                     {
-                        AddLegalMove(startSquare, startSquare + pawnOffsets[1]);
+                        AddLegalMove(startSquare, startSquare + pawnOffsets[1], false, false);
 
                         if (Squares[startSquare + (2 * pawnOffsets[1])].encodedPiece == Piece.Empty)
                         {
-                            AddLegalMove(startSquare, startSquare + (2 * pawnOffsets[1]));
+                            AddLegalMove(startSquare, startSquare + (2 * pawnOffsets[1]), false, false);
                         }
                     }
 
@@ -160,7 +187,7 @@ namespace Chess
 
                     if (Squares[startSquare - pawnOffsets[1]].encodedPiece == Piece.Empty)
                     {
-                        AddLegalMove(startSquare, startSquare - pawnOffsets[1]);
+                        AddLegalMove(startSquare, startSquare - pawnOffsets[1], false, false);
                     }
 
                     CheckBlackPawnCaptures(startSquare);
@@ -171,11 +198,11 @@ namespace Chess
                     // if pawn has not moved, legal moves is a two square advance
                     if (Squares[startSquare - pawnOffsets[1]].encodedPiece == Piece.Empty)
                     {
-                        AddLegalMove(startSquare, startSquare - pawnOffsets[1]);
+                        AddLegalMove(startSquare, startSquare - pawnOffsets[1], false, false);
 
                         if (Squares[startSquare - (2 * pawnOffsets[1])].encodedPiece == Piece.Empty)
                         {
-                            AddLegalMove(startSquare, startSquare - (2 * pawnOffsets[1]));
+                            AddLegalMove(startSquare, startSquare - (2 * pawnOffsets[1]), false, false);
                         }
                     }
 
@@ -210,7 +237,7 @@ namespace Chess
                                 }
                             }
 
-                            AddLegalMove(startSquare, startSquare + knightOffsets[knightOffsetIndex, offsetIndex]);
+                            AddLegalMove(startSquare, startSquare + knightOffsets[knightOffsetIndex, offsetIndex], false, false);
                         }
                     }
                 }
@@ -286,11 +313,11 @@ namespace Chess
                     }
                     else
                     {
-                        AddLegalMove(startSquare, startSquare + offset);
+                        AddLegalMove(startSquare, startSquare + offset, false, false);
                         break;
                     }
                 }
-                AddLegalMove(startSquare, startSquare + offset);
+                AddLegalMove(startSquare, startSquare + offset, false, false);
             }
 
         }
@@ -355,7 +382,7 @@ namespace Chess
 
             /* TODO, this legal move needs to have some extra functionality built in some how to move the rook as well,
             maybe a flag in the legal move marking a special move */
-            AddLegalMove(startSquare, startSquare + 2);
+            AddLegalMove(startSquare, startSquare + 2, true, false);
 
 
         }
