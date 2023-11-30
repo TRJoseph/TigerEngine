@@ -229,40 +229,39 @@ namespace Chess
             UIController.Instance.UpdateMoveStatusText(GridManager.whiteToMove);
         }
 
-        private static void DoKingSideCastle(int oldRookXPos, int oldRookYPos)
+        private static void DoCastle(int oldRookXPos, int oldRookYPos, bool doKingSideCastle)
         {
 
-            /* This section will be handling king side castling*/
-            int newKingSideRookXpos = oldRookXPos - 2;
+            int newRookXpos = doKingSideCastle ? oldRookXPos - 2 : oldRookXPos + 3;
 
             // grab piece, if null, break expression
-            PieceRender kingSideRook = FindChessPieceGameObject(oldRookXPos, oldRookYPos) ?? throw new Exception();
+            PieceRender Rook = FindChessPieceGameObject(oldRookXPos, oldRookYPos) ?? throw new Exception();
 
             // grab tile, if null, break expression
-            Tile newTile = FindTileGameObject(newKingSideRookXpos, oldRookYPos) ?? throw new Exception();
+            Tile newTile = FindTileGameObject(newRookXpos, oldRookYPos) ?? throw new Exception();
 
-            // set current king-side rook tile (which will now be the old tile in the corner) to null (empty)
-            kingSideRook.occupiedTile.OccupyingPiece = null;
+            // set current rook tile (which will now be the old tile in the corner) to null (empty)
+            Rook.occupiedTile.OccupyingPiece = null;
 
             // set rook piece's occupied tile to the new tile that it is now on
-            kingSideRook.occupiedTile = newTile;
-            kingSideRook.transform.position = new Vector3(newKingSideRookXpos, oldRookYPos);
+            Rook.occupiedTile = newTile;
+            Rook.transform.position = new Vector3(newRookXpos, oldRookYPos);
 
             // set new tile's currently occupied piece to the kingside rook
-            newTile.OccupyingPiece = kingSideRook.gameObject;
-
-            /* ************ */
+            newTile.OccupyingPiece = Rook.gameObject;
         }
 
-        public static void UpdateFrontEndSpecialMove(int oldRookXPos, int oldRookYPos)
+        public static void UpdateFrontEndSpecialMove(int oldRookXPos, int oldRookYPos, bool doKingSideCastle, bool doQueenSideCastle)
         {
-
-            // this const is temporary until the other
-            const bool dokingsidecastle = true;
-
-            if (dokingsidecastle)
+            /* This function will control updating the front end board with any special moves that are played (castling, en passant) */
+            if (doKingSideCastle)
             {
-                DoKingSideCastle(oldRookXPos, oldRookYPos);
+                DoCastle(oldRookXPos, oldRookYPos, true);
+            }
+
+            if (doQueenSideCastle)
+            {
+                DoCastle(oldRookXPos, oldRookYPos, false);
             }
 
 
