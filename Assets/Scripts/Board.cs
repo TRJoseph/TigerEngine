@@ -28,9 +28,13 @@ namespace Chess
             public int DistanceSouthEast;
         }
 
+        // values for decoding the encoded piece from binary (MCCTTT) M = Move Status flag bit, CC = Color bits, TTT = Piece Type bits
+        private const int PieceTypeMask = 7;
+        private const int PieceColorMask = 24;
+        private const int PieceMoveStatusFlag = 32;
+        //
 
         private const int BoardSize = 64;
-
         public static InternalSquare[] Squares = new InternalSquare[BoardSize];
 
 
@@ -72,7 +76,7 @@ namespace Chess
             int currentPiece = Squares[(int)originalYPosition * 8 + (int)originalXPosition].encodedPiece;
 
             // when the piece has moved, set the 6th bit to 1
-            currentPiece = currentPiece | 32;
+            currentPiece = currentPiece | PieceMoveStatusFlag;
 
             // removing the piece from its old position
             Squares[(int)originalYPosition * 8 + (int)originalXPosition].encodedPiece = Piece.Empty;
@@ -97,7 +101,7 @@ namespace Chess
                 Squares[newPieceMove + 1].encodedPiece = Piece.Empty;
 
                 // update move and piece move status
-                Squares[newPieceMove - 1].encodedPiece = cornerRook | 32;
+                Squares[newPieceMove - 1].encodedPiece = cornerRook | PieceMoveStatusFlag;
 
                 // updates front end board representation, moves king to new position and moves kingside rook to the square left of new king position
                 PieceMovementManager.UpdateFrontEndSpecialMove((int)newXPosition + 1, (int)newYPosition, true, false);
@@ -111,7 +115,7 @@ namespace Chess
                 Squares[newPieceMove - 2].encodedPiece = Piece.Empty;
 
                 // update move and piece move status
-                Squares[newPieceMove + 1].encodedPiece = cornerRook | 32;
+                Squares[newPieceMove + 1].encodedPiece = cornerRook | PieceMoveStatusFlag;
 
                 // updates front end board representation, moves king to new position and moves queenside rook to the square right of new king position
                 PieceMovementManager.UpdateFrontEndSpecialMove((int)newXPosition - 2, (int)newYPosition, false, true);
@@ -135,12 +139,12 @@ namespace Chess
         private static void CheckWhitePawnCaptures(int startSquare)
         {
             // square one square northWest, checking if an enemy piece is there available for capture
-            if (Squares[startSquare + pawnOffsets[0]].encodedPiece != Piece.Empty && (Squares[startSquare + pawnOffsets[0]].encodedPiece & 24) == Piece.Black)
+            if (Squares[startSquare + pawnOffsets[0]].encodedPiece != Piece.Empty && (Squares[startSquare + pawnOffsets[0]].encodedPiece & PieceColorMask) == Piece.Black)
             {
                 AddLegalMove(startSquare, startSquare + pawnOffsets[0], false, false, false);
             }
             // square one square northEast, checking if an enemy piece is there available for capture
-            if (Squares[startSquare + pawnOffsets[2]].encodedPiece != Piece.Empty && (Squares[startSquare + pawnOffsets[2]].encodedPiece & 24) == Piece.Black)
+            if (Squares[startSquare + pawnOffsets[2]].encodedPiece != Piece.Empty && (Squares[startSquare + pawnOffsets[2]].encodedPiece & PieceColorMask) == Piece.Black)
             {
                 AddLegalMove(startSquare, startSquare + pawnOffsets[2], false, false, false);
             }
@@ -149,13 +153,13 @@ namespace Chess
         private static void CheckBlackPawnCaptures(int startSquare)
         {
             // square one square southEast, checking if an enemy piece is there available for capture
-            if (Squares[startSquare - pawnOffsets[0]].encodedPiece != Piece.Empty && (Squares[startSquare - pawnOffsets[0]].encodedPiece & 24) == Piece.White)
+            if (Squares[startSquare - pawnOffsets[0]].encodedPiece != Piece.Empty && (Squares[startSquare - pawnOffsets[0]].encodedPiece & PieceColorMask) == Piece.White)
             {
                 AddLegalMove(startSquare, startSquare - pawnOffsets[0], false, false, false);
             }
 
             // square one square southWest, checking if an enemy piece is there available for capture
-            if (Squares[startSquare - pawnOffsets[2]].encodedPiece != Piece.Empty && (Squares[startSquare - pawnOffsets[2]].encodedPiece & 24) == Piece.White)
+            if (Squares[startSquare - pawnOffsets[2]].encodedPiece != Piece.Empty && (Squares[startSquare - pawnOffsets[2]].encodedPiece & PieceColorMask) == Piece.White)
             {
                 AddLegalMove(startSquare, startSquare - pawnOffsets[2], false, false, false);
             }
@@ -164,9 +168,9 @@ namespace Chess
         private static void CalculatePawnMoves(int startSquare, int decodedColor, int decodedPieceStatus)
         {
             // if white pawn
-            if (decodedColor == 8)
+            if (decodedColor == Piece.White)
             {
-                if (decodedPieceStatus == 32)
+                if (decodedPieceStatus == PieceMoveStatusFlag)
                 {
                     // if pawn has moved, legal moves is only a one square advance
 
@@ -202,7 +206,7 @@ namespace Chess
             else
             {
                 // if black pawn
-                if (decodedPieceStatus == 32)
+                if (decodedPieceStatus == PieceMoveStatusFlag)
                 {
                     // if pawn has moved, legal moves is only a one square advance
 
@@ -251,7 +255,7 @@ namespace Chess
 
                             if (Squares[startSquare + knightOffsets[knightOffsetIndex, offsetIndex]].encodedPiece != Piece.Empty)
                             {
-                                if (decodedColor == (Squares[startSquare + knightOffsets[knightOffsetIndex, offsetIndex]].encodedPiece & 24))
+                                if (decodedColor == (Squares[startSquare + knightOffsets[knightOffsetIndex, offsetIndex]].encodedPiece & PieceColorMask))
                                 {
                                     // same color piece
                                     continue;
@@ -328,7 +332,7 @@ namespace Chess
                 //by a different color, add the move and stop the loop(capturing the piece)
                 if (Squares[startSquare + offset].encodedPiece != Piece.Empty)
                 {
-                    if (decodedColor == (Squares[startSquare + offset].encodedPiece & 24))
+                    if (decodedColor == (Squares[startSquare + offset].encodedPiece & PieceColorMask))
                     {
                         break;
                     }
@@ -372,7 +376,7 @@ namespace Chess
         private static void CheckKingSideCastle(int startSquare)
         {
             // decodes piece move status; if king or rook on kingside has moved, castling not allowed
-            if ((Squares[startSquare].encodedPiece & 32) == 32 || ((Squares[startSquare + 3].encodedPiece & 32) == 32))
+            if ((Squares[startSquare].encodedPiece & PieceMoveStatusFlag) == PieceMoveStatusFlag || ((Squares[startSquare + 3].encodedPiece & PieceMoveStatusFlag) == PieceMoveStatusFlag))
             {
                 return;
             }
@@ -408,7 +412,7 @@ namespace Chess
         private static void CheckQueenSideCastle(int startSquare)
         {
             // decodes piece move status; if king or rook on queenside has moved, castling not allowed
-            if ((Squares[startSquare].encodedPiece & 32) == 32 || ((Squares[startSquare - 4].encodedPiece & 32) == 32))
+            if ((Squares[startSquare].encodedPiece & PieceMoveStatusFlag) == PieceMoveStatusFlag || ((Squares[startSquare - 4].encodedPiece & PieceMoveStatusFlag) == PieceMoveStatusFlag))
             {
                 return;
             }
@@ -455,7 +459,7 @@ namespace Chess
             {
                 if (whiteToMove)
                 {
-                    if ((Squares[startSquare].encodedPiece & 24) == 8)
+                    if ((Squares[startSquare].encodedPiece & PieceColorMask) == Piece.White)
                     {
                         CalculateLegalMoves(startSquare, Squares[startSquare].encodedPiece);
                     }
@@ -463,7 +467,7 @@ namespace Chess
                 }
                 else
                 {
-                    if ((Squares[startSquare].encodedPiece & 24) == 16)
+                    if ((Squares[startSquare].encodedPiece & PieceColorMask) == Piece.Black)
                     {
                         CalculateLegalMoves(startSquare, Squares[startSquare].encodedPiece);
                     }
@@ -478,11 +482,11 @@ namespace Chess
         {
 
 
-            int decodedPiece = internalGamePiece & 7;
-            int decodedColor = internalGamePiece & 24;
+            int decodedPiece = internalGamePiece & PieceTypeMask;
+            int decodedColor = internalGamePiece & PieceColorMask;
 
-            // if = 32, piece has moved, if 0, piece has not moved
-            int decodedPieceStatus = internalGamePiece & 32;
+            // if = PieceMoveStatusFlag (32), piece has moved, if 0, piece has not moved
+            int decodedPieceStatus = internalGamePiece & PieceMoveStatusFlag;
 
             switch (decodedPiece)
             {
