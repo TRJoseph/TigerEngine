@@ -54,7 +54,15 @@ namespace Chess
             public bool? enPassant;
         }
 
+        /* opting for a variable to control which list the algorithm places a move 
+        into instead of passing the corresponding list as a parameter to every move 
+        calculation function (opponent list or friendly list). */
+        public static bool friendlyList = true;
+
         public static List<LegalMove> legalMoves = new List<LegalMove>();
+
+        public static List<LegalMove> opponentMoves = new List<LegalMove>();
+
 
         private enum Direction { North, South, East, West, NorthWest, NorthEast, SouthWest, SouthEast };
 
@@ -125,15 +133,30 @@ namespace Chess
 
         private static void AddLegalMove(int startSquare, int endSquare, bool? kingSideCastling, bool? queenSideCastling, bool? enPassant)
         {
-            legalMoves.Add(new LegalMove
+            if (friendlyList)
             {
-                startSquare = startSquare,
-                endSquare = endSquare,
-                kingSideCastling = kingSideCastling,
-                queenSideCastling = queenSideCastling,
-                enPassant = enPassant
+                legalMoves.Add(new LegalMove
+                {
+                    startSquare = startSquare,
+                    endSquare = endSquare,
+                    kingSideCastling = kingSideCastling,
+                    queenSideCastling = queenSideCastling,
+                    enPassant = enPassant
 
-            });
+                });
+            }
+            else
+            {
+                opponentMoves.Add(new LegalMove
+                {
+                    startSquare = startSquare,
+                    endSquare = endSquare,
+                    kingSideCastling = kingSideCastling,
+                    queenSideCastling = queenSideCastling,
+                    enPassant = enPassant
+                });
+            }
+
         }
 
         private static void CheckWhitePawnCaptures(int startSquare)
@@ -278,8 +301,6 @@ namespace Chess
 
             CalculateKnightMovesHelper(xOffsets, yOffsets, 0, startSquare, decodedColor);
             CalculateKnightMovesHelper(yOffsets, xOffsets, 1, startSquare, decodedColor);
-
-
         }
 
         private static void CalculateSlidingPiecesMoves(int piece, Direction direction, int startSquare, int decodedColor)
@@ -392,16 +413,12 @@ namespace Chess
             }
 
             // check if squares king is leaving, crossing-over, or finishing on are not under attack
-
-            // TODO: refine the 'legalMoves' filtering logic to exclude moves that jeopardize the king's safety when castling
-            // currently, 'legalMoves' includes friendly moves that incorrectly indicate the king's path as safe for traversal during castling
-            // need to ensure that moves do not put the king into or through check
             for (int i = startSquare; i < (startSquare + 3); i++)
             {
-                // if (legalMoves.Any(move => move.endSquare == i))
-                // {
-                //     return;
-                // }
+                if (opponentMoves.Any(move => move.endSquare == i))
+                {
+                    return;
+                }
             }
 
             // this adds a legal move with the kingSideCastling flag set to true
@@ -428,18 +445,13 @@ namespace Chess
             }
 
             // check if squares king is leaving, crossing-over, or finishing on are not under attack
-
-            // TODO: refine the 'legalMoves' filtering logic to exclude moves that jeopardize the king's safety when castling
-            // currently, 'legalMoves' includes friendly moves that incorrectly indicate the king's path as safe for traversal during castling
-            // need to ensure that moves do not put the king into or through check
             for (int i = startSquare; i > (startSquare - 3); i--)
             {
-                // if (legalMoves.Any(move => move.endSquare == i))
-                // {
-                //     return;
-                // }
+                if (opponentMoves.Any(move => move.endSquare == i))
+                {
+                    return;
+                }
             }
-
 
             // this adds a legal move with the queenSideCastling flag set to true
             AddLegalMove(startSquare, startSquare - 2, false, true, false);
@@ -449,11 +461,25 @@ namespace Chess
         public static void ClearListMoves()
         {
             legalMoves.Clear();
+            opponentMoves.Clear();
+        }
+
+
+        public static void AfterMove(bool whiteToMove)
+        {
+            // 'friendlyList' controls which list (opponent or friendly) the algorithm places a legal move into
+
+            // for opponent side
+            friendlyList = false;
+            CalculateAllLegalMoves(!whiteToMove);
+
+            // for friendly side
+            friendlyList = true;
+            CalculateAllLegalMoves(whiteToMove);
         }
 
         public static void CalculateAllLegalMoves(bool whiteToMove)
         {
-
             // this calculates all legal moves in a given position for either white or black
             for (int startSquare = 0; startSquare < BoardSize; startSquare++)
             {
@@ -480,7 +506,6 @@ namespace Chess
 
         public static List<LegalMove> CalculateLegalMoves(int startSquare, int internalGamePiece)
         {
-
 
             int decodedPiece = internalGamePiece & PieceTypeMask;
             int decodedColor = internalGamePiece & PieceColorMask;
