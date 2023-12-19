@@ -29,6 +29,8 @@ namespace Chess
         // Forsyth-Edwards Notation representing positions in a chess game
         private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
 
+        // rnb1k3/pp5P/8/8/8/8/P1pKPPP1/1R1N1BNR
+
 
         // this array holds all the tiles in the game
         public static Tile[,] chessTiles = new Tile[8, 8];
@@ -69,7 +71,7 @@ namespace Chess
 
                     chessTiles[file, rank] = tile;
 
-                    if(file  == 0)
+                    if (file == 0)
                     {
                         TextMeshProUGUI rankLabel = Instantiate(tileRankLabels[rank]);
                         rankLabel.transform.position = new Vector3(-1, rank, -1);

@@ -256,17 +256,38 @@ namespace Chess
             newTile.OccupyingPiece = Rook.gameObject;
         }
 
-        public static void UpdateFrontEndSpecialMove(int oldRookXPos, int oldRookYPos, bool doKingSideCastle, bool doQueenSideCastle)
+        private static void DoEnPassant(int capturedXPawnPosition, int capturedYPawnPosition)
+        {
+
+            PieceRender capturedPawn = FindChessPieceGameObject(capturedXPawnPosition, capturedYPawnPosition) ?? throw new Exception();
+
+            Tile newTile = FindTileGameObject(capturedXPawnPosition, capturedYPawnPosition) ?? throw new Exception();
+
+            newTile.OccupyingPiece = null;
+
+            Destroy(capturedPawn.gameObject);
+
+        }
+
+        public static void UpdateFrontEndSpecialMove(int XPiecePos, int YPiecePos, bool doKingSideCastle, bool doQueenSideCastle, bool enPassant)
         {
             /* This function will control updating the front end board with any special moves that are played (castling, en passant) */
             if (doKingSideCastle)
             {
-                DoCastle(oldRookXPos, oldRookYPos, true);
+                DoCastle(XPiecePos, YPiecePos, true);
+                return;
             }
 
             if (doQueenSideCastle)
             {
-                DoCastle(oldRookXPos, oldRookYPos, false);
+                DoCastle(XPiecePos, YPiecePos, false);
+                return;
+            }
+
+            if (enPassant)
+            {
+                DoEnPassant(XPiecePos, YPiecePos);
+                return;
             }
 
         }
