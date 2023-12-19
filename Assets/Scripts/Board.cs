@@ -92,7 +92,6 @@ namespace Chess
             // placing the piece in its new position
             Squares[newPieceMove].encodedPiece = currentPiece;
 
-
             // check for special move flags
             /* TODO, THIS MAY CAUSE ISSUES WHEN CREATING THE CHESS ENGINE PART. I have not given this enough thought quite yet
                although my intitial hunch is that it should be okay as the engine will likely work entirely on the back end 
@@ -187,22 +186,19 @@ namespace Chess
 
         private static void CheckWhitePawnCaptures(int startSquare)
         {
-            // square one square northWest, checking if an enemy piece is there available for capture
-            if (Squares[startSquare].DistanceNorthWest >= 1)
-            {
-                if (Squares[startSquare + pawnOffsets[0]].encodedPiece != Piece.Empty && (Squares[startSquare + pawnOffsets[0]].encodedPiece & PieceColorMask) == Piece.Black)
-                {
-                    AddLegalMove(startSquare, startSquare + pawnOffsets[0], false, false, false);
-                }
+            int northWestSquare = startSquare + pawnOffsets[0];
+            int northEastSquare = startSquare + pawnOffsets[2];
 
-            }
-            // square one square northEast, checking if an enemy piece is there available for capture
-            if (Squares[startSquare].DistanceNorthEast >= 1)
+            // square one square northWest, checking if an enemy piece is there available for capture
+            if (Squares[startSquare].DistanceNorthWest >= 1 && IsOpponentPiece(northWestSquare, Piece.Black))
             {
-                if (Squares[startSquare + pawnOffsets[2]].encodedPiece != Piece.Empty && (Squares[startSquare + pawnOffsets[2]].encodedPiece & PieceColorMask) == Piece.Black)
-                {
-                    AddLegalMove(startSquare, startSquare + pawnOffsets[2], false, false, false);
-                }
+                AddLegalMove(startSquare, northWestSquare, false, false, false);
+            }
+
+            // square one square northEast, checking if an enemy piece is there available for capture
+            if (Squares[startSquare].DistanceNorthEast >= 1 && IsOpponentPiece(northEastSquare, Piece.Black))
+            {
+                AddLegalMove(startSquare, northEastSquare, false, false, false);
             }
 
             // for en passant
@@ -224,21 +220,19 @@ namespace Chess
 
         private static void CheckBlackPawnCaptures(int startSquare)
         {
+            int southEastSquare = startSquare - pawnOffsets[0];
+            int southWestSquare = startSquare - pawnOffsets[2];
+
             // square one square southEast, checking if an enemy piece is there available for capture
-            if (Squares[startSquare].DistanceSouthEast >= 1)
+            if (Squares[startSquare].DistanceSouthEast >= 1 && IsOpponentPiece(southEastSquare, Piece.White))
             {
-                if (Squares[startSquare - pawnOffsets[0]].encodedPiece != Piece.Empty && (Squares[startSquare - pawnOffsets[0]].encodedPiece & PieceColorMask) == Piece.White)
-                {
-                    AddLegalMove(startSquare, startSquare - pawnOffsets[0], false, false, false);
-                }
+                AddLegalMove(startSquare, southEastSquare, false, false, false);
             }
+
             // square one square southWest, checking if an enemy piece is there available for capture
-            if (Squares[startSquare].DistanceSouthWest >= 1)
+            if (Squares[startSquare].DistanceSouthWest >= 1 && IsOpponentPiece(southWestSquare, Piece.White))
             {
-                if (Squares[startSquare - pawnOffsets[2]].encodedPiece != Piece.Empty && (Squares[startSquare - pawnOffsets[2]].encodedPiece & PieceColorMask) == Piece.White)
-                {
-                    AddLegalMove(startSquare, startSquare - pawnOffsets[2], false, false, false);
-                }
+                AddLegalMove(startSquare, southWestSquare, false, false, false);
             }
 
             // for en passant
@@ -255,8 +249,12 @@ namespace Chess
                     // one square below the white pawn that just moved
                     AddLegalMove(startSquare, lastPawnDoubleMoveSquare - 8, false, false, true);
                 }
-
             }
+        }
+
+        private static bool IsOpponentPiece(int square, int opponentColor)
+        {
+            return Squares[square].encodedPiece != Piece.Empty && (Squares[square].encodedPiece & PieceColorMask) == opponentColor;
         }
 
         private static void CalculatePawnMoves(int startSquare, int decodedColor, int decodedPieceStatus)
@@ -267,7 +265,6 @@ namespace Chess
                 if (decodedPieceStatus == PieceMoveStatusFlag)
                 {
                     // if pawn has moved, legal moves is only a one square advance
-
                     // checks if the square in front of the pawn is empty
                     if (Squares[startSquare + pawnOffsets[1]].encodedPiece == Piece.Empty)
                     {
@@ -280,8 +277,6 @@ namespace Chess
                 else
                 {
                     // if pawn has not moved, legal moves is a two square advance
-
-
                     if (Squares[startSquare + pawnOffsets[1]].encodedPiece == Piece.Empty)
                     {
                         AddLegalMove(startSquare, startSquare + pawnOffsets[1], false, false, false);
@@ -303,7 +298,6 @@ namespace Chess
                 if (decodedPieceStatus == PieceMoveStatusFlag)
                 {
                     // if pawn has moved, legal moves is only a one square advance
-
                     if (Squares[startSquare - pawnOffsets[1]].encodedPiece == Piece.Empty)
                     {
                         AddLegalMove(startSquare, startSquare - pawnOffsets[1], false, false, false);
