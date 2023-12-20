@@ -78,17 +78,17 @@ namespace Chess
         private static readonly int[,] knightOffsets = { { 17, -15, 15, -17 }, { 10, -6, 6, -10 } };
 
 
-        public static void UpdateInternalState(float originalXPosition, float originalYPosition, float newXPosition, float newYPosition)
+        public static void UpdateInternalState(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
         {
-            int newPieceMove = (int)newYPosition * 8 + (int)newXPosition;
+            int newPieceMove = newYPosition * 8 + newXPosition;
             // grab current piece and store it
-            int currentPiece = Squares[(int)originalYPosition * 8 + (int)originalXPosition].encodedPiece;
+            int currentPiece = Squares[originalYPosition * 8 + originalXPosition].encodedPiece;
 
             // when the piece has moved, set the 6th bit to 1
             currentPiece = currentPiece | PieceMoveStatusFlag;
 
             // removing the piece from its old position
-            Squares[(int)originalYPosition * 8 + (int)originalXPosition].encodedPiece = Piece.Empty;
+            Squares[originalYPosition * 8 + originalXPosition].encodedPiece = Piece.Empty;
 
             // placing the piece in its new position
             Squares[newPieceMove].encodedPiece = currentPiece;
@@ -100,13 +100,13 @@ namespace Chess
                the engine to take advantage of. */
 
             // checks for a potential en passant capture
-            HandleEnPassantInternal(currentPiece, (int)originalXPosition, (int)originalYPosition, (int)newXPosition, (int)newYPosition, newPieceMove);
+            HandleEnPassantInternal(currentPiece, originalXPosition, originalYPosition, newXPosition, newYPosition, newPieceMove);
 
             // checks for moves with the kingSideCastling flag 
-            HandleKingSideCastleInternal(newPieceMove, (int)newXPosition, (int)newYPosition);
+            HandleKingSideCastleInternal(newPieceMove, newXPosition, newYPosition);
 
             // checks for moves with queenSideCastling flag
-            HandleQueenSideCastleInternal(newPieceMove, (int)newXPosition, (int)newYPosition);
+            HandleQueenSideCastleInternal(newPieceMove, newXPosition, newYPosition);
 
         }
 

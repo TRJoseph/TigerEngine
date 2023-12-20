@@ -222,7 +222,7 @@ namespace Chess
             GridManager.whiteToMove = !GridManager.whiteToMove;
 
             // update the internal board state when a move is made
-            Board.UpdateInternalState(originalPosition.x, originalPosition.y, selectedPiece.transform.position.x, selectedPiece.transform.position.y);
+            Board.UpdateInternalState((int)originalPosition.x, (int)originalPosition.y, (int)selectedPiece.transform.position.x, (int)selectedPiece.transform.position.y);
 
             // wipe the available moves once a move is executed
             Board.ClearListMoves();
