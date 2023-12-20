@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using System.Security.Cryptography;
 
 
 namespace Chess
@@ -99,7 +100,19 @@ namespace Chess
                the engine to take advantage of. */
 
             // checks for a potential en passant capture
-            if ((currentPiece & PieceTypeMask) == Piece.Pawn && Math.Abs((int)originalYPosition * 8 + (int)originalXPosition - newPieceMove) == 16)
+            HandleEnPassantInternal(currentPiece, (int)originalXPosition, (int)originalYPosition, (int)newXPosition, (int)newYPosition, newPieceMove);
+
+            // checks for moves with the kingSideCastling flag 
+            HandleKingSideCastleInternal(newPieceMove, (int)newXPosition, (int)newYPosition);
+
+            // checks for moves with queenSideCastling flag
+            HandleQueenSideCastleInternal(newPieceMove, (int)newXPosition, (int)newYPosition);
+
+        }
+
+        private static void HandleEnPassantInternal(int currentPiece, int originalXPosition, int originalYPosition, int newXPosition, int newYPosition, int newPieceMove)
+        {
+            if ((currentPiece & PieceTypeMask) == Piece.Pawn && Math.Abs(originalYPosition * 8 + originalXPosition - newPieceMove) == 16)
             {
                 lastPawnDoubleMoveSquare = newPieceMove;
             }
@@ -113,17 +126,19 @@ namespace Chess
                 if ((currentPiece & PieceColorMask) == Piece.White)
                 {
                     Squares[newPieceMove - 8].encodedPiece = Piece.Empty;
-                    PieceMovementManager.UpdateFrontEndSpecialMove((int)newXPosition, (int)newYPosition - 1, false, false, true);
+                    PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition, newYPosition - 1, false, false, true);
                 }
                 else if ((currentPiece & PieceColorMask) == Piece.Black)
                 {
                     Squares[newPieceMove + 8].encodedPiece = Piece.Empty;
-                    PieceMovementManager.UpdateFrontEndSpecialMove((int)newXPosition, (int)newYPosition + 1, false, false, true);
+                    PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition, newYPosition + 1, false, false, true);
                 }
 
             }
+        }
 
-            // checks for moves with the kingSideCastling flag 
+        private static void HandleKingSideCastleInternal(int newPieceMove, int newXPosition, int newYPosition)
+        {
             if (legalMoves.Any(move => move.endSquare == newPieceMove && move.kingSideCastling == true))
             {
 
@@ -136,10 +151,13 @@ namespace Chess
                 Squares[newPieceMove - 1].encodedPiece = cornerRook | PieceMoveStatusFlag;
 
                 // updates front end board representation, moves king to new position and moves kingside rook to the square left of new king position
-                PieceMovementManager.UpdateFrontEndSpecialMove((int)newXPosition + 1, (int)newYPosition, true, false, false);
+                PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition + 1, newYPosition, true, false, false);
             }
 
-            // checks for moves with queenSideCastling flag
+        }
+
+        private static void HandleQueenSideCastleInternal(int newPieceMove, int newXPosition, int newYPosition)
+        {
             if (legalMoves.Any(move => move.endSquare == newPieceMove && move.queenSideCastling == true))
             {
                 // grab rook in the corner on queenside
@@ -151,9 +169,8 @@ namespace Chess
                 Squares[newPieceMove + 1].encodedPiece = cornerRook | PieceMoveStatusFlag;
 
                 // updates front end board representation, moves king to new position and moves queenside rook to the square right of new king position
-                PieceMovementManager.UpdateFrontEndSpecialMove((int)newXPosition - 2, (int)newYPosition, false, true, false);
+                PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition - 2, newYPosition, false, true, false);
             }
-
         }
 
         private static void AddLegalMove(int startSquare, int endSquare, bool? kingSideCastling, bool? queenSideCastling, bool? enPassant)

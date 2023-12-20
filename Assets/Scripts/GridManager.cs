@@ -29,7 +29,8 @@ namespace Chess
         // Forsyth-Edwards Notation representing positions in a chess game
         private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
 
-        // rnb1k3/pp5P/8/8/8/8/P1pKPPP1/1R1N1BNR
+        // FEN string for testing pawn promotions
+        //private readonly string FENString = "rnbqk3/pppp4/6P1/8/8/6p1/PPPPP3/RNBQK2R";
 
 
         // this array holds all the tiles in the game
