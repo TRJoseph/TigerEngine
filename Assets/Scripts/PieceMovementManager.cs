@@ -76,7 +76,6 @@ namespace Chess
             }
         }
 
-
         void OnPieceMouseDown(GameObject piece)
         {
             selectedPiece = piece;
@@ -231,7 +230,7 @@ namespace Chess
 
             // TODO COME UP WITH BETTER WAY TO DO THIS
             // there will only be one instance of the UI controller so this is okay to do (for now)
-            UIController.Instance.UpdateMoveStatusText(GridManager.whiteToMove);
+            UIController.Instance.UpdateMoveStatusUIInformation();
         }
 
         private static void DoCastle(int oldRookXPos, int oldRookYPos, bool doKingSideCastle)
@@ -289,6 +288,11 @@ namespace Chess
                 DoEnPassant(XPiecePos, YPiecePos);
                 return;
             }
+
+        }
+
+        public static void ShowPromotionDropdown()
+        {
 
         }
 

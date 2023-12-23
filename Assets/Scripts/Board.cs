@@ -99,6 +99,8 @@ namespace Chess
                and never have to update the internal state from the front end, but there may be a need to have new internal update functions for
                the engine to take advantage of. */
 
+            HandlePawnPromotionInternal(currentPiece, newYPosition);
+
             // checks for a potential en passant capture
             HandleEnPassantInternal(currentPiece, originalXPosition, originalYPosition, newXPosition, newYPosition, newPieceMove);
 
@@ -108,6 +110,34 @@ namespace Chess
             // checks for moves with queenSideCastling flag
             HandleQueenSideCastleInternal(newPieceMove, newXPosition, newYPosition);
 
+        }
+
+        private static void HandlePawnPromotionInternal(int currentPiece, int newYPosition)
+        {
+            if (IsPawnPromotion(currentPiece, newYPosition))
+            {
+                // TODO will likely need to tweak this for the chess engine to automatically select a promotion choice based on the position
+
+                PieceMovementManager.ShowPromotionDropdown();
+
+            }
+        }
+
+        private static bool IsPawnPromotion(int currentPiece, int newYPosition)
+        {
+            if ((currentPiece & PieceTypeMask) == Piece.Pawn)
+            {
+                if ((currentPiece & PieceColorMask) == Piece.White && newYPosition == 7)
+                {
+                    return true;
+                }
+
+                if ((currentPiece & PieceColorMask) == Piece.Black && newYPosition == 0)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static void HandleEnPassantInternal(int currentPiece, int originalXPosition, int originalYPosition, int newXPosition, int newYPosition, int newPieceMove)
