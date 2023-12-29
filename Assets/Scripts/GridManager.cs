@@ -27,10 +27,10 @@ namespace Chess
         public GameObject chessPiecePrefab;
 
         // Forsyth-Edwards Notation representing positions in a chess game
-        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
+        //private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
 
         // FEN string for testing pawn promotions
-        //private readonly string FENString = "rnbqk3/pppp4/6P1/8/8/6p1/PPPPP3/RNBQK2R";
+        private readonly string FENString = "rnbqk3/pppp4/6P1/8/8/6p1/PPPPP3/RNBQK2R";
 
 
         // this array holds all the tiles in the game

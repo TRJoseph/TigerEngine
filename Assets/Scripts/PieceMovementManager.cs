@@ -218,19 +218,23 @@ namespace Chess
 
 
             // update who's move it is
-            GridManager.whiteToMove = !GridManager.whiteToMove;
+
 
             // update the internal board state when a move is made
             Board.UpdateInternalState((int)originalPosition.x, (int)originalPosition.y, (int)selectedPiece.transform.position.x, (int)selectedPiece.transform.position.y);
 
-            // wipe the available moves once a move is executed
-            Board.ClearListMoves();
+            GridManager.whiteToMove = !GridManager.whiteToMove;
+            if (Board.currentState == Board.GameState.Normal)
+            {
+                // wipe the available moves once a move is executed
+                Board.ClearListMoves();
 
-            Board.AfterMove(GridManager.whiteToMove);
+                Board.AfterMove(GridManager.whiteToMove);
 
-            // TODO COME UP WITH BETTER WAY TO DO THIS
-            // there will only be one instance of the UI controller so this is okay to do (for now)
-            UIController.Instance.UpdateMoveStatusUIInformation();
+                // TODO COME UP WITH BETTER WAY TO DO THIS
+                // there will only be one instance of the UI controller so this is okay to do (for now)
+                UIController.Instance.UpdateMoveStatusUIInformation();
+            }
         }
 
         private static void DoCastle(int oldRookXPos, int oldRookYPos, bool doKingSideCastle)
@@ -288,11 +292,6 @@ namespace Chess
                 DoEnPassant(XPiecePos, YPiecePos);
                 return;
             }
-
-        }
-
-        public static void ShowPromotionDropdown()
-        {
 
         }
 

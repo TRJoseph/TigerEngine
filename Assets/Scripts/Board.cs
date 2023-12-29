@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 using System.Security.Cryptography;
+using UnityEditor;
 
 
 namespace Chess
@@ -77,6 +78,15 @@ namespace Chess
 
         private static readonly int[,] knightOffsets = { { 17, -15, 15, -17 }, { 10, -6, 6, -10 } };
 
+        public enum GameState
+        {
+            Normal,
+            AwaitingPromotion
+        }
+
+        public static GameState currentState = GameState.Normal;
+
+
 
         public static void UpdateInternalState(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
         {
@@ -99,7 +109,7 @@ namespace Chess
                and never have to update the internal state from the front end, but there may be a need to have new internal update functions for
                the engine to take advantage of. */
 
-            HandlePawnPromotionInternal(currentPiece, newYPosition);
+            HandlePawnPromotionInternal(newPieceMove, currentPiece, newYPosition);
 
             // checks for a potential en passant capture
             HandleEnPassantInternal(currentPiece, originalXPosition, originalYPosition, newXPosition, newYPosition, newPieceMove);
@@ -112,15 +122,55 @@ namespace Chess
 
         }
 
-        private static void HandlePawnPromotionInternal(int currentPiece, int newYPosition)
+        private static void HandlePawnPromotionInternal(int newPieceMove, int currentPiece, int newYPosition)
         {
             if (IsPawnPromotion(currentPiece, newYPosition))
             {
                 // TODO will likely need to tweak this for the chess engine to automatically select a promotion choice based on the position
 
-                PieceMovementManager.ShowPromotionDropdown();
+                UIController.Instance.ShowPromotionDropdown(newPieceMove);
 
             }
+        }
+
+        public static void UpdatePromotedPawn(int newPieceMove)
+        {
+            // this line performs a logical and operation on the entire piece to remove the piece type from the three least-significant bits
+            Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece & (PieceColorMask + PieceMoveStatusFlag);
+
+            switch (UIController.Instance.promotionSelection)
+            {
+                case "Queen":
+                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 5;
+                    break;
+
+                case "Rook":
+                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 4;
+                    break;
+
+                case "Bishop":
+                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 3;
+                    break;
+
+                case "Knight":
+                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 2;
+                    break;
+
+                default:
+
+                    // this should not happen
+                    throw new Exception();
+            }
+
+            // TODO: write code to update front end piece to new piece
+
+            // once the pawn has been swapped internally
+            ClearListMoves();
+
+            AfterMove(GridManager.whiteToMove);
+
+            UIController.Instance.UpdateMoveStatusUIInformation();
+
         }
 
         private static bool IsPawnPromotion(int currentPiece, int newYPosition)
