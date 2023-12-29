@@ -137,11 +137,14 @@ namespace Chess
         {
             // this line performs a logical and operation on the entire piece to remove the piece type from the three least-significant bits
             Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece & (PieceColorMask + PieceMoveStatusFlag);
+            int newPieceXPos = newPieceMove % 8;
+            int newPieceYPos = newPieceMove / 8;
 
             switch (UIController.Instance.promotionSelection)
             {
                 case "Queen":
                     Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 5;
+
                     break;
 
                 case "Rook":
@@ -161,6 +164,9 @@ namespace Chess
                     // this should not happen
                     throw new Exception();
             }
+
+            // update the front end sprite so the new correct piece is visible
+            PieceMovementManager.UpdateFrontEndPromotion(Squares[newPieceMove].encodedPiece, newPieceXPos, newPieceYPos);
 
             // TODO: write code to update front end piece to new piece
 
@@ -558,6 +564,13 @@ namespace Chess
 
         private static void CheckKingSideCastle(int startSquare)
         {
+
+            // first checks if a rook piece is present in the corner and a king is on the e file
+            // (this can be useful in non-standard FEN string positions)
+            if ((Squares[startSquare].encodedPiece & PieceTypeMask) != Piece.King || ((Squares[startSquare + 3].encodedPiece & PieceTypeMask) != Piece.Rook))
+            {
+                return;
+            }
             // decodes piece move status; if king or rook on kingside has moved, castling not allowed
             if ((Squares[startSquare].encodedPiece & PieceMoveStatusFlag) == PieceMoveStatusFlag || ((Squares[startSquare + 3].encodedPiece & PieceMoveStatusFlag) == PieceMoveStatusFlag))
             {
@@ -590,6 +603,12 @@ namespace Chess
 
         private static void CheckQueenSideCastle(int startSquare)
         {
+            // first checks if a rook piece is present in the corner and a king is on the e file
+            // (this can be useful in non-standard FEN string positions)
+            if ((Squares[startSquare].encodedPiece & PieceTypeMask) != Piece.King || ((Squares[startSquare - 4].encodedPiece & PieceTypeMask) != Piece.Rook))
+            {
+                return;
+            }
             // decodes piece move status; if king or rook on queenside has moved, castling not allowed
             if ((Squares[startSquare].encodedPiece & PieceMoveStatusFlag) == PieceMoveStatusFlag || ((Squares[startSquare - 4].encodedPiece & PieceMoveStatusFlag) == PieceMoveStatusFlag))
             {
@@ -696,8 +715,12 @@ namespace Chess
                     CalculateKingMoves(startSquare, decodedColor);
 
                     // check for castling ability
-                    CheckKingSideCastle(startSquare);
-                    CheckQueenSideCastle(startSquare);
+                    // makes sure king is on e file
+                    if (startSquare == 4 || startSquare == 60)
+                    {
+                        CheckKingSideCastle(startSquare);
+                        CheckQueenSideCastle(startSquare);
+                    }
                     break;
                 default:
                     return;

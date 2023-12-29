@@ -61,6 +61,9 @@ namespace Chess
         {
             Board.currentState = Board.GameState.AwaitingPromotion;
             PromotionPanel.gameObject.SetActive(true);
+
+            PromotionPanel.gameObject.transform.position = new Vector3((newPieceMove % 8) - 1, (newPieceMove / 8) - 2, -2);
+
             List<Sprite> pieceSprites = GridManager.whiteToMove ? whitePieceSprites : blackPieceSprites;
             for (int i = 0; i < pieceButtons.Length; i++)
             {
@@ -68,14 +71,14 @@ namespace Chess
             }
 
             // this begins the coroutine that essential 'waits' for the user to select a new piece before allowing the game to continue
-            StartCoroutine(WaitForSelection(newPieceMove));
+            StartCoroutine(WaitForSelection(newPieceMove, PromotionPanel));
         }
 
         /* This method is important as it allows for the program to wait for the user to make a selection. During this time the gamestate is
         locked on "Awaiting Promotion". This prevents the main thread from attempting to calculate pawn moves off the edge of the board.
         Once the selection is made, the Board is set back to its normal game state and the internal board is updated with the new piece type information
         */
-        IEnumerator WaitForSelection(int newPieceMove)
+        IEnumerator WaitForSelection(int newPieceMove, GameObject PromotionPanel)
         {
             selectionMade = false;
 
@@ -84,12 +87,14 @@ namespace Chess
                 yield return null; // Wait for the next frame
             }
 
+            // hide the promotion panel gameobject
+            PromotionPanel.gameObject.SetActive(false);
+
             // Updates the game state
             Board.currentState = Board.GameState.Normal;
 
             // Now update pawn to new selected piece and recalculate moves
             Board.UpdatePromotedPawn(newPieceMove);
-
         }
 
 

@@ -237,6 +237,18 @@ namespace Chess
             }
         }
 
+        public static void UpdateFrontEndPromotion(int encodedPiece, int xPos, int yPos)
+        {
+            int decodedPieceColor = encodedPiece & 24;
+            int decodedPiece = encodedPiece & 7;
+
+            PieceRender renderScript = FindChessPieceGameObject(xPos, yPos);
+
+            Sprite pieceSprite = GridManager.GetSpriteForPiece(decodedPiece, decodedPieceColor, renderScript);
+
+            renderScript.GetComponent<SpriteRenderer>().sprite = pieceSprite;
+        }
+
         private static void DoCastle(int oldRookXPos, int oldRookYPos, bool doKingSideCastle)
         {
 
