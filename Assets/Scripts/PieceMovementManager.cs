@@ -25,10 +25,10 @@ namespace Chess
         {
             /* uncommenting this line (and commenting out the Board.CalculateAllLegalMoves here) might fix issues with 
             castling using FEN Strings with a starting position that includes an attack of the opponents potential castling moves */
-            //Board.AfterMove(GridManager.whiteToMove);
+            Board.AfterMove(GridManager.whiteToMove);
 
             // no need to calculate opponent moves here as the game just started, no possible checks on first move
-            Board.CalculateAllLegalMoves(GridManager.whiteToMove);
+            //Board.CalculateAllLegalMoves(GridManager.whiteToMove);
         }
 
         void Update()
@@ -216,14 +216,12 @@ namespace Chess
             // snaps to closest square
             selectedPiece.transform.position = new Vector3(closestSquare.position.x, closestSquare.position.y, transform.position.z);
 
-
-            // update who's move it is
-
-
             // update the internal board state when a move is made
             Board.UpdateInternalState((int)originalPosition.x, (int)originalPosition.y, (int)selectedPiece.transform.position.x, (int)selectedPiece.transform.position.y);
 
+            // update who's move it is
             GridManager.whiteToMove = !GridManager.whiteToMove;
+
             if (Board.currentState == Board.GameState.Normal)
             {
                 // wipe the available moves once a move is executed

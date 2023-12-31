@@ -39,6 +39,10 @@ namespace Chess
         private const int BoardSize = 64;
         public static InternalSquare[] Squares = new InternalSquare[BoardSize];
 
+        public static HashSet<int> whitePieces = new HashSet<int>(); // Contains indices of squares with white pieces
+        public static HashSet<int> blackPieces = new HashSet<int>(); // Contains indices of squares with black pieces
+
+
         // this structure will hold a move that can be executed
         public struct LegalMove
         {
@@ -63,7 +67,6 @@ namespace Chess
 
         public static List<LegalMove> opponentMoves = new List<LegalMove>();
 
-
         private enum Direction { North, South, East, West, NorthWest, NorthEast, SouthWest, SouthEast };
 
         // west, north, east, south
@@ -86,7 +89,21 @@ namespace Chess
 
         public static GameState currentState = GameState.Normal;
 
-
+        private static void UpdateWhiteAndBlackPieceLists(int removePieceSquare, int addPieceSquare)
+        {
+            if (GridManager.whiteToMove)
+            {
+                whitePieces.Remove(removePieceSquare);
+                whitePieces.Add(addPieceSquare);
+                blackPieces.Remove(addPieceSquare);
+            }
+            else
+            {
+                blackPieces.Remove(removePieceSquare);
+                blackPieces.Add(addPieceSquare);
+                whitePieces.Remove(addPieceSquare);
+            }
+        }
 
         public static void UpdateInternalState(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
         {
@@ -102,6 +119,9 @@ namespace Chess
 
             // placing the piece in its new position
             Squares[newPieceMove].encodedPiece = currentPiece;
+
+            // keeps the white and black piece lists up to date
+            UpdateWhiteAndBlackPieceLists(originalYPosition * 8 + originalXPosition, newPieceMove);
 
             // check for special move flags
             /* TODO, THIS MAY CAUSE ISSUES WHEN CREATING THE CHESS ENGINE PART. I have not given this enough thought quite yet
@@ -137,6 +157,16 @@ namespace Chess
         {
             // this line performs a logical and operation on the entire piece to remove the piece type from the three least-significant bits
             Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece & (PieceColorMask + PieceMoveStatusFlag);
+
+            if (GridManager.whiteToMove)
+            {
+                whitePieces.Remove(newPieceMove);
+            }
+            else
+            {
+                blackPieces.Remove(newPieceMove);
+            }
+
             int newPieceXPos = newPieceMove % 8;
             int newPieceYPos = newPieceMove / 8;
 
@@ -167,8 +197,6 @@ namespace Chess
 
             // update the front end sprite so the new correct piece is visible
             PieceMovementManager.UpdateFrontEndPromotion(Squares[newPieceMove].encodedPiece, newPieceXPos, newPieceYPos);
-
-            // TODO: write code to update front end piece to new piece
 
             // once the pawn has been swapped internally
             ClearListMoves();
@@ -212,11 +240,13 @@ namespace Chess
                 if ((currentPiece & PieceColorMask) == Piece.White)
                 {
                     Squares[newPieceMove - 8].encodedPiece = Piece.Empty;
+                    blackPieces.Remove(newPieceMove - 8);
                     PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition, newYPosition - 1, false, false, true);
                 }
                 else if ((currentPiece & PieceColorMask) == Piece.Black)
                 {
                     Squares[newPieceMove + 8].encodedPiece = Piece.Empty;
+                    whitePieces.Remove(newPieceMove + 8);
                     PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition, newYPosition + 1, false, false, true);
                 }
 
@@ -238,8 +268,9 @@ namespace Chess
 
                 // updates front end board representation, moves king to new position and moves kingside rook to the square left of new king position
                 PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition + 1, newYPosition, true, false, false);
-            }
 
+                UpdateWhiteAndBlackPieceLists(newPieceMove + 1, newPieceMove - 1);
+            }
         }
 
         private static void HandleQueenSideCastleInternal(int newPieceMove, int newXPosition, int newYPosition)
@@ -256,7 +287,10 @@ namespace Chess
 
                 // updates front end board representation, moves king to new position and moves queenside rook to the square right of new king position
                 PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition - 2, newYPosition, false, true, false);
+
+                UpdateWhiteAndBlackPieceLists(newPieceMove - 2, newPieceMove + 1);
             }
+
         }
 
         private static void AddLegalMove(int startSquare, int endSquare, bool? kingSideCastling, bool? queenSideCastling, bool? enPassant)
@@ -293,13 +327,13 @@ namespace Chess
             int northEastSquare = startSquare + pawnOffsets[2];
 
             // square one square northWest, checking if an enemy piece is there available for capture
-            if (Squares[startSquare].DistanceNorthWest >= 1 && IsOpponentPiece(northWestSquare, Piece.Black))
+            if (Squares[startSquare].DistanceNorthWest >= 1 && IsOpponentPiece(northWestSquare, Piece.Black) || !friendlyList)
             {
                 AddLegalMove(startSquare, northWestSquare, false, false, false);
             }
 
             // square one square northEast, checking if an enemy piece is there available for capture
-            if (Squares[startSquare].DistanceNorthEast >= 1 && IsOpponentPiece(northEastSquare, Piece.Black))
+            if (Squares[startSquare].DistanceNorthEast >= 1 && IsOpponentPiece(northEastSquare, Piece.Black) || !friendlyList)
             {
                 AddLegalMove(startSquare, northEastSquare, false, false, false);
             }
@@ -327,13 +361,13 @@ namespace Chess
             int southWestSquare = startSquare - pawnOffsets[2];
 
             // square one square southEast, checking if an enemy piece is there available for capture
-            if (Squares[startSquare].DistanceSouthEast >= 1 && IsOpponentPiece(southEastSquare, Piece.White))
+            if (Squares[startSquare].DistanceSouthEast >= 1 && IsOpponentPiece(southEastSquare, Piece.White) || !friendlyList)
             {
                 AddLegalMove(startSquare, southEastSquare, false, false, false);
             }
 
             // square one square southWest, checking if an enemy piece is there available for capture
-            if (Squares[startSquare].DistanceSouthWest >= 1 && IsOpponentPiece(southWestSquare, Piece.White))
+            if (Squares[startSquare].DistanceSouthWest >= 1 && IsOpponentPiece(southWestSquare, Piece.White) || !friendlyList)
             {
                 AddLegalMove(startSquare, southWestSquare, false, false, false);
             }
@@ -639,6 +673,35 @@ namespace Chess
 
         }
 
+
+        private static int FindKingPosition()
+        {
+            int pieceColor = GridManager.whiteToMove ? Piece.White : Piece.Black;
+
+            for (int i = 0; i < BoardSize; i++)
+            {
+                if ((Squares[i].encodedPiece & PieceColorMask) == pieceColor && (Squares[i].encodedPiece & PieceTypeMask) == Piece.King)
+                {
+                    return i; // current square that the friendly king is on
+                }
+            }
+            return -1;
+        }
+
+        private static bool IsKingInCheck()
+        {
+            int kingSquare = FindKingPosition();
+
+            if (opponentMoves.Any(move => move.endSquare == kingSquare))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         public static void ClearListMoves()
         {
             legalMoves.Clear();
@@ -646,46 +709,35 @@ namespace Chess
         }
 
 
-        public static void AfterMove(bool whiteToMove)
+        public static void AfterMove(bool friendlyMove)
         {
             // 'friendlyList' controls which list (opponent or friendly) the algorithm places a legal move into
 
             // for opponent side
             friendlyList = false;
-            CalculateAllLegalMoves(!whiteToMove);
+            CalculateAllLegalMoves(!friendlyMove);
 
             // for friendly side
             friendlyList = true;
-            CalculateAllLegalMoves(whiteToMove);
-        }
+            CalculateAllLegalMoves(friendlyMove);
 
-        public static void CalculateAllLegalMoves(bool whiteToMove)
+        }
+        public static void CalculateAllLegalMoves(bool friendlyMove)
         {
-            // this calculates all legal moves in a given position for either white or black
-            for (int startSquare = 0; startSquare < BoardSize; startSquare++)
+
+            // determine if king is in check by checking opponent moves list
+            bool kingInCheck = friendlyList && IsKingInCheck();
+            HashSet<int> whichPieces = friendlyMove ? whitePieces : blackPieces;
+            foreach (int square in whichPieces)
             {
-                if (whiteToMove)
-                {
-                    if ((Squares[startSquare].encodedPiece & PieceColorMask) == Piece.White)
-                    {
-                        CalculateLegalMoves(startSquare, Squares[startSquare].encodedPiece);
-                    }
-                }
-                else
-                {
-                    if ((Squares[startSquare].encodedPiece & PieceColorMask) == Piece.Black)
-                    {
-                        CalculateLegalMoves(startSquare, Squares[startSquare].encodedPiece);
-                    }
-                }
+                CalculateLegalMoves(square, Squares[square].encodedPiece, kingInCheck, friendlyMove);
             }
             return;
         }
 
 
-        public static void CalculateLegalMoves(int startSquare, int internalGamePiece)
+        public static void CalculateLegalMoves(int startSquare, int internalGamePiece, bool kingInCheck, bool friendlyMove)
         {
-
             int decodedPiece = internalGamePiece & PieceTypeMask;
             int decodedColor = internalGamePiece & PieceColorMask;
 

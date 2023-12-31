@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using UnityEngine;
 using TMPro;
+using System.Linq;
 
 namespace Chess
 {
@@ -131,6 +132,15 @@ namespace Chess
 
                     // represented in binary with or operator
                     Board.Squares[rank * 8 + file].encodedPiece = pieceColor | piece;
+
+                    if (pieceColor == Piece.White)
+                    {
+                        Board.whitePieces.Add(rank * 8 + file);
+                    }
+                    else
+                    {
+                        Board.blackPieces.Add(rank * 8 + file);
+                    }
 
                     file++;
                 }
