@@ -136,15 +136,6 @@ namespace Chess
             // this line performs a logical and operation on the entire piece to remove the piece type from the three least-significant bits
             Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece & (PieceColorMask + PieceMoveStatusFlag);
 
-            // if (GridManager.whiteToMove)
-            // {
-            //     whitePieces.Remove(newPieceMove);
-            // }
-            // else
-            // {
-            //     blackPieces.Remove(newPieceMove);
-            // }
-
             int newPieceXPos = newPieceMove % 8;
             int newPieceYPos = newPieceMove / 8;
 
@@ -283,30 +274,6 @@ namespace Chess
                     enPassant = enPassant
 
                 };
-            // if (friendlyList)
-            // {
-            //     legalMoves.Add(new LegalMove
-            //     {
-            //         startSquare = startSquare,
-            //         endSquare = endSquare,
-            //         kingSideCastling = kingSideCastling,
-            //         queenSideCastling = queenSideCastling,
-            //         enPassant = enPassant
-
-            //     });
-            // }
-            // else
-            // {
-            //     opponentMoves.Add(new LegalMove
-            //     {
-            //         startSquare = startSquare,
-            //         endSquare = endSquare,
-            //         kingSideCastling = kingSideCastling,
-            //         queenSideCastling = queenSideCastling,
-            //         enPassant = enPassant
-            //     });
-            // }
-
         }
 
         private static List<LegalMove> CheckWhitePawnCaptures(int startSquare)
