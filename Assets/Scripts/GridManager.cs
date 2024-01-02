@@ -31,8 +31,16 @@ namespace Chess
         private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
 
         // FEN string for testing pawn promotions
-        //private readonly string FENString = "rnbqk3/pppp4/6P1/8/8/6p1/PPPPP3/RNBQK2R";
+        //private readonly string FENString = "5b2/8/8/6P1/6p1/8/8/8";
 
+        // second FEN string for testings king interactivity
+        //private readonly string FENString = "4k3/8/7P/2b5/8/8/8/4K3";
+
+        // another FEN string for testing king castling
+        //private readonly string FENString = "r3k2r/p7/6N1/8/8/8/8/4K2R";
+
+        // another FEN string for testing checkmate 
+        //private readonly string FENString = "rnbqkbnr/p1pp1ppp/1p6/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR";
 
         // this array holds all the tiles in the game
         public static Tile[,] chessTiles = new Tile[8, 8];
@@ -132,15 +140,6 @@ namespace Chess
 
                     // represented in binary with or operator
                     Board.Squares[rank * 8 + file].encodedPiece = pieceColor | piece;
-
-                    if (pieceColor == Piece.White)
-                    {
-                        Board.whitePieces.Add(rank * 8 + file);
-                    }
-                    else
-                    {
-                        Board.blackPieces.Add(rank * 8 + file);
-                    }
 
                     file++;
                 }

@@ -25,7 +25,7 @@ namespace Chess
         {
             /* uncommenting this line (and commenting out the Board.CalculateAllLegalMoves here) might fix issues with 
             castling using FEN Strings with a starting position that includes an attack of the opponents potential castling moves */
-            Board.AfterMove(GridManager.whiteToMove);
+            Board.legalMoves = Board.AfterMove(GridManager.whiteToMove);
 
             // no need to calculate opponent moves here as the game just started, no possible checks on first move
             //Board.CalculateAllLegalMoves(GridManager.whiteToMove);
@@ -227,7 +227,7 @@ namespace Chess
                 // wipe the available moves once a move is executed
                 Board.ClearListMoves();
 
-                Board.AfterMove(GridManager.whiteToMove);
+                Board.legalMoves = Board.AfterMove(GridManager.whiteToMove);
 
                 // TODO COME UP WITH BETTER WAY TO DO THIS
                 // there will only be one instance of the UI controller so this is okay to do (for now)
