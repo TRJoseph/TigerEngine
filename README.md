@@ -9,3 +9,15 @@ First of all, this project is in progress and is currently receiving updates. Cu
 
 ## Current Features
 As previously stated, this project contains the game of chess implemented in full. This includes special moves such as castling, en passant, and pawn promotions. These are all available to the player when the move is legal in the given position. As of commit [`c074cae`](https://github.com/TRJoseph/TigerEngine/commit/c074caedde3fd045cd098068dcbba9164b79d0f7), a foundational layer is placed for engine development. Currently the Engine plays legal moves completely at random. The next steps are to of course implement a more advanced AI. One potential method in doing this is to implement the minimax algorithm and custom evaluation functions to determine whether the position is advantageous for white or black.
+
+## Some In-Progress Features
+- A main menu for the user to select which side they would like to play as
+- Volume feedback for specific moves (castling, check, checkmate)
+
+## Play the Game
+Once the first release is available this will be updated. The project needs a more intuitive interface first (main menu, exit game button)
+
+## For Developers
+This section is mainly reserved for my friends at university that have also shown interest in this project and may want to help out. Head over to the **Contributing** page to see how to get started.
+
+**🚀 [Contributing](CONTRIBUTING.md)**
