@@ -1342,8 +1342,10 @@ GameObject:
   - component: {fileID: 1938672571}
   - component: {fileID: 1938672570}
   - component: {fileID: 1938672572}
+  - component: {fileID: 1938672573}
+  - component: {fileID: 1938672574}
   m_Layer: 0
-  m_Name: GridManager
+  m_Name: BoardManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1363,6 +1365,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tilePrefab: {fileID: 7629693030608968657, guid: f6d1234384d094a2a9c042d2cf08a7a1, type: 3}
   _cam: {fileID: 519420032}
+  engine: {fileID: 1938672573}
   Canvas: {fileID: 1545817158}
   tileFileLabels:
   - {fileID: 4309269165316274283, guid: 51bca7c92f337a147b35acc8501fcc16, type: 3}
@@ -1411,6 +1414,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   highlightOverlayPrefab: {fileID: 5593409470330700248, guid: eca842774a1b21b4cb95eda8fc1fa63c, type: 3}
+  boardManager: {fileID: 1938672570}
+--- !u!114 &1938672573
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1938672569}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2758ce834b192457eb0de7ddff1bf799, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  boardManager: {fileID: 0}
+  pieceMovementManager: {fileID: 1938672572}
+--- !u!114 &1938672574
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1938672569}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 115ab618c0b1445e69318e3914bea818, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1986068897
 GameObject:
   m_ObjectHideFlags: 0

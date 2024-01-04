@@ -64,7 +64,7 @@ namespace Chess
 
             PromotionPanel.gameObject.transform.position = new Vector3((newPieceMove % 8) - 1, (newPieceMove / 8) - 2, -2);
 
-            List<Sprite> pieceSprites = GridManager.whiteToMove ? whitePieceSprites : blackPieceSprites;
+            List<Sprite> pieceSprites = BoardManager.whiteToMove ? whitePieceSprites : blackPieceSprites;
             for (int i = 0; i < pieceButtons.Length; i++)
             {
                 pieceButtons[i].sprite = pieceSprites[i];
@@ -113,7 +113,7 @@ namespace Chess
 
         public void UpdateMoveStatusUIInformation()
         {
-            if (GridManager.whiteToMove)
+            if (BoardManager.whiteToMove)
             {
                 WhichPlayerMoveText.text = "White to move";
             }

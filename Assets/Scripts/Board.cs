@@ -1,14 +1,6 @@
-using JetBrains.Annotations;
 using System;
 using System.Linq;
-using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
-using UnityEngine;
-using System.Security.Cryptography;
-using UnityEditor;
-using UnityEngine.UIElements;
-using UnityEngine.Analytics;
 
 
 namespace Chess
@@ -40,9 +32,6 @@ namespace Chess
 
         private const int BoardSize = 64;
         public static InternalSquare[] Squares = new InternalSquare[BoardSize];
-
-        // public static HashSet<int> whitePieces = new HashSet<int>(); // Contains indices of squares with white pieces
-        // public static HashSet<int> blackPieces = new HashSet<int>(); // Contains indices of squares with black pieces
 
         // this structure will hold a move that can be executed
         public struct LegalMove
@@ -83,7 +72,8 @@ namespace Chess
         public enum GameState
         {
             Normal,
-            AwaitingPromotion
+            AwaitingPromotion,
+            Ended
         }
 
         public static GameState currentState = GameState.Normal;
@@ -170,7 +160,7 @@ namespace Chess
             // once the pawn has been swapped internally
             ClearListMoves();
 
-            legalMoves = AfterMove(GridManager.whiteToMove);
+            legalMoves = AfterMove(BoardManager.whiteToMove);
 
             UIController.Instance.UpdateMoveStatusUIInformation();
 
@@ -210,13 +200,13 @@ namespace Chess
                 {
                     Squares[newPieceMove - 8].encodedPiece = Piece.Empty;
                     //blackPieces.Remove(newPieceMove - 8);
-                    PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition, newYPosition - 1, false, false, true);
+                    //PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition, newYPosition - 1, false, false, true);
                 }
                 else if ((currentPiece & PieceColorMask) == Piece.Black)
                 {
                     Squares[newPieceMove + 8].encodedPiece = Piece.Empty;
                     //whitePieces.Remove(newPieceMove + 8);
-                    PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition, newYPosition + 1, false, false, true);
+                    //PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition, newYPosition + 1, false, false, true);
                 }
 
             }
@@ -236,9 +226,7 @@ namespace Chess
                 Squares[newPieceMove - 1].encodedPiece = cornerRook | PieceMoveStatusFlag;
 
                 // updates front end board representation, moves king to new position and moves kingside rook to the square left of new king position
-                PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition + 1, newYPosition, true, false, false);
-
-                //UpdateWhiteAndBlackPieceLists(newPieceMove + 1, newPieceMove - 1, GridManager.whiteToMove);
+                //PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition + 1, newYPosition, true, false, false);
             }
         }
 
@@ -255,9 +243,7 @@ namespace Chess
                 Squares[newPieceMove + 1].encodedPiece = cornerRook | PieceMoveStatusFlag;
 
                 // updates front end board representation, moves king to new position and moves queenside rook to the square right of new king position
-                PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition - 2, newYPosition, false, true, false);
-
-                //UpdateWhiteAndBlackPieceLists(newPieceMove - 2, newPieceMove + 1, GridManager.whiteToMove);
+                //PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition - 2, newYPosition, false, true, false);
             }
 
         }
@@ -748,21 +734,21 @@ namespace Chess
         public static List<LegalMove> GenerateLegalMoves()
         {
             // calculate all pseudo legal moves for the friendly side (whoevers turn it is)
-            List<LegalMove> pseudoLegalMoves = CalculateAllMoves(GridManager.whiteToMove);
+            List<LegalMove> pseudoLegalMoves = CalculateAllMoves(BoardManager.whiteToMove);
 
             List<LegalMove> legalMoves = new List<LegalMove>();
 
-            int originalkingSquare = FindKingPosition(GridManager.whiteToMove);
+            int originalkingSquare = FindKingPosition(BoardManager.whiteToMove);
 
             foreach (LegalMove move in pseudoLegalMoves)
             {
                 int rememberedPiece = ExecuteMove(move);
 
                 // replace this with current king square
-                int currentKingSquare = FindKingPosition(GridManager.whiteToMove);
+                int currentKingSquare = FindKingPosition(BoardManager.whiteToMove);
 
                 friendlyList = false;
-                List<LegalMove> opponentResponses = CalculateAllMoves(!GridManager.whiteToMove);
+                List<LegalMove> opponentResponses = CalculateAllMoves(!BoardManager.whiteToMove);
 
                 // Special handling for castling moves
                 if (move.kingSideCastling == true)

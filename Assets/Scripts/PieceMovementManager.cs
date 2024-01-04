@@ -14,22 +14,14 @@ namespace Chess
         // this holds the overlay that is placed on top of tiles to represent a legal move in the position
         [SerializeField] private GameObject highlightOverlayPrefab;
 
+        public BoardManager boardManager;
+
         private GameObject selectedPiece;
 
         private bool isDragging;
+
         private Vector3 offset;
-
         private Vector3 originalPosition;
-
-        void Start()
-        {
-            /* uncommenting this line (and commenting out the Board.CalculateAllLegalMoves here) might fix issues with 
-            castling using FEN Strings with a starting position that includes an attack of the opponents potential castling moves */
-            Board.legalMoves = Board.AfterMove(GridManager.whiteToMove);
-
-            // no need to calculate opponent moves here as the game just started, no possible checks on first move
-            //Board.CalculateAllLegalMoves(GridManager.whiteToMove);
-        }
 
         void Update()
         {
@@ -82,7 +74,7 @@ namespace Chess
             originalPosition = selectedPiece.transform.position;
 
             // Implement your conditions and logic
-            if (GridManager.whiteToMove)
+            if (BoardManager.whiteToMove)
             {
                 if (!selectedPiece.GetComponent<PieceRender>().isWhitePiece)
                 {
@@ -133,65 +125,30 @@ namespace Chess
                     closestSquare = square.transform;
                 }
             }
-
-            // 
             if (closestSquare != null)
             {
                 // check if tile is occupied by friendly piece or by enemy piece
                 GameObject pieceOnTile = closestSquare.GetComponent<Tile>().OccupyingPiece;
 
 
-                // if user attempts to move a piece to the same tile or move is not legal, return
-                // (TODO: checking for piece on tile might not actually be necessary anymore with legal move checks, needs testing)
-                if (pieceOnTile == selectedPiece.transform.gameObject || !legalMove)
+                // if user attempts an illegal move, return
+                if (!legalMove)
                 {
                     selectedPiece.transform.position = originalPosition;
                     selectedPiece = null;
                     return;
                 }
 
-                // if there is a piece on the tile
+                selectedPiece.transform.position = new Vector3(closestSquare.transform.position.x, closestSquare.transform.position.y, closestSquare.transform.position.z);
+
                 if (pieceOnTile != null)
                 {
-                    if (GridManager.whiteToMove)
-                    {
-                        // if occupied by friendly piece, snap back to original position
-                        if (pieceOnTile.GetComponent<PieceRender>().isWhitePiece)
-                        {
-                            selectedPiece.transform.position = originalPosition;
-                            return;
-                        }
-                        else
-                        {
-                            // if occupied by enemy piece, destroy enemy piece and snap to tile
-                            Destroy(pieceOnTile);
-
-                            selectedPiece.transform.position = new Vector3(closestSquare.position.x, closestSquare.position.y, transform.position.z);
-                        }
-                    }
-                    else
-                    {
-                        // must be blacks move, if occupied by friendly piece, snap back to original position
-                        if (!pieceOnTile.GetComponent<PieceRender>().isWhitePiece)
-                        {
-                            selectedPiece.transform.position = originalPosition;
-                            return;
-                        }
-                        else
-                        {
-                            // if occupied by enemy piece, destroy enemy piece and snap to tile
-                            Destroy(pieceOnTile);
-
-                            selectedPiece.transform.position = new Vector3(closestSquare.position.x, closestSquare.position.y, transform.position.z);
-                        }
-
-
-                    }
+                    Destroy(pieceOnTile);
                 }
+
 
                 // this is reached when a move is made
                 HandleMoveExecution(selectedPiece, closestSquare);
-
             }
         }
 
@@ -203,31 +160,56 @@ namespace Chess
             these are updated here when a move is made
 
             */
-
-            // sets the new tile's occupying piece to the piece that was moved
-            closestSquare.GetComponent<Tile>().OccupyingPiece = selectedPiece.transform.GameObject();
-
-            // removes the old tile's occupied piece because the piece has moved squares
-            selectedPiece.transform.GetComponent<PieceRender>().occupiedTile.OccupyingPiece = null;
-
-            // sets the current new occupied tile (attached to the piece) to the new tile
-            selectedPiece.transform.GetComponent<PieceRender>().occupiedTile = closestSquare.GetComponent<Tile>();
-
-            // snaps to closest square
-            selectedPiece.transform.position = new Vector3(closestSquare.position.x, closestSquare.position.y, transform.position.z);
-
             // update the internal board state when a move is made
             Board.UpdateInternalState((int)originalPosition.x, (int)originalPosition.y, (int)selectedPiece.transform.position.x, (int)selectedPiece.transform.position.y);
 
+            boardManager.ClearExistingPieces();
+            boardManager.RenderPiecesOnBoard();
+
             // update who's move it is
-            GridManager.whiteToMove = !GridManager.whiteToMove;
+            BoardManager.whiteToMove = !BoardManager.whiteToMove;
 
             if (Board.currentState == Board.GameState.Normal)
             {
                 // wipe the available moves once a move is executed
                 Board.ClearListMoves();
 
-                Board.legalMoves = Board.AfterMove(GridManager.whiteToMove);
+                Board.legalMoves = Board.AfterMove(BoardManager.whiteToMove);
+
+                BoardManager.ComputerMove = true;
+
+                // TODO COME UP WITH BETTER WAY TO DO THIS
+                // there will only be one instance of the UI controller so this is okay to do (for now)
+                UIController.Instance.UpdateMoveStatusUIInformation();
+            }
+        }
+
+        public void HandleEngineMoveExecution(Board.LegalMove legalMove)
+        {
+
+            int originalXPosition = legalMove.startSquare % 8;
+            int originalYPosition = legalMove.startSquare / 8;
+
+            int newXPosition = legalMove.endSquare % 8;
+            int newYPosition = legalMove.endSquare / 8;
+
+            // update the internal board state when a move is made
+            Board.UpdateInternalState(originalXPosition, originalYPosition, newXPosition, newYPosition);
+
+            boardManager.ClearExistingPieces();
+            boardManager.RenderPiecesOnBoard();
+
+            // update who's move it is
+            BoardManager.whiteToMove = !BoardManager.whiteToMove;
+
+            if (Board.currentState == Board.GameState.Normal)
+            {
+                // wipe the available moves once a move is executed
+                Board.ClearListMoves();
+
+                Board.legalMoves = Board.AfterMove(BoardManager.whiteToMove);
+
+                BoardManager.ComputerMove = !BoardManager.ComputerMove;
 
                 // TODO COME UP WITH BETTER WAY TO DO THIS
                 // there will only be one instance of the UI controller so this is okay to do (for now)
@@ -242,73 +224,15 @@ namespace Chess
 
             PieceRender renderScript = FindChessPieceGameObject(xPos, yPos);
 
-            Sprite pieceSprite = GridManager.GetSpriteForPiece(decodedPiece, decodedPieceColor, renderScript);
+            Sprite pieceSprite = BoardManager.GetSpriteForPiece(decodedPiece, decodedPieceColor, renderScript);
 
             renderScript.GetComponent<SpriteRenderer>().sprite = pieceSprite;
-        }
-
-        private static void DoCastle(int oldRookXPos, int oldRookYPos, bool doKingSideCastle)
-        {
-
-            int newRookXpos = doKingSideCastle ? oldRookXPos - 2 : oldRookXPos + 3;
-
-            // grab piece, if null, break expression
-            PieceRender Rook = FindChessPieceGameObject(oldRookXPos, oldRookYPos) ?? throw new Exception();
-
-            // grab tile, if null, break expression
-            Tile newTile = FindTileGameObject(newRookXpos, oldRookYPos) ?? throw new Exception();
-
-            // set current rook tile (which will now be the old tile in the corner) to null (empty)
-            Rook.occupiedTile.OccupyingPiece = null;
-
-            // set rook piece's occupied tile to the new tile that it is now on
-            Rook.occupiedTile = newTile;
-            Rook.transform.position = new Vector3(newRookXpos, oldRookYPos);
-
-            // set new tile's currently occupied piece to the kingside rook
-            newTile.OccupyingPiece = Rook.gameObject;
-        }
-
-        private static void DoEnPassant(int capturedXPawnPosition, int capturedYPawnPosition)
-        {
-
-            PieceRender capturedPawn = FindChessPieceGameObject(capturedXPawnPosition, capturedYPawnPosition) ?? throw new Exception();
-
-            Tile newTile = FindTileGameObject(capturedXPawnPosition, capturedYPawnPosition) ?? throw new Exception();
-
-            newTile.OccupyingPiece = null;
-
-            Destroy(capturedPawn.gameObject);
-
-        }
-
-        public static void UpdateFrontEndSpecialMove(int XPiecePos, int YPiecePos, bool doKingSideCastle, bool doQueenSideCastle, bool enPassant)
-        {
-            /* This function will control updating the front end board with any special moves that are played (castling, en passant) */
-            if (doKingSideCastle)
-            {
-                DoCastle(XPiecePos, YPiecePos, true);
-                return;
-            }
-
-            if (doQueenSideCastle)
-            {
-                DoCastle(XPiecePos, YPiecePos, false);
-                return;
-            }
-
-            if (enPassant)
-            {
-                DoEnPassant(XPiecePos, YPiecePos);
-                return;
-            }
-
         }
 
         private static PieceRender FindChessPieceGameObject(int xPos, int yPos)
         {
             // Assuming each piece has a script that holds its board position and type
-            foreach (var piece in GameObject.FindObjectsOfType<PieceRender>())
+            foreach (var piece in FindObjectsOfType<PieceRender>())
             {
                 if (piece.transform.position.x == xPos && piece.transform.position.y == yPos)
                 {
@@ -320,7 +244,7 @@ namespace Chess
 
         private static Tile FindTileGameObject(int xPos, int yPos)
         {
-            foreach (var tile in GameObject.FindObjectsOfType<Tile>())
+            foreach (var tile in FindObjectsOfType<Tile>())
             {
                 if (tile.transform.position.x == xPos && tile.transform.position.y == yPos)
                     return tile;

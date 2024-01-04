@@ -5,16 +5,18 @@ using System.ComponentModel;
 using UnityEngine;
 using TMPro;
 using System.Linq;
+using UnityEditor.PackageManager;
 
 namespace Chess
 {
-    public class GridManager : MonoBehaviour
+    public class BoardManager : MonoBehaviour
     {
         // reference to game tile prefab
         [SerializeField] private Tile tilePrefab;
 
         [SerializeField] private Transform _cam;
 
+        [SerializeField] public Engine engine;
 
         // this holds the UI elements for the scene
         public Canvas Canvas;
@@ -25,7 +27,7 @@ namespace Chess
 
 
         // this game object holds all the sprites for each chess piece
-        public GameObject chessPiecePrefab;
+        [SerializeField] public GameObject chessPiecePrefab;
 
         // Forsyth-Edwards Notation representing positions in a chess game
         private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
@@ -48,6 +50,11 @@ namespace Chess
         // this will control the turn based movement
         public static bool whiteToMove = true;
 
+        // this triggers the computer to begin is move selection process
+        public static bool ComputerMove = false;
+
+        //
+
         // Start is called before the first frame update
         void Start()
         {
@@ -55,6 +62,26 @@ namespace Chess
             LoadFENString();
             CalculateDistanceToEdge();
             RenderPiecesOnBoard();
+
+            Board.legalMoves = Board.AfterMove(whiteToMove);
+
+            /* TODO: Currently this controls whether the computer plays black or white, I plan to change the implementation
+            inside of the Engine.cs file to have some UI elements on the main menu control what side the computer is playing.
+            Currently if computerMove = false, computer is playing black, else it plays white
+            */
+            //ComputerMove = true;
+
+
+            // TODO: this will likely get moved to some sort of button trigger on a UI main menu (starting the game)
+            Board.currentState = Board.GameState.Normal;
+
+
+            // This will control whether or not the computer will play moves at all
+            if (true)
+            {
+                engine.StartThinking();
+            }
+
         }
 
         void GenerateGrid()
@@ -185,8 +212,17 @@ namespace Chess
 
         }
 
+        public void ClearExistingPieces()
+        {
+            var pieces = GameObject.FindGameObjectsWithTag("ChessPiece");
+            foreach (var piece in pieces)
+            {
+                Destroy(piece);
+            }
+        }
+
         // render sprites onto board
-        void RenderPiecesOnBoard()
+        public void RenderPiecesOnBoard()
         {
             for (int rank = 0; rank < 8; rank++)
             {
@@ -238,7 +274,6 @@ namespace Chess
                     return null;  // For the 'Empty' piece or any unexpected value
             }
         }
-
     }
 
 }
