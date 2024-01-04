@@ -162,6 +162,9 @@ namespace Chess
 
             legalMoves = AfterMove(BoardManager.whiteToMove);
 
+            // This is okay here as the computer will never trigger this method
+            BoardManager.ComputerMove = true;
+
             UIController.Instance.UpdateMoveStatusUIInformation();
 
         }
