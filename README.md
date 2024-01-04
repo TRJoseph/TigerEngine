@@ -1,1 +1,10 @@
-# TigerEngine: A Chess AI implemented in C# with Unity Game Engine Visuals
+# TigerEngine: A Chess AI implemented in C#
+
+<img align="right" src="https://github.com/TRJoseph/TigerEngine/assets/83513663/548c9647-0be7-4988-a1d9-938d09d78e18" alt="TigerEngine Logo" width="400"/>
+
+Welcome! This repository is the host of a fully functional recreation of the classic board game, Chess! This project idea first stemmed from my love of the game of chess. I have been addicted to playing and learning about the game of chess for quite some time now and this has led to some overlap to my university studies within the computer science domain. Engine skill level has far surpassed the abilities of even the top human players of the game. After becoming proficient at the game itself and developing a thorough understanding of the rules of chess, I decided to embark upon developing an Engine of my own.
+
+## Overview
+First of all, this project is in progress and is currently receiving updates. Currently, the repository contains not only a chess computer that a player can challenge, but it also includes just the game of chess with all legal moves implemented. A human player is able to play a friend or simply mess around with the pieces. The front-end visual representation of this project is built using the Unity Game Engine. This allows for a human player to interact with the pieces. The back-end of the game is implemented using Bitboards (not entirely though). The chess board is an array of structs of length 64 (8x8 game board). Each structure within the array contains encoded information about the current piece occupying the square as well as pre-calculated distances to the edge of the board from each square. This information is useful for determining when to stop the move search once the algorithm reaches either another piece occupying a square or the edge of the game board. Swapping entirely over to Bitboards for this project is coming in the future to improve Engine efficiency as a full bitboard implementation would allow for more efficient legal move calculations using binary bitwise operations.
+
+## Current Features
