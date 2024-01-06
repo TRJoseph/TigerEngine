@@ -174,12 +174,9 @@ namespace Chess
                 // wipe the available moves once a move is executed
                 Board.ClearListMoves();
 
-                Board.legalMoves = Board.AfterMove(BoardManager.whiteToMove);
+                Board.legalMoves = Board.AfterMove();
 
-                BoardManager.ComputerMove = true;
-
-                // TODO COME UP WITH BETTER WAY TO DO THIS
-                // there will only be one instance of the UI controller so this is okay to do (for now)
+                // TODO Reference the UI instance in the top of this file
                 UIController.Instance.UpdateMoveStatusUIInformation();
             }
         }
@@ -207,12 +204,8 @@ namespace Chess
                 // wipe the available moves once a move is executed
                 Board.ClearListMoves();
 
-                Board.legalMoves = Board.AfterMove(BoardManager.whiteToMove);
+                Board.legalMoves = Board.AfterMove();
 
-                BoardManager.ComputerMove = !BoardManager.ComputerMove;
-
-                // TODO COME UP WITH BETTER WAY TO DO THIS
-                // there will only be one instance of the UI controller so this is okay to do (for now)
                 UIController.Instance.UpdateMoveStatusUIInformation();
             }
         }

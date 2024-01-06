@@ -33,7 +33,7 @@ namespace Chess
         private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
 
         // FEN string for testing pawn promotions
-        //private readonly string FENString = "5b2/8/8/6P1/6p1/8/8/8";
+        //private readonly string FENString = "8/8/8/6P1/6p1/8/8/8";
 
         // second FEN string for testings king interactivity
         //private readonly string FENString = "4k3/8/7P/2b5/8/8/8/4K3";
@@ -47,13 +47,21 @@ namespace Chess
         // this array holds all the tiles in the game
         public static Tile[,] chessTiles = new Tile[8, 8];
 
-        // this will control the turn based movement
+        // this will control the turn based movement, white moves first
         public static bool whiteToMove = true;
 
-        // this triggers the computer to begin is move selection process
-        public static bool ComputerMove = false;
+        public enum Sides
+        {
+            White = 0,
+            Black = 1
+        }
 
-        //
+        // these will be updated and selected based on UI elements in some sort of main menu before the game is started
+        public static Sides humanPlayer = Sides.White;
+
+        public static Sides ComputerSide = Sides.White;
+
+        public static Sides CurrentTurn = Sides.White;
 
         // Start is called before the first frame update
         void Start()
@@ -63,25 +71,30 @@ namespace Chess
             CalculateDistanceToEdge();
             RenderPiecesOnBoard();
 
-            Board.legalMoves = Board.AfterMove(whiteToMove);
+            Board.legalMoves = Board.GenerateLegalMoves();
 
-            /* TODO: Currently this controls whether the computer plays black or white, I plan to change the implementation
-            inside of the Engine.cs file to have some UI elements on the main menu control what side the computer is playing.
-            Currently if computerMove = false, computer is playing black, else it plays white
+            /* ChooseSide controls what side the player will play 
+            For example, if Sides.White is passed in, the player will be able to control the white pieces
+            and the engine will move the black pieces.
+            If the goal is to have the engine play itself, comment out this ChooseSide function call below and
+            comment out the 'SwapTurns' call from inside the 'AfterMove' method.
+
+            If the goal is to let the human player make both white and black moves, just comment out the 
+            'SwapTurns' call from inside the 'AfterMove' method.
             */
-            //ComputerMove = true;
-
+            ChooseSide(Sides.White);
 
             // TODO: this will likely get moved to some sort of button trigger on a UI main menu (starting the game)
             Board.currentState = Board.GameState.Normal;
 
+            // The engine should be analyzing the position constantly whether or not its the engine's turn
+            engine.StartThinking();
+        }
 
-            // This will control whether or not the computer will play moves at all
-            if (true)
-            {
-                engine.StartThinking();
-            }
-
+        public void ChooseSide(Sides playerSide)
+        {
+            humanPlayer = playerSide;
+            ComputerSide = (playerSide == Sides.White) ? Sides.Black : Sides.White; ;
         }
 
         void GenerateGrid()
@@ -183,17 +196,6 @@ namespace Chess
             {
                 for (int file = 0; file < 8; file++)
                 {
-                    // Board.Squares[rank * 8 + file];
-                    //chessTiles[file, rank].distances.DistanceNorth = 7 - rank;
-                    //chessTiles[file, rank].distances.DistanceSouth = rank;
-                    //chessTiles[file, rank].distances.DistanceWest = file;
-                    //chessTiles[file, rank].distances.DistanceEast = 7 - file;
-
-                    //chessTiles[file, rank].distances.DistanceNorthWest = Math.Min(chessTiles[file, rank].distances.DistanceNorth, chessTiles[file, rank].distances.DistanceWest);
-                    //chessTiles[file, rank].distances.DistanceNorthEast = Math.Min(chessTiles[file, rank].distances.DistanceNorth, chessTiles[file, rank].distances.DistanceEast);
-                    //chessTiles[file, rank].distances.DistanceSouthWest = Math.Min(chessTiles[file, rank].distances.DistanceSouth, chessTiles[file, rank].distances.DistanceWest);
-                    //chessTiles[file, rank].distances.DistanceSouthEast = Math.Min(chessTiles[file, rank].distances.DistanceSouth, chessTiles[file, rank].distances.DistanceEast);
-
                     int currentSquareIndex = rank * 8 + file;
 
                     Board.Squares[currentSquareIndex].DistanceNorth = 7 - rank;

@@ -15,17 +15,6 @@ namespace Chess
 
         private Thread _engineThread;
 
-        public enum Sides
-        {
-            White = 0,
-            Black = 0
-        }
-
-        // these will be updated and selected based on UI elements in some sort of main menu before the game is started
-        public static Sides humanPlayer = Sides.White;
-
-        public static Sides ComputerSide = Sides.Black;
-
         public void StartThinking()
         {
             _engineThread = new Thread(Think);
@@ -37,13 +26,7 @@ namespace Chess
             while (Board.currentState != Board.GameState.Ended)
             {
                 // engine should be analyzing the position constantly while the gamestate is active
-                // if (BoardManager.ComputerSide == BoardManager.Sides.White)
-                // {
-
-                // }
-                // else
-                // {
-                if (BoardManager.ComputerMove)
+                if (BoardManager.ComputerSide == BoardManager.CurrentTurn)
                 {
                     // make random moves
                     var random = new System.Random();
@@ -54,10 +37,14 @@ namespace Chess
                     });
 
                 }
-
-                //}
                 Thread.Sleep(100); // Prevents tight looping, adjust as needed
             }
+        }
+
+        public static int EvaluateBestPromotionPiece()
+        {
+            // Later, add more sophisticated logic
+            return Piece.Queen;
         }
     }
 

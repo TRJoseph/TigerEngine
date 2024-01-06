@@ -114,11 +114,46 @@ namespace Chess
         {
             if (IsPawnPromotion(currentPiece, newYPosition))
             {
-                // TODO will likely need to tweak this for the chess engine to automatically select a promotion choice based on the position
 
-                UIController.Instance.ShowPromotionDropdown(newPieceMove);
+                if (BoardManager.CurrentTurn == BoardManager.ComputerSide)
+                {
+                    UpdatePromotedPawnEngine(newPieceMove);
+                }
+                else
+                {
+                    UIController.Instance.ShowPromotionDropdown(newPieceMove);
+                }
 
             }
+        }
+
+        public static void UpdatePromotedPawnEngine(int newPieceMove)
+        {
+            int chosenPiece = Engine.EvaluateBestPromotionPiece();
+            switch (chosenPiece)
+            {
+                case Piece.Queen:
+                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 5;
+                    break;
+
+                case Piece.Rook:
+                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 4;
+                    break;
+
+                case Piece.Bishop:
+                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 3;
+                    break;
+
+                case Piece.Knight:
+                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 2;
+                    break;
+
+                default:
+                    // this should not happen
+                    throw new Exception();
+            }
+
+            UIController.Instance.UpdateMoveStatusUIInformation();
         }
 
         public static void UpdatePromotedPawn(int newPieceMove)
@@ -160,10 +195,7 @@ namespace Chess
             // once the pawn has been swapped internally
             ClearListMoves();
 
-            legalMoves = AfterMove(BoardManager.whiteToMove);
-
-            // This is okay here as the computer will never trigger this method
-            BoardManager.ComputerMove = true;
+            legalMoves = AfterMove();
 
             UIController.Instance.UpdateMoveStatusUIInformation();
 
@@ -274,7 +306,7 @@ namespace Chess
             // square one square northWest, checking if an enemy piece is there available for capture
             if (Squares[startSquare].DistanceNorthWest >= 1)
             {
-                if (IsOpponentPiece(northWestSquare, Piece.Black) || !friendlyList)
+                if (IsOpponentPiece(northWestSquare, Piece.Black))
                 {
                     pawnCaptureMoves.Add(AddLegalMove(startSquare, northWestSquare, false, false, false));
                 }
@@ -284,14 +316,14 @@ namespace Chess
 
             if (Squares[startSquare].DistanceNorthEast >= 1)
             {
-                if (IsOpponentPiece(northEastSquare, Piece.Black) || !friendlyList)
+                if (IsOpponentPiece(northEastSquare, Piece.Black))
                 {
                     pawnCaptureMoves.Add(AddLegalMove(startSquare, northEastSquare, false, false, false));
                 }
             }
 
             // for en passant
-            if (lastPawnDoubleMoveSquare != -1 && friendlyList)
+            if (lastPawnDoubleMoveSquare != -1)
             {
                 if ((lastPawnDoubleMoveSquare + 8 - startSquare) == pawnOffsets[2] && Squares[startSquare].DistanceEast >= 1)
                 {
@@ -318,7 +350,7 @@ namespace Chess
             // square one square southEast, checking if an enemy piece is there available for capture
             if (Squares[startSquare].DistanceSouthEast >= 1)
             {
-                if (IsOpponentPiece(southEastSquare, Piece.White) || !friendlyList)
+                if (IsOpponentPiece(southEastSquare, Piece.White))
                 {
                     pawnCaptureMoves.Add(AddLegalMove(startSquare, southEastSquare, false, false, false));
                 }
@@ -327,14 +359,14 @@ namespace Chess
 
             if (Squares[startSquare].DistanceSouthWest >= 1)
             {
-                if (IsOpponentPiece(southWestSquare, Piece.White) || !friendlyList)
+                if (IsOpponentPiece(southWestSquare, Piece.White))
                 {
                     pawnCaptureMoves.Add(AddLegalMove(startSquare, southWestSquare, false, false, false));
                 }
             }
 
             // for en passant
-            if (lastPawnDoubleMoveSquare != -1 && friendlyList)
+            if (lastPawnDoubleMoveSquare != -1)
             {
                 if (startSquare - (lastPawnDoubleMoveSquare - 8) == pawnOffsets[2] && Squares[startSquare].DistanceWest >= 1)
                 {
@@ -368,7 +400,7 @@ namespace Chess
                 {
                     // if pawn has moved, legal moves is only a one square advance
                     // checks if the square in front of the pawn is empty
-                    if (Squares[startSquare + pawnOffsets[1]].encodedPiece == Piece.Empty && friendlyList)
+                    if (Squares[startSquare + pawnOffsets[1]].encodedPiece == Piece.Empty)
                     {
                         pawnMoves.Add(AddLegalMove(startSquare, startSquare + pawnOffsets[1], false, false, false));
                     }
@@ -379,7 +411,7 @@ namespace Chess
                 else
                 {
                     // if pawn has not moved, legal moves is a two square advance
-                    if (Squares[startSquare + pawnOffsets[1]].encodedPiece == Piece.Empty && friendlyList)
+                    if (Squares[startSquare + pawnOffsets[1]].encodedPiece == Piece.Empty)
                     {
                         pawnMoves.Add(AddLegalMove(startSquare, startSquare + pawnOffsets[1], false, false, false));
 
@@ -398,7 +430,7 @@ namespace Chess
                 if (decodedPieceStatus == PieceMoveStatusFlag)
                 {
                     // if pawn has moved, legal moves is only a one square advance
-                    if (Squares[startSquare - pawnOffsets[1]].encodedPiece == Piece.Empty && friendlyList)
+                    if (Squares[startSquare - pawnOffsets[1]].encodedPiece == Piece.Empty)
                     {
                         pawnMoves.Add(AddLegalMove(startSquare, startSquare - pawnOffsets[1], false, false, false));
                     }
@@ -409,7 +441,7 @@ namespace Chess
                 else
                 {
                     // if pawn has not moved, legal moves is a two square advance
-                    if (Squares[startSquare - pawnOffsets[1]].encodedPiece == Piece.Empty && friendlyList)
+                    if (Squares[startSquare - pawnOffsets[1]].encodedPiece == Piece.Empty)
                     {
                         pawnMoves.Add(AddLegalMove(startSquare, startSquare - pawnOffsets[1], false, false, false));
 
@@ -707,16 +739,24 @@ namespace Chess
         }
 
 
-        public static List<LegalMove> AfterMove(bool friendlyMove)
+        public static List<LegalMove> AfterMove()
         {
-            // 'friendlyList' controls which list (opponent or friendly) the algorithm places a move into
-            friendlyList = true;
-
             // calculates all legal moves in a given position
             legalMoves = GenerateLegalMoves();
+
+            SwapTurn();
+
             return legalMoves;
 
         }
+
+        private static void SwapTurn()
+        {
+            BoardManager.CurrentTurn = BoardManager.CurrentTurn == BoardManager.Sides.White
+                                    ? BoardManager.Sides.Black
+                                    : BoardManager.Sides.White;
+        }
+
         private static bool IsKingSideCastleLegal(int startSquare, List<LegalMove> opponentMoves)
         {
             int kingFinalSquare = startSquare + 2; // For kingside castling, king ends two squares to the right
@@ -750,7 +790,6 @@ namespace Chess
                 // replace this with current king square
                 int currentKingSquare = FindKingPosition(BoardManager.whiteToMove);
 
-                friendlyList = false;
                 List<LegalMove> opponentResponses = CalculateAllMoves(!BoardManager.whiteToMove);
 
                 // Special handling for castling moves
