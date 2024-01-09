@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-
+using System.Diagnostics;
+using UnityEngine;
+using System.Timers;
 
 namespace Chess
 {
@@ -48,11 +50,6 @@ namespace Chess
             public bool? enPassant;
         }
 
-        /* opting for a variable to control which list the algorithm places a move 
-        into instead of passing the corresponding list as a parameter to every move 
-        calculation function (opponent list or friendly list). */
-        public static bool friendlyList = true;
-
         public static List<LegalMove> legalMoves = new List<LegalMove>();
 
         private enum Direction { North, South, East, West, NorthWest, NorthEast, SouthWest, SouthEast };
@@ -68,6 +65,12 @@ namespace Chess
         private static int lastPawnDoubleMoveSquare = -1;
 
         private static readonly int[,] knightOffsets = { { 17, -15, 15, -17 }, { 10, -6, 6, -10 } };
+
+        // These flags are for game-ending conditions
+        private static bool kingInCheck;
+
+        private static int fiftyMoveAccumulator;
+
 
         public enum GameState
         {
@@ -741,13 +744,37 @@ namespace Chess
 
         public static List<LegalMove> AfterMove()
         {
+            //Stopwatch timer = Stopwatch.StartNew();
+
             // calculates all legal moves in a given position
             legalMoves = GenerateLegalMoves();
+
+            // timer.Stop();
+            // TimeSpan timespan = timer.Elapsed;
+            // UnityEngine.Debug.Log(String.Format("{0:00}:{1:00}:{2:00}", timespan.Minutes, timespan.Seconds, timespan.Milliseconds));
+
+            // TODO this might need to be done inside of GenerateLegalMoves();
+            CheckForGameOverConditions();
 
             SwapTurn();
 
             return legalMoves;
+        }
 
+        private static void CheckForGameOverConditions()
+        {
+            if (legalMoves.Count == 0 && kingInCheck)
+            {
+                UnityEngine.Debug.Log("CheckMate!");
+                currentState = GameState.Ended;
+
+            }
+
+            if (legalMoves.Count == 0 && !kingInCheck)
+            {
+                UnityEngine.Debug.Log("Stalemate!");
+                currentState = GameState.Ended;
+            }
         }
 
         private static void SwapTurn()
@@ -783,6 +810,8 @@ namespace Chess
 
             int originalkingSquare = FindKingPosition(BoardManager.whiteToMove);
 
+            kingInCheck = false;
+
             foreach (LegalMove move in pseudoLegalMoves)
             {
                 int rememberedPiece = ExecuteMove(move);
@@ -812,6 +841,10 @@ namespace Chess
                 {
                     // if the king is not under attack after the move, add it to legal moves
                     legalMoves.Add(move);
+                }
+                else
+                {
+                    kingInCheck = true;
                 }
                 // Undo the move for the next iteration
                 UndoMove(move, rememberedPiece);
