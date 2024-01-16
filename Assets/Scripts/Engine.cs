@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Threading;
+using System.Diagnostics.Tracing;
 
 namespace Chess
 {
@@ -19,7 +20,7 @@ namespace Chess
         {
             _engineThread = new Thread(Think);
             _engineThread.Start();
-        }
+        } 
 
         private void Think()
         {
