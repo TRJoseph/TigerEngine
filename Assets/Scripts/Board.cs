@@ -27,9 +27,9 @@ namespace Chess
         }
 
         // values for decoding the encoded piece from binary (MCCTTT) M = Move Status flag bit, CC = Color bits, TTT = Piece Type bits
-        private const int PieceTypeMask = 7;
-        private const int PieceColorMask = 24;
-        private const int PieceMoveStatusFlag = 32;
+        public const int PieceTypeMask = 7;
+        public const int PieceColorMask = 24;
+        public const int PieceMoveStatusFlag = 32;
         //
 
         public const int BoardSize = 64;
@@ -80,11 +80,15 @@ namespace Chess
         }
 
         public static GameState currentState = GameState.Normal;
+
         public static void UpdateInternalState(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
         {
             int newPieceMove = newYPosition * 8 + newXPosition;
             // grab current piece and store it
             int currentPiece = Squares[originalYPosition * 8 + originalXPosition].encodedPiece;
+
+            // before the piece is changed this rule needs to be verified (50 moves without a piece capture or pawn advance)
+            Verify50MoveRule(currentPiece, newPieceMove);
 
             // when the piece has moved, set the 6th bit to 1
             currentPiece = currentPiece | PieceMoveStatusFlag;
@@ -96,11 +100,8 @@ namespace Chess
             Squares[newPieceMove].encodedPiece = currentPiece;
 
             // check for special move flags
-            /* TODO, THIS MAY CAUSE ISSUES WHEN CREATING THE CHESS ENGINE PART. I have not given this enough thought quite yet
-               although my intitial hunch is that it should be okay as the engine will likely work entirely on the back end 
-               and never have to update the internal state from the front end, but there may be a need to have new internal update functions for
-               the engine to take advantage of. */
 
+            // checks for pawn promotions and handles them appropriately
             HandlePawnPromotionInternal(newPieceMove, currentPiece, newYPosition);
 
             // checks for a potential en passant capture
@@ -754,20 +755,33 @@ namespace Chess
             // UnityEngine.Debug.Log(String.Format("{0:00}:{1:00}:{2:00}", timespan.Minutes, timespan.Seconds, timespan.Milliseconds));
 
             // TODO this might need to be done inside of GenerateLegalMoves();
-            CheckForGameOverConditions();
+            CheckForGameOverRules();
 
             //SwapTurn();
 
             return legalMoves;
         }
 
-        private static void CheckForGameOverConditions()
+        private static void Verify50MoveRule(int currentPiece, int newPieceMove)
+        {
+            // if the current piece being moved is a pawn, reset the 50 move accumulator
+            // if the newpiecemove was a capture, reset the 50 move accumulator
+            if ((Squares[currentPiece].encodedPiece & PieceTypeMask) == Piece.Pawn || (Squares[newPieceMove].encodedPiece & PieceTypeMask) != Piece.Empty)
+            {
+                // this move captured a piece, reset the fifty move rule
+                fiftyMoveAccumulator = 0;
+            } else
+            {
+                fiftyMoveAccumulator ++;
+            }
+        }
+
+        private static void CheckForGameOverRules()
         {
             if (legalMoves.Count == 0 && kingInCheck)
             {
                 UnityEngine.Debug.Log("CheckMate!");
                 currentState = GameState.Ended;
-
             }
 
             if (legalMoves.Count == 0 && !kingInCheck)
@@ -775,6 +789,19 @@ namespace Chess
                 UnityEngine.Debug.Log("Stalemate!");
                 currentState = GameState.Ended;
             }
+
+            // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence
+            // why this is checking for 100, not 50. 
+            if (fiftyMoveAccumulator == 100)
+            {
+                UnityEngine.Debug.Log("Draw by 50 move rule!");
+                currentState = GameState.Ended;
+            }
+
+            // threefold repetition rule (position repeats three times is a draw)
+
+            // draw by insufficient material rule, for example: knight and king cannot deliver checkmate
+
         }
 
         private static void SwapTurn()
@@ -890,7 +917,6 @@ namespace Chess
             }
             return moveList;
         }
-
 
         public static List<LegalMove> CalculateLegalMoves(int startSquare, int internalGamePiece)
         {
