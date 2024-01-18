@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Threading;
 using System.Diagnostics.Tracing;
+using UnityEditor.Experimental.GraphView;
 
 namespace Chess
 {
@@ -29,12 +30,9 @@ namespace Chess
                 // engine should be analyzing the position constantly while the gamestate is active
                 if (BoardManager.ComputerSide == BoardManager.CurrentTurn)
                 {
-                    // make random moves
-                    var random = new System.Random();
-                    int index = random.Next(Board.legalMoves.Count);
                     MainThreadDispatcher.Enqueue(() =>
                     {
-                        pieceMovementManager.HandleEngineMoveExecution(Board.legalMoves[index]);
+                        pieceMovementManager.HandleEngineMoveExecution(SimpleEval());
                     });
 
                 }
@@ -46,6 +44,24 @@ namespace Chess
         {
             // Later, add more sophisticated logic
             return Piece.Queen;
+        }
+
+        private static Board.LegalMove SimpleEval()
+        {
+            Board.LegalMove defaultMove = default(Board.LegalMove);
+            // capture piece when available
+            var capturingMove = Board.legalMoves
+                        .FirstOrDefault(move => (Board.Squares[move.endSquare].encodedPiece & Board.PieceTypeMask) != Piece.Empty);
+
+            if(!capturingMove.Equals(defaultMove))
+            {
+                return capturingMove;
+
+            }else {
+                // make random move, for now
+                var random = new System.Random();
+                return Board.legalMoves[random.Next(Board.legalMoves.Count)];
+            }
         }
     }
 

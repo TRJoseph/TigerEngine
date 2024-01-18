@@ -27,9 +27,9 @@ namespace Chess
         }
 
         // values for decoding the encoded piece from binary (MCCTTT) M = Move Status flag bit, CC = Color bits, TTT = Piece Type bits
-        private const int PieceTypeMask = 7;
-        private const int PieceColorMask = 24;
-        private const int PieceMoveStatusFlag = 32;
+        public const int PieceTypeMask = 7;
+        public const int PieceColorMask = 24;
+        public const int PieceMoveStatusFlag = 32;
         //
 
         private const int BoardSize = 64;
@@ -918,7 +918,6 @@ namespace Chess
             return moveList;
         }
 
-
         public static List<LegalMove> CalculateLegalMoves(int startSquare, int internalGamePiece)
         {
             int decodedPiece = internalGamePiece & PieceTypeMask;
@@ -926,30 +925,34 @@ namespace Chess
 
             // if = PieceMoveStatusFlag (32), piece has moved, if 0, piece has not moved
             int decodedPieceStatus = internalGamePiece & PieceMoveStatusFlag;
-
-            List<LegalMove> pieceMoves = new List<LegalMove>();
-
             switch (decodedPiece)
             {
                 case Piece.Pawn:
-                    pieceMoves.AddRange(CalculatePawnMoves(startSquare, decodedColor, decodedPieceStatus));
-                    break;
+                    // a pawn can never have more than 4 moves in any given position
+                    List<LegalMove> pawnMoves = new List<LegalMove>(4);
+                    pawnMoves.AddRange(CalculatePawnMoves(startSquare, decodedColor, decodedPieceStatus));
+                    return pawnMoves;
                 case Piece.Knight:
-                    pieceMoves.AddRange(CalculateKnightMoves(startSquare, decodedColor));
-                    break;
+                    List<LegalMove> knightMoves = new List<LegalMove>(8);
+                    knightMoves.AddRange(CalculateKnightMoves(startSquare, decodedColor));
+                    return knightMoves;
                 case Piece.Rook:
-                    pieceMoves.AddRange(CalculateRookMoves(startSquare, decodedColor));
-                    break;
+                    List<LegalMove> rookMoves = new List<LegalMove>(14);
+                    rookMoves.AddRange(CalculateRookMoves(startSquare, decodedColor));
+                    return rookMoves;
                 case Piece.Bishop:
-                    pieceMoves.AddRange(CalculateBishopMoves(startSquare, decodedColor));
-                    break;
+                    List<LegalMove> bishopMoves = new List<LegalMove>(13);
+                    bishopMoves.AddRange(CalculateBishopMoves(startSquare, decodedColor));
+                    return bishopMoves;
                 case Piece.Queen:
                     // queen contains both movesets of a bishop and a rook
-                    pieceMoves.AddRange(CalculateRookMoves(startSquare, decodedColor));
-                    pieceMoves.AddRange(CalculateBishopMoves(startSquare, decodedColor));
-                    break;
+                    List<LegalMove> queenMoves = new List<LegalMove>(27);
+                    queenMoves.AddRange(CalculateRookMoves(startSquare, decodedColor));
+                    queenMoves.AddRange(CalculateBishopMoves(startSquare, decodedColor));
+                    return queenMoves;
                 case Piece.King:
-                    pieceMoves.AddRange(CalculateKingMoves(startSquare, decodedColor));
+                    List<LegalMove> kingMoves = new List<LegalMove>(8);
+                    kingMoves.AddRange(CalculateKingMoves(startSquare, decodedColor));
 
                     // check for castling ability
                     // makes sure king is on e file
@@ -960,21 +963,20 @@ namespace Chess
                         if (kingSideCastleMove != null)
                         {
 
-                            pieceMoves.Add(kingSideCastleMove.Value);
+                            kingMoves.Add(kingSideCastleMove.Value);
                         }
 
                         var queenSideCastleMove = CheckQueenSideCastle(startSquare);
 
                         if (queenSideCastleMove != null)
                         {
-                            pieceMoves.Add(queenSideCastleMove.Value);
+                            kingMoves.Add(queenSideCastleMove.Value);
                         }
                     }
-                    break;
+                    return kingMoves;
                 default:
-                    return pieceMoves;
+                    return null;
             }
-            return pieceMoves;
         }
     }
 }
