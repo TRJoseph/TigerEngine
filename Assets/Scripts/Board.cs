@@ -757,7 +757,7 @@ namespace Chess
             // TODO this might need to be done inside of GenerateLegalMoves();
             CheckForGameOverRules();
 
-            SwapTurn();
+            //SwapTurn();
 
             return legalMoves;
         }
@@ -821,11 +821,10 @@ namespace Chess
 
         private static bool IsQueenSideCastleLegal(int startSquare, List<LegalMove> opponentMoves)
         {
-            int kingFinalSquare = startSquare - 3; // For kingside castling, king ends two squares to the right
-            int kingPathSquare = startSquare - 2; // The square king passes through
-            int kingPathSquare2 = startSquare - 1;
+            int kingPathSquare = startSquare - 2; 
+            int kingPathSquare2 = startSquare - 1; // The square king passes through
 
-            return !opponentMoves.Any(move => move.endSquare == kingFinalSquare || move.endSquare == kingPathSquare || move.endSquare == kingPathSquare2 || move.endSquare == startSquare);
+            return !opponentMoves.Any(move => move.endSquare == kingPathSquare || move.endSquare == kingPathSquare2 || move.endSquare == startSquare);
         }
 
         public static List<LegalMove> GenerateLegalMoves()
