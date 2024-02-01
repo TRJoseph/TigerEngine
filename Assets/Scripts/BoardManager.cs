@@ -44,9 +44,6 @@ namespace Chess
         // another FEN string for testing checkmate 
         //private readonly string FENString = "rnbqkbnr/p1pp1ppp/1p6/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR";
 
-        // this array holds all the tiles in the game
-        public static Tile[,] chessTiles = new Tile[8, 8];
-
         // this will control the turn based movement, white moves first
         public static bool whiteToMove = true;
 
@@ -118,8 +115,6 @@ namespace Chess
                     tile.SetTileColor(isLightSquare);
 
                     tile.name = $"Tile file: {file} rank: {rank}";
-
-                    chessTiles[file, rank] = tile;
 
                     if (file == 0)
                     {
@@ -245,12 +240,6 @@ namespace Chess
 
                         // this may be removed for a better alternative for sizing the pieces
                         piece.transform.localScale = new Vector3(0.125f, 0.125f, 1f);
-
-                        // set tile to occupied by piece
-                        chessTiles[file, rank].OccupyingPiece = piece;
-
-                        // set piece to occupy tile
-                        renderScript.occupiedTile = chessTiles[file, rank];
                     }
                 }
             }
