@@ -6,6 +6,8 @@ using UnityEngine;
 using TMPro;
 using System.Linq;
 using UnityEditor.PackageManager;
+using static Chess.Board;
+using Unity.VisualScripting;
 
 namespace Chess
 {
@@ -44,9 +46,6 @@ namespace Chess
         // another FEN string for testing checkmate 
         //private readonly string FENString = "rnbqkbnr/p1pp1ppp/1p6/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR";
 
-        // this array holds all the tiles in the game
-        public static Tile[,] chessTiles = new Tile[8, 8];
-
         // this will control the turn based movement, white moves first
         public static bool whiteToMove = true;
 
@@ -67,6 +66,7 @@ namespace Chess
         void Start()
         {
             GenerateGrid();
+            InitializeChessBoard();
             LoadFENString();
             CalculateDistanceToEdge();
             RenderPiecesOnBoard();
@@ -119,8 +119,6 @@ namespace Chess
 
                     tile.name = $"Tile file: {file} rank: {rank}";
 
-                    chessTiles[file, rank] = tile;
-
                     if (file == 0)
                     {
                         TextMeshProUGUI rankLabel = Instantiate(tileRankLabels[rank]);
@@ -133,6 +131,24 @@ namespace Chess
 
             _cam.transform.position = new Vector3((float)file / 2 - 0.5f, (float)rank / 2 - 0.5f, -10);
 
+        }
+        public static void InitializeChessBoard()
+        {
+            InternalBoard.WhitePawns = new BitBoard();
+            InternalBoard.WhiteRooks = new BitBoard();
+            InternalBoard.WhiteKnights = new BitBoard();
+            InternalBoard.WhiteBishops = new BitBoard();
+            InternalBoard.WhiteQueens = new BitBoard();
+            InternalBoard.WhiteKing = new BitBoard();
+            InternalBoard.BlackPawns = new BitBoard();
+            InternalBoard.BlackRooks = new BitBoard();
+            InternalBoard.BlackKnights = new BitBoard();
+            InternalBoard.BlackBishops = new BitBoard();
+            InternalBoard.BlackQueens = new BitBoard();
+            InternalBoard.BlackKing = new BitBoard();
+            InternalBoard.AllWhitePieces = new BitBoard();
+            InternalBoard.AllBlackPieces = new BitBoard();
+            InternalBoard.AllPieces = new BitBoard();
         }
 
         void LoadFENString()
@@ -178,13 +194,52 @@ namespace Chess
                     // get the piece color
                     int pieceColor = char.IsUpper(FENString[i]) ? Piece.White : Piece.Black;
 
+                    // places all pieces in appropriate bitboard locations
+                    InitializeBitBoards(piece, pieceColor, rank * 8 + file);
+
                     // represented in binary with or operator
-                    Board.Squares[rank * 8 + file].encodedPiece = pieceColor | piece;
+                    Squares[rank * 8 + file].encodedPiece = pieceColor | piece;
 
                     file++;
                 }
             }
 
+            // Initializes the initial physical locations of all the white pieces, black pieces, and every piece on the board
+            InternalBoard.AllWhitePieces = InternalBoard.WhitePawns | InternalBoard.WhiteKnights | InternalBoard.WhiteBishops | InternalBoard.WhiteRooks | InternalBoard.WhiteQueens | InternalBoard.WhiteKing;
+            InternalBoard.AllBlackPieces = InternalBoard.BlackPawns | InternalBoard.BlackKnights | InternalBoard.BlackBishops | InternalBoard.BlackRooks | InternalBoard.BlackQueens | InternalBoard.BlackKing;
+            InternalBoard.AllPieces = InternalBoard.AllBlackPieces | InternalBoard.AllWhitePieces;
+
+
+            VisualizeBitboard(InternalBoard.WhiteQueens);
+            InternalBoard.eastOne(InternalBoard.WhiteQueens);
+            VisualizeBitboard(InternalBoard.WhiteQueens);
+        }
+
+        private void InitializeBitBoards(int pieceType, int pieceColor, int currentPosition)
+        {
+            BitBoard targetBitboard = null;
+            switch (pieceType)
+            {
+                case Piece.Pawn:
+                    targetBitboard = (pieceColor == Piece.White) ? InternalBoard.WhitePawns : InternalBoard.BlackPawns;
+                    break;
+                case Piece.Knight:
+                    targetBitboard = (pieceColor == Piece.White) ? InternalBoard.WhiteKnights : InternalBoard.BlackKnights;
+                    break;
+                case Piece.Rook:
+                    targetBitboard = (pieceColor == Piece.White) ? InternalBoard.WhiteRooks : InternalBoard.BlackRooks;
+                    break;
+                case Piece.Bishop:
+                    targetBitboard = (pieceColor == Piece.White) ? InternalBoard.WhiteBishops : InternalBoard.BlackBishops;
+                    break;
+                case Piece.Queen:
+                    targetBitboard = (pieceColor == Piece.White) ? InternalBoard.WhiteQueens : InternalBoard.BlackQueens;
+                    break;
+                case Piece.King:
+                    targetBitboard = (pieceColor == Piece.White) ? InternalBoard.WhiteKing : InternalBoard.BlackKing;
+                    break;
+            }
+            targetBitboard.SetBit(currentPosition);
         }
 
 
@@ -198,19 +253,18 @@ namespace Chess
                 {
                     int currentSquareIndex = rank * 8 + file;
 
-                    Board.Squares[currentSquareIndex].DistanceNorth = 7 - rank;
-                    Board.Squares[currentSquareIndex].DistanceSouth = rank;
-                    Board.Squares[currentSquareIndex].DistanceWest = file;
-                    Board.Squares[currentSquareIndex].DistanceEast = 7 - file;
+                    Squares[currentSquareIndex].DistanceNorth = 7 - rank;
+                    Squares[currentSquareIndex].DistanceSouth = rank;
+                    Squares[currentSquareIndex].DistanceWest = file;
+                    Squares[currentSquareIndex].DistanceEast = 7 - file;
 
-                    Board.Squares[currentSquareIndex].DistanceNorthWest = Math.Min(Board.Squares[currentSquareIndex].DistanceNorth, Board.Squares[currentSquareIndex].DistanceWest);
-                    Board.Squares[currentSquareIndex].DistanceNorthEast = Math.Min(Board.Squares[currentSquareIndex].DistanceNorth, Board.Squares[currentSquareIndex].DistanceEast);
-                    Board.Squares[currentSquareIndex].DistanceSouthWest = Math.Min(Board.Squares[currentSquareIndex].DistanceSouth, Board.Squares[currentSquareIndex].DistanceWest);
-                    Board.Squares[currentSquareIndex].DistanceSouthEast = Math.Min(Board.Squares[currentSquareIndex].DistanceSouth, Board.Squares[currentSquareIndex].DistanceEast);
+                    Squares[currentSquareIndex].DistanceNorthWest = Math.Min(Board.Squares[currentSquareIndex].DistanceNorth, Board.Squares[currentSquareIndex].DistanceWest);
+                    Squares[currentSquareIndex].DistanceNorthEast = Math.Min(Board.Squares[currentSquareIndex].DistanceNorth, Board.Squares[currentSquareIndex].DistanceEast);
+                    Squares[currentSquareIndex].DistanceSouthWest = Math.Min(Board.Squares[currentSquareIndex].DistanceSouth, Board.Squares[currentSquareIndex].DistanceWest);
+                    Squares[currentSquareIndex].DistanceSouthEast = Math.Min(Board.Squares[currentSquareIndex].DistanceSouth, Board.Squares[currentSquareIndex].DistanceEast);
 
                 }
             }
-
 
         }
 
@@ -246,14 +300,32 @@ namespace Chess
                         // this may be removed for a better alternative for sizing the pieces
                         piece.transform.localScale = new Vector3(0.125f, 0.125f, 1f);
 
-                        // set tile to occupied by piece
-                        chessTiles[file, rank].OccupyingPiece = piece;
-
-                        // set piece to occupy tile
-                        renderScript.occupiedTile = chessTiles[file, rank];
                     }
                 }
             }
+        }
+        public static void VisualizeBitboard(BitBoard bitboard)
+        {
+            string boardRepresentation = "";
+            for (int rank = 7; rank >= 0; rank--)
+            {
+                for (int file = 0; file < 8; file++)
+                {
+                    int squareIndex = rank * 8 + file;
+                    ulong squareBit = 1UL << squareIndex;
+
+                    if ((bitboard.Value & squareBit) != 0)
+                    {
+                        boardRepresentation += "1 ";
+                    }
+                    else
+                    {
+                        boardRepresentation += ". ";
+                    }
+                }
+                boardRepresentation += "\n"; // New line for each rank
+            }
+            Debug.Log(boardRepresentation);
         }
 
         public static Sprite GetSpriteForPiece(int decodedPiece, int decodedPieceColor, PieceRender renderScript)
