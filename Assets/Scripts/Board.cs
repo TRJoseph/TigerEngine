@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
 using System.Timers;
+using static Chess.Board;
 
 namespace Chess
 {
@@ -35,54 +36,68 @@ namespace Chess
         // This section is being used for bitboard refactoring
         //
         //
-        public class BitBoard
-        {
-            public ulong Value { get; private set; }
+        //public class BitBoard
+        //{
+        //    public ulong Value { get; set; }
 
-            public BitBoard(ulong initialValue = 0UL)
-            {
-                Value = initialValue;
-            }
+        //    public BitBoard(ulong initialValue = 0UL)
+        //    {
+        //        Value = initialValue;
+        //    }
 
-            // Allows setting bits on the bitboard easily
-            public static BitBoard operator |(BitBoard a, BitBoard b)
-            {
-                return new BitBoard(a.Value | b.Value);
-            }
+        //    // Allows setting bits on the bitboard easily
+        //    public static BitBoard operator |(BitBoard a, BitBoard b)
+        //    {
+        //        return new BitBoard(a.Value | b.Value);
+        //    }
 
-            // Method to set a bit at a specific position
-            public void SetBit(int position)
-            {
-                Value |= 1UL << position;
-            }
+        //    // Method to set a bit at a specific position
+        //    public void SetBit(int position)
+        //    {
+        //        Value |= 1UL << position;
+        //    }
 
-            public void ShiftBitLeft(int position)
-            {
-                Value <<= position;
-            }
-        }
+        //    public BitBoard ShiftBitLeft(int position)
+        //    {
+        //        Value = (Value << position) & notAFile;
+        //        return Value;
+        //    }
+
+        //    public BitBoard ShiftBitRight(int position)
+        //    {
+        //        Value = (Value >> position) & notHFile;
+        //        return Value;
+        //    }
+        //}
 
         public struct ChessBoard
         {
-            public BitBoard WhitePawns;
-            public BitBoard WhiteRooks;
-            public BitBoard WhiteKnights;
-            public BitBoard WhiteBishops;
-            public BitBoard WhiteQueens;
-            public BitBoard WhiteKing;
+            public ulong WhitePawns;
+            public ulong WhiteRooks;
+            public ulong WhiteKnights;
+            public ulong WhiteBishops;
+            public ulong WhiteQueens;
+            public ulong WhiteKing;
 
-            public BitBoard BlackPawns;
-            public BitBoard BlackRooks;
-            public BitBoard BlackKnights;
-            public BitBoard BlackBishops;
-            public BitBoard BlackQueens;
-            public BitBoard BlackKing;
+            public ulong BlackPawns;
+            public ulong BlackRooks;
+            public ulong BlackKnights;
+            public ulong BlackBishops;
+            public ulong BlackQueens;
+            public ulong BlackKing;
 
-            public BitBoard AllWhitePieces;
-            public BitBoard AllBlackPieces;
-            public BitBoard AllPieces;
+            public ulong AllWhitePieces;
+            public ulong AllBlackPieces;
+            public ulong AllPieces;
 
-            public void eastOne(BitBoard bitboard) { bitboard.ShiftBitLeft(1); }
+            public readonly ulong NorthOne(ulong bitboard) { return (bitboard << 8) & notAFile; }
+            public readonly ulong EastOne(ulong bitboard) { return (bitboard << 1) & notAFile; }
+            public readonly ulong NorthEastOne(ulong bitboard) { return (bitboard << 9) & notAFile; }
+            public readonly ulong SouthEastOne(ulong bitboard) { return (bitboard >> 7) & notHFile; }
+            public readonly ulong WestOne(ulong bitboard) { return (bitboard >> 1) & notHFile; }
+            public readonly ulong SouthWestOne(ulong bitboard) { return (bitboard >> 9) & notHFile; }
+            public readonly ulong NorthWestOne(ulong bitboard) { return (bitboard << 7) & notAFile; }
+            public readonly ulong SouthOne(ulong bitboard) { return (bitboard >> 8) & notHFile; }
         }
 
         public static ChessBoard InternalBoard = new();
@@ -170,7 +185,7 @@ namespace Chess
         //
 
 
-        private const int BoardSize = 64;
+        public const int BoardSize = 64;
         public static InternalSquare[] Squares = new InternalSquare[BoardSize];
 
         // this structure will hold a move that can be executed
@@ -885,7 +900,9 @@ namespace Chess
             //Stopwatch timer = Stopwatch.StartNew();
 
             // calculates all legal moves in a given position
-            legalMoves = GenerateLegalMoves();
+            //legalMoves = GenerateLegalMoves();
+            //legalmoves
+
 
             // timer.Stop();
             // TimeSpan timespan = timer.Elapsed;
@@ -963,6 +980,48 @@ namespace Chess
 
             return !opponentMoves.Any(move => move.endSquare == kingPathSquare || move.endSquare == kingPathSquare2 || move.endSquare == startSquare);
         }
+
+
+        public static List<LegalMove> GenerateLegalMovesBitBoard()
+        {
+            List<LegalMove> pseudoLegalMoves = new List<LegalMove>();
+
+            ulong validKingMoves = ComputeKingMoves(InternalBoard.WhiteKing);
+
+            while(validKingMoves != 0)
+            {
+                ulong lsb = validKingMoves & (~validKingMoves + 1);
+            }
+
+
+             return pseudoLegalMoves;
+        }
+
+        public static ulong ComputeKingMoves(ulong king_loc)
+        {
+            if(BoardManager.whiteToMove)
+            {
+                ulong square1 = InternalBoard.EastOne(king_loc);
+                ulong square2 = InternalBoard.NorthEastOne(king_loc);
+                ulong square3 = InternalBoard.SouthEastOne(king_loc);
+                ulong square4 = InternalBoard.NorthOne(king_loc);
+                ulong square5 = InternalBoard.NorthWestOne(king_loc);
+                ulong square6 = InternalBoard.WestOne(king_loc);
+                ulong square7 = InternalBoard.SouthWestOne(king_loc);
+                ulong square8 = InternalBoard.SouthOne(king_loc);
+
+                ulong kingMoves = square1 | square2 | square3 | square4 | square5 | square6 | square7 | square8;
+
+                ulong kingValidMoves = kingMoves & ~InternalBoard.AllWhitePieces;
+                return kingValidMoves;
+            } else
+            {
+                return new ulong();
+            }
+        }
+
+
+
 
         public static List<LegalMove> GenerateLegalMoves()
         {
