@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
 using System.Timers;
+using static Chess.Board;
 
 namespace Chess
 {
@@ -31,6 +32,158 @@ namespace Chess
         public const int PieceColorMask = 24;
         public const int PieceMoveStatusFlag = 32;
         //
+
+        // This section is being used for bitboard refactoring
+        //
+        //
+        //public class BitBoard
+        //{
+        //    public ulong Value { get; set; }
+
+        //    public BitBoard(ulong initialValue = 0UL)
+        //    {
+        //        Value = initialValue;
+        //    }
+
+        //    // Allows setting bits on the bitboard easily
+        //    public static BitBoard operator |(BitBoard a, BitBoard b)
+        //    {
+        //        return new BitBoard(a.Value | b.Value);
+        //    }
+
+        //    // Method to set a bit at a specific position
+        //    public void SetBit(int position)
+        //    {
+        //        Value |= 1UL << position;
+        //    }
+
+        //    public BitBoard ShiftBitLeft(int position)
+        //    {
+        //        Value = (Value << position) & notAFile;
+        //        return Value;
+        //    }
+
+        //    public BitBoard ShiftBitRight(int position)
+        //    {
+        //        Value = (Value >> position) & notHFile;
+        //        return Value;
+        //    }
+        //}
+
+        public struct ChessBoard
+        {
+            public ulong WhitePawns;
+            public ulong WhiteRooks;
+            public ulong WhiteKnights;
+            public ulong WhiteBishops;
+            public ulong WhiteQueens;
+            public ulong WhiteKing;
+
+            public ulong BlackPawns;
+            public ulong BlackRooks;
+            public ulong BlackKnights;
+            public ulong BlackBishops;
+            public ulong BlackQueens;
+            public ulong BlackKing;
+
+            public ulong AllWhitePieces;
+            public ulong AllBlackPieces;
+            public ulong AllPieces;
+
+            public readonly ulong NorthOne(ulong bitboard) { return (bitboard << 8) & notAFile; }
+            public readonly ulong EastOne(ulong bitboard) { return (bitboard << 1) & notAFile; }
+            public readonly ulong NorthEastOne(ulong bitboard) { return (bitboard << 9) & notAFile; }
+            public readonly ulong SouthEastOne(ulong bitboard) { return (bitboard >> 7) & notHFile; }
+            public readonly ulong WestOne(ulong bitboard) { return (bitboard >> 1) & notHFile; }
+            public readonly ulong SouthWestOne(ulong bitboard) { return (bitboard >> 9) & notHFile; }
+            public readonly ulong NorthWestOne(ulong bitboard) { return (bitboard << 7) & notAFile; }
+            public readonly ulong SouthOne(ulong bitboard) { return (bitboard >> 8) & notHFile; }
+        }
+
+        public static ChessBoard InternalBoard = new();
+
+        public static Dictionary<string, ulong> pieceLookupTable = new Dictionary<string, ulong>()
+        {
+            ["A1"] = 1UL << 0,
+            ["B1"] = 1UL << 1,
+            ["C1"] = 1UL << 2,
+            ["D1"] = 1UL << 3,
+            ["E1"] = 1UL << 4,
+            ["F1"] = 1UL << 5,
+            ["G1"] = 1UL << 6,
+            ["H1"] = 1UL << 7,
+            ["A2"] = 1UL << 8,
+            ["B2"] = 1UL << 9,
+            ["C2"] = 1UL << 10,
+            ["D2"] = 1UL << 11,
+            ["E2"] = 1UL << 12,
+            ["F2"] = 1UL << 13,
+            ["G2"] = 1UL << 14,
+            ["H2"] = 1UL << 15,
+            ["A3"] = 1UL << 16,
+            ["B3"] = 1UL << 17,
+            ["C3"] = 1UL << 18,
+            ["D3"] = 1UL << 19,
+            ["E3"] = 1UL << 20,
+            ["F3"] = 1UL << 21,
+            ["G3"] = 1UL << 22,
+            ["H3"] = 1UL << 23,
+            ["A4"] = 1UL << 24,
+            ["B4"] = 1UL << 25,
+            ["C4"] = 1UL << 26,
+            ["D4"] = 1UL << 27,
+            ["E4"] = 1UL << 28,
+            ["F4"] = 1UL << 29,
+            ["G4"] = 1UL << 30,
+            ["H4"] = 1UL << 31,
+            ["A5"] = 1UL << 32,
+            ["B5"] = 1UL << 33,
+            ["C5"] = 1UL << 34,
+            ["D5"] = 1UL << 35,
+            ["E5"] = 1UL << 36,
+            ["F5"] = 1UL << 37,
+            ["G5"] = 1UL << 38,
+            ["H5"] = 1UL << 39,
+            ["A6"] = 1UL << 40,
+            ["B6"] = 1UL << 41,
+            ["C6"] = 1UL << 42,
+            ["D6"] = 1UL << 43,
+            ["E6"] = 1UL << 44,
+            ["F6"] = 1UL << 45,
+            ["G6"] = 1UL << 46,
+            ["H6"] = 1UL << 47,
+            ["A7"] = 1UL << 48,
+            ["B7"] = 1UL << 49,
+            ["C7"] = 1UL << 50,
+            ["D7"] = 1UL << 51,
+            ["E7"] = 1UL << 52,
+            ["F7"] = 1UL << 53,
+            ["G7"] = 1UL << 54,
+            ["H7"] = 1UL << 55,
+            ["A8"] = 1UL << 56,
+            ["B8"] = 1UL << 57,
+            ["C8"] = 1UL << 58,
+            ["D8"] = 1UL << 59,
+            ["E8"] = 1UL << 60,
+            ["F8"] = 1UL << 61,
+            ["G8"] = 1UL << 62,
+            ["H8"] = 1UL << 63
+        };
+
+        public static ulong testString = pieceLookupTable["A1"];
+
+        // masks to prevent A file and H file wrapping for legal move calculations
+        public const ulong notAFile = 0xfefefefefefefefe;
+        public const ulong notHFile = 0x7f7f7f7f7f7f7f7f;
+
+
+
+
+
+        //
+        //
+        //
+
 
         public const int BoardSize = 64;
         public static InternalSquare[] Squares = new InternalSquare[BoardSize];
@@ -118,7 +271,6 @@ namespace Chess
         {
             if (IsPawnPromotion(currentPiece, newYPosition))
             {
-
                 if (BoardManager.CurrentTurn == BoardManager.ComputerSide)
                 {
                     UpdatePromotedPawnEngine(newPieceMove);
@@ -748,7 +900,9 @@ namespace Chess
             //Stopwatch timer = Stopwatch.StartNew();
 
             // calculates all legal moves in a given position
-            legalMoves = GenerateLegalMoves();
+            //legalMoves = GenerateLegalMoves();
+            //legalmoves
+
 
             // timer.Stop();
             // TimeSpan timespan = timer.Elapsed;
@@ -757,7 +911,7 @@ namespace Chess
             // TODO this might need to be done inside of GenerateLegalMoves();
             CheckForGameOverRules();
 
-            //SwapTurn();
+            SwapTurn();
 
             return legalMoves;
         }
@@ -770,9 +924,10 @@ namespace Chess
             {
                 // this move captured a piece, reset the fifty move rule
                 fiftyMoveAccumulator = 0;
-            } else
+            }
+            else
             {
-                fiftyMoveAccumulator ++;
+                fiftyMoveAccumulator++;
             }
         }
 
@@ -821,11 +976,54 @@ namespace Chess
 
         private static bool IsQueenSideCastleLegal(int startSquare, List<LegalMove> opponentMoves)
         {
-            int kingPathSquare = startSquare - 2; 
+            int kingPathSquare = startSquare - 2;
             int kingPathSquare2 = startSquare - 1; // The square king passes through
 
             return !opponentMoves.Any(move => move.endSquare == kingPathSquare || move.endSquare == kingPathSquare2 || move.endSquare == startSquare);
         }
+
+
+        public static List<LegalMove> GenerateLegalMovesBitBoard()
+        {
+            List<LegalMove> pseudoLegalMoves = new List<LegalMove>();
+
+            ulong validKingMoves = ComputeKingMoves(InternalBoard.WhiteKing);
+
+            while (validKingMoves != 0)
+            {
+                ulong lsb = validKingMoves & (~validKingMoves + 1);
+            }
+
+
+            return pseudoLegalMoves;
+        }
+
+        public static ulong ComputeKingMoves(ulong king_loc)
+        {
+            if (BoardManager.whiteToMove)
+            {
+                ulong square1 = InternalBoard.EastOne(king_loc);
+                ulong square2 = InternalBoard.NorthEastOne(king_loc);
+                ulong square3 = InternalBoard.SouthEastOne(king_loc);
+                ulong square4 = InternalBoard.NorthOne(king_loc);
+                ulong square5 = InternalBoard.NorthWestOne(king_loc);
+                ulong square6 = InternalBoard.WestOne(king_loc);
+                ulong square7 = InternalBoard.SouthWestOne(king_loc);
+                ulong square8 = InternalBoard.SouthOne(king_loc);
+
+                ulong kingMoves = square1 | square2 | square3 | square4 | square5 | square6 | square7 | square8;
+
+                ulong kingValidMoves = kingMoves & ~InternalBoard.AllWhitePieces;
+                return kingValidMoves;
+            }
+            else
+            {
+                return new ulong();
+            }
+        }
+
+
+
 
         public static List<LegalMove> GenerateLegalMoves()
         {
