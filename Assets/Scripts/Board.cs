@@ -90,14 +90,14 @@ namespace Chess
             public ulong AllBlackPieces;
             public ulong AllPieces;
 
-            public readonly ulong NorthOne(ulong bitboard) { return (bitboard << 8) & notAFile; }
-            public readonly ulong EastOne(ulong bitboard) { return (bitboard << 1) & notAFile; }
-            public readonly ulong NorthEastOne(ulong bitboard) { return (bitboard << 9) & notAFile; }
-            public readonly ulong SouthEastOne(ulong bitboard) { return (bitboard >> 7) & notHFile; }
-            public readonly ulong WestOne(ulong bitboard) { return (bitboard >> 1) & notHFile; }
-            public readonly ulong SouthWestOne(ulong bitboard) { return (bitboard >> 9) & notHFile; }
-            public readonly ulong NorthWestOne(ulong bitboard) { return (bitboard << 7) & notAFile; }
-            public readonly ulong SouthOne(ulong bitboard) { return (bitboard >> 8) & notHFile; }
+            public readonly ulong NorthOne(ulong bitboard) { return bitboard << 8; }
+            public readonly ulong EastOne(ulong bitboard) { return (bitboard << 1) & HFileMask; }
+            public readonly ulong NorthEastOne(ulong bitboard) { return (bitboard << 9) & HFileMask; }
+            public readonly ulong SouthEastOne(ulong bitboard) { return (bitboard >> 7) & HFileMask; }
+            public readonly ulong WestOne(ulong bitboard) { return (bitboard >> 1) & AFileMask; }
+            public readonly ulong SouthWestOne(ulong bitboard) { return (bitboard >> 9) & AFileMask; }
+            public readonly ulong NorthWestOne(ulong bitboard) { return (bitboard << 7) & AFileMask; }
+            public readonly ulong SouthOne(ulong bitboard) { return bitboard >> 8; }
         }
 
         public static ChessBoard InternalBoard = new();
@@ -173,10 +173,8 @@ namespace Chess
         public static ulong testString = pieceLookupTable["A1"];
 
         // masks to prevent A file and H file wrapping for legal move calculations
-        public const ulong notAFile = 0xfefefefefefefefe;
-        public const ulong notHFile = 0x7f7f7f7f7f7f7f7f;
-
-
+        public const ulong HFileMask = 0xfefefefefefefefe;
+        public const ulong AFileMask = 0x7f7f7f7f7f7f7f7f;
 
 
 
@@ -982,17 +980,49 @@ namespace Chess
             return !opponentMoves.Any(move => move.endSquare == kingPathSquare || move.endSquare == kingPathSquare2 || move.endSquare == startSquare);
         }
 
+        public static List<LegalMove> GenerateLegalMovesWhitePieces()
+        {
+            List<LegalMove> whiteMoves = new();
+
+            ulong validKingMoves = ComputeKingMoves(InternalBoard.WhiteKing);
+            int startingSquare = (int)Math.Log(InternalBoard.WhiteKing, 2);
+
+            while (validKingMoves != 0)
+            {
+                ulong lsb = validKingMoves & (~validKingMoves + 1);
+
+                int validKingMove = (int)Math.Log(lsb, 2);
+
+                validKingMoves &= validKingMoves - 1;
+
+                whiteMoves.Add(AddLegalMove(startingSquare, validKingMove, false, false, false));
+            }
+
+            return whiteMoves;
+
+        }
+
+        public static List<LegalMove> GenerateLegalMovesBlackPieces()
+        {
+            List<LegalMove> blackMoves = new();
+
+
+            return blackMoves;
+        }
 
         public static List<LegalMove> GenerateLegalMovesBitBoard()
         {
             List<LegalMove> pseudoLegalMoves = new List<LegalMove>();
 
-            ulong validKingMoves = ComputeKingMoves(InternalBoard.WhiteKing);
-
-            while (validKingMoves != 0)
+            if (BoardManager.whiteToMove)
             {
-                ulong lsb = validKingMoves & (~validKingMoves + 1);
+                pseudoLegalMoves.AddRange(GenerateLegalMovesWhitePieces());
             }
+            else
+            {
+                pseudoLegalMoves.AddRange(GenerateLegalMovesBlackPieces());
+            }
+
 
 
             return pseudoLegalMoves;
