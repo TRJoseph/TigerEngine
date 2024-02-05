@@ -98,6 +98,18 @@ namespace Chess
             public readonly ulong SouthWestOne(ulong bitboard) { return (bitboard >> 9) & AFileMask; }
             public readonly ulong NorthWestOne(ulong bitboard) { return (bitboard << 7) & AFileMask; }
             public readonly ulong SouthOne(ulong bitboard) { return bitboard >> 8; }
+
+            /* knight move offsets
+             * Northeasteast, represents a knight move in an L shape that is one square up and two squares right */
+            public readonly ulong NorthNorthEast(ulong bitboard) { return (bitboard << 17) & AFileMask; }
+            public readonly ulong NorthEastEast(ulong bitboard) { return (bitboard << 10) & ABFileMask; }
+            public readonly ulong SouthEastEast(ulong bitboard) { return (bitboard >> 6) & ABFileMask; }
+            public readonly ulong SouthSouthEast(ulong bitboard) { return (bitboard >> 15) & AFileMask; }
+            public readonly ulong NorthNorthWest(ulong bitboard) { return (bitboard << 15) & HFileMask; }
+            public readonly ulong NorthWestWest(ulong bitboard) { return (bitboard << 6) & GHFileMask; }
+            public readonly ulong SouthWestWest(ulong bitboard) { return (bitboard >> 10) & GHFileMask; }
+            public readonly ulong SouthSouthWest(ulong bitboard) { return (bitboard >> 17) & HFileMask; }
+
         }
 
         public static ChessBoard InternalBoard = new();
@@ -173,9 +185,12 @@ namespace Chess
         public static ulong testString = pieceLookupTable["A1"];
 
         // masks to prevent A file and H file wrapping for legal move calculations
-        public const ulong HFileMask = 0xfefefefefefefefe;
         public const ulong AFileMask = 0x7f7f7f7f7f7f7f7f;
+        public const ulong HFileMask = 0xfefefefefefefefe;
 
+        // masks to prevent knight jumps from wrapping 
+        public const ulong ABFileMask = 0x3F3F3F3F3F3F3F3F;
+        public const ulong GHFileMask = 0xFCFCFCFCFCFCFCFC;
 
 
         //
@@ -984,11 +999,22 @@ namespace Chess
         {
             List<LegalMove> whiteMoves = new();
 
+            //ulong validKnightMoves = ComputeKnightMoves(InternalBoard.WhiteKnights);
+            ulong whiteKnights = InternalBoard.WhiteKnights;
+            while(whiteKnights != 0)
+            {
+
+
+                whiteKnights &= whiteKnights - 1;
+            }
+            
+
             ulong validKingMoves = ComputeKingMoves(InternalBoard.WhiteKing);
             int startingSquare = (int)Math.Log(InternalBoard.WhiteKing, 2);
 
             while (validKingMoves != 0)
             {
+                // gets the least significant bit while validmoves are being parsed in order to find new square position
                 ulong lsb = validKingMoves & (~validKingMoves + 1);
 
                 int validKingMove = (int)Math.Log(lsb, 2);
@@ -1028,28 +1054,40 @@ namespace Chess
             return pseudoLegalMoves;
         }
 
+        public static ulong ComputeKnightMoves(ulong knight_loc)
+        {
+            ulong square1 = InternalBoard.NorthNorthEast(knight_loc);
+            ulong square2 = InternalBoard.NorthNorthWest(knight_loc);
+            ulong square3 = InternalBoard.NorthWestWest(knight_loc);
+            ulong square4 = InternalBoard.NorthEastEast(knight_loc);
+            ulong square5 = InternalBoard.SouthSouthEast(knight_loc);
+            ulong square6 = InternalBoard.SouthSouthWest(knight_loc);
+            ulong square7 = InternalBoard.SouthWestWest(knight_loc);
+            ulong square8 = InternalBoard.SouthEastEast(knight_loc);
+
+            
+            ulong knightMoves = square1 | square2 | square3 | square4 | square5 | square6 | square7 | square8;
+
+            ulong knightValidMoves = BoardManager.whiteToMove ? knightMoves & ~InternalBoard.AllWhitePieces : knightMoves & ~InternalBoard.AllBlackPieces;
+
+            return knightValidMoves;
+        }
+
         public static ulong ComputeKingMoves(ulong king_loc)
         {
-            if (BoardManager.whiteToMove)
-            {
-                ulong square1 = InternalBoard.EastOne(king_loc);
-                ulong square2 = InternalBoard.NorthEastOne(king_loc);
-                ulong square3 = InternalBoard.SouthEastOne(king_loc);
-                ulong square4 = InternalBoard.NorthOne(king_loc);
-                ulong square5 = InternalBoard.NorthWestOne(king_loc);
-                ulong square6 = InternalBoard.WestOne(king_loc);
-                ulong square7 = InternalBoard.SouthWestOne(king_loc);
-                ulong square8 = InternalBoard.SouthOne(king_loc);
+            ulong square1 = InternalBoard.EastOne(king_loc);
+            ulong square2 = InternalBoard.NorthEastOne(king_loc);
+            ulong square3 = InternalBoard.SouthEastOne(king_loc);
+            ulong square4 = InternalBoard.NorthOne(king_loc);
+            ulong square5 = InternalBoard.NorthWestOne(king_loc);
+            ulong square6 = InternalBoard.WestOne(king_loc);
+            ulong square7 = InternalBoard.SouthWestOne(king_loc);
+            ulong square8 = InternalBoard.SouthOne(king_loc);
 
-                ulong kingMoves = square1 | square2 | square3 | square4 | square5 | square6 | square7 | square8;
+            ulong kingMoves = square1 | square2 | square3 | square4 | square5 | square6 | square7 | square8;
 
-                ulong kingValidMoves = kingMoves & ~InternalBoard.AllWhitePieces;
-                return kingValidMoves;
-            }
-            else
-            {
-                return new ulong();
-            }
+            ulong kingValidMoves = BoardManager.whiteToMove ? kingMoves & ~InternalBoard.AllWhitePieces : kingMoves & ~InternalBoard.AllBlackPieces;
+            return kingValidMoves;
         }
 
 

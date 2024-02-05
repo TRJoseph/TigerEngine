@@ -40,7 +40,7 @@ namespace Chess
         //private readonly string FENString = "8/8/8/6P1/6p1/8/8/8";
 
         // second FEN string for testings king interactivity
-        private readonly string FENString = "8/8/3k4/8/3bQq2/4KB2/8/8";
+        private readonly string FENString = "8/1k6/8/8/6Nr/7K/8/8";
 
         // another FEN string for testing king castling
         //private readonly string FENString = "r3k2r/p7/6N1/8/8/8/8/4K2R";
