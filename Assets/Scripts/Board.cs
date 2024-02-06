@@ -182,6 +182,7 @@ namespace Chess
             ["H8"] = 1UL << 63
         };
 
+        // from index 0 to 63 starting from bottom left to top right of chess board
         public static ulong[] PrecomputedKingMoves = {
             0x302,
             0x705,
@@ -249,6 +250,7 @@ namespace Chess
             0x40c0000000000000
         };
 
+        // from index 0 to 63 starting from bottom left to top right of chess board
         public static ulong[] PrecomputedKnightMoves = {
             0x20400,
             0x50800,
@@ -1137,17 +1139,36 @@ namespace Chess
             ulong whiteKnights = InternalBoard.WhiteKnights;
             while (whiteKnights != 0)
             {
+                // isolate each knight
+                ulong lsb = whiteKnights & (~whiteKnights + 1);
+                int currentKnightPos = (int)Math.Log(lsb, 2);
 
+                // valid knight moves only include either empty squares or squares the opponent pieces occupy
+                ulong validKnightMoves = PrecomputedKnightMoves[currentKnightPos] & ~InternalBoard.AllWhitePieces;
+
+                while(validKnightMoves != 0)
+                {
+                    ulong movelsb = validKnightMoves & (~validKnightMoves + 1);
+                    int validKnightMove = (int)Math.Log(movelsb, 2);
+
+                    validKnightMoves &= validKnightMoves - 1;
+                    whiteMoves.Add(AddLegalMove(currentKnightPos, validKnightMove, false, false, false));
+                }
+
+                // move to next knight
                 whiteKnights &= whiteKnights - 1;
             }
 
-
             //ulong validKingMoves = ComputeKingMoves(InternalBoard.WhiteKing);
 
-            ulong validKingMoves = PrecomputedKingMoves[(int)Math.Log(InternalBoard.WhiteKing, 2)];
-            validKingMoves = BoardManager.whiteToMove ? validKingMoves & ~InternalBoard.AllWhitePieces : validKingMoves & ~InternalBoard.AllBlackPieces;
+            // king index converts the king bitboard 
+            int kingIndex = (int)Math.Log(InternalBoard.WhiteKing, 2);
 
-            int startingSquare = (int)Math.Log(InternalBoard.WhiteKing, 2);
+            // grabs the corresponding bitboard representing all legal moves from the given king index on the board
+            ulong validKingMoves = PrecomputedKingMoves[kingIndex];
+
+            // valid king moves only include either empty squares or squares the opponent pieces occupy (for now, this will change when check is implemented)
+            validKingMoves &= ~InternalBoard.AllWhitePieces;
 
             while (validKingMoves != 0)
             {
@@ -1158,7 +1179,7 @@ namespace Chess
 
                 validKingMoves &= validKingMoves - 1;
 
-                whiteMoves.Add(AddLegalMove(startingSquare, validKingMove, false, false, false));
+                whiteMoves.Add(AddLegalMove(kingIndex, validKingMove, false, false, false));
             }
 
             return whiteMoves;
