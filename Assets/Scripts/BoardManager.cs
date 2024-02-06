@@ -40,7 +40,7 @@ namespace Chess
         //private readonly string FENString = "8/8/8/6P1/6p1/8/8/8";
 
         // second FEN string for testings king interactivity
-        private readonly string FENString = "8/1k6/8/8/6Nr/7K/8/8";
+        private readonly string FENString = "4k3/8/4r3/4P3/p7/1QP2Pq1/PP3P1P/4K3";
 
         // another FEN string for testing king castling
         //private readonly string FENString = "r3k2r/p7/6N1/8/8/8/8/4K2R";
@@ -209,61 +209,61 @@ namespace Chess
 
                     if (pieceColor == Piece.White)
                     {
-                        InternalBoard.WhitePawns = 1UL << currentPosition;
+                        InternalBoard.WhitePawns |= 1UL << currentPosition;
                     }
                     else
                     {
-                        InternalBoard.BlackPawns = 1UL << currentPosition;
+                        InternalBoard.BlackPawns |= 1UL << currentPosition;
                     }
                     break;
                 case Piece.Knight:
                     if (pieceColor == Piece.White)
                     {
-                        InternalBoard.WhiteKnights = 1UL << currentPosition;
+                        InternalBoard.WhiteKnights |= 1UL << currentPosition;
                     }
                     else
                     {
-                        InternalBoard.BlackKnights = 1UL << currentPosition;
+                        InternalBoard.BlackKnights |= 1UL << currentPosition;
                     }
                     break;
                 case Piece.Rook:
                     if (pieceColor == Piece.White)
                     {
-                        InternalBoard.WhiteRooks = 1UL << currentPosition;
+                        InternalBoard.WhiteRooks |= 1UL << currentPosition;
                     }
                     else
                     {
-                        InternalBoard.BlackRooks = 1UL << currentPosition;
+                        InternalBoard.BlackRooks |= 1UL << currentPosition;
                     }
                     break;
                 case Piece.Bishop:
                     if (pieceColor == Piece.White)
                     {
-                        InternalBoard.WhiteBishops = 1UL << currentPosition;
+                        InternalBoard.WhiteBishops |= 1UL << currentPosition;
                     }
                     else
                     {
-                        InternalBoard.BlackBishops = 1UL << currentPosition;
+                        InternalBoard.BlackBishops |= 1UL << currentPosition;
                     }
                     break;
                 case Piece.Queen:
                     if (pieceColor == Piece.White)
                     {
-                        InternalBoard.WhiteQueens = 1UL << currentPosition;
+                        InternalBoard.WhiteQueens |= 1UL << currentPosition;
                     }
                     else
                     {
-                        InternalBoard.BlackQueens = 1UL << currentPosition;
+                        InternalBoard.BlackQueens |= 1UL << currentPosition;
                     }
                     break;
                 case Piece.King:
                     if (pieceColor == Piece.White)
                     {
-                        InternalBoard.WhiteKing = 1UL << currentPosition;
+                        InternalBoard.WhiteKing |= 1UL << currentPosition;
                     }
                     else
                     {
-                        InternalBoard.BlackKing = 1UL << currentPosition;
+                        InternalBoard.BlackKing |= 1UL << currentPosition;
                     }
                     break;
             }

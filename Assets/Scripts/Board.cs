@@ -318,7 +318,154 @@ namespace Chess
             0x20000000000000,
         };
 
-        public static ulong testString = pieceLookupTable["A1"];
+        public static ulong[] PrecomputedWhitePawnPushes =
+        {
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x1010000,
+            0x2020000,
+            0x4040000,
+            0x8080000,
+            0x10100000,
+            0x20200000,
+            0x40400000,
+            0x80800000,
+            0x1000000,
+            0x2000000,
+            0x4000000,
+            0x8000000,
+            0x10000000,
+            0x20000000,
+            0x40000000,
+            0x80000000,
+            0x100000000,
+            0x200000000,
+            0x400000000,
+            0x800000000,
+            0x1000000000,
+            0x2000000000,
+            0x4000000000,
+            0x8000000000,
+            0x10000000000,
+            0x20000000000,
+            0x40000000000,
+            0x80000000000,
+            0x100000000000,
+            0x200000000000,
+            0x400000000000,
+            0x800000000000,
+            0x1000000000000,
+            0x2000000000000,
+            0x4000000000000,
+            0x8000000000000,
+            0x10000000000000,
+            0x20000000000000,
+            0x40000000000000,
+            0x80000000000000,
+            0x100000000000000,
+            0x200000000000000,
+            0x400000000000000,
+            0x800000000000000,
+            0x1000000000000000,
+            0x2000000000000000,
+            0x4000000000000000,
+            0x8000000000000000,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0
+        };
+
+        public static ulong[] PrecomputedWhitePawnCaptures =
+        {
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x20000,
+            0x50000,
+            0xa0000,
+            0x140000,
+            0x280000,
+            0x500000,
+            0xa00000,
+            0x400000,
+            0x2000000,
+            0x5000000,
+            0xa000000,
+            0x14000000,
+            0x28000000,
+            0x50000000,
+            0xa0000000,
+            0x40000000,
+            0x200000000,
+            0x500000000,
+            0xa00000000,
+            0x1400000000,
+            0x2800000000,
+            0x5000000000,
+            0xa000000000,
+            0x4000000000,
+            0x20000000000,
+            0x50000000000,
+            0xa0000000000,
+            0x140000000000,
+            0x280000000000,
+            0x500000000000,
+            0xa00000000000,
+            0x400000000000,
+            0x2000000000000,
+            0x5000000000000,
+            0xa000000000000,
+            0x14000000000000,
+            0x28000000000000,
+            0x50000000000000,
+            0xa0000000000000,
+            0x40000000000000,
+            0x200000000000000,
+            0x500000000000000,
+            0xa00000000000000,
+            0x1400000000000000,
+            0x2800000000000000,
+            0x5000000000000000,
+            0xa000000000000000,
+            0x4000000000000000,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+        };
+
+        // starting from the 1st rank (index 0) to the 8th rank (index 7)
+        public static ulong[] RankMasks =
+        {
+            0xff,
+            0xff00,
+            0xff0000,
+            0xff000000,
+            0xff00000000,
+            0xff0000000000,
+            0xff000000000000,
+            0xff00000000000000
+        };
 
         // masks to prevent A file and H file wrapping for legal move calculations
         public const ulong AFileMask = 0x7f7f7f7f7f7f7f7f;
@@ -1131,11 +1278,71 @@ namespace Chess
             return !opponentMoves.Any(move => move.endSquare == kingPathSquare || move.endSquare == kingPathSquare2 || move.endSquare == startSquare);
         }
 
+
+        /* these two functions came from "https://www.chessprogramming.org/Pawn_Pushes_(Bitboards)"
+        * the pawn is able to push if no impeding piece (friendly or foe) is blocking the path, these functions traverse
+        * the intersection of pawns with the shifted down empty squares in the opposite direction
+        */
+        static ulong WhitePawnsAbleToPushOneSquare(ulong wpawns, ulong emptySquares)
+        {
+            ulong result = InternalBoard.SouthOne(emptySquares) & wpawns;
+            return result;
+        }
+
+        static ulong WhitePawnsAbleToPushTwoSquares(ulong wpawns, ulong emptySquares)
+        {
+            ulong rank4 = RankMasks[3];
+            ulong emptyRank3 = InternalBoard.SouthOne(emptySquares & rank4) & emptySquares;
+            return WhitePawnsAbleToPushOneSquare(wpawns, emptyRank3);
+        }
+        //
+
         public static List<LegalMove> GenerateLegalMovesWhitePieces()
         {
             List<LegalMove> whiteMoves = new();
 
-            //ulong validKnightMoves = ComputeKnightMoves(InternalBoard.WhiteKnights);
+
+            ulong whitePawns = InternalBoard.WhitePawns;
+
+            while(whitePawns  != 0)
+            {
+                // isolates each pawn one by one
+                ulong isolatedPawnlsb = whitePawns & (~whitePawns + 1);
+                // gets current pawn position to add to legal move list
+                int currentPawnPos = (int)Math.Log(isolatedPawnlsb, 2);
+
+                // valid pawn moves include pushes, captures, and en passant
+                ulong validPawnMoves = PrecomputedWhitePawnPushes[currentPawnPos];
+
+                if (WhitePawnsAbleToPushOneSquare(isolatedPawnlsb, ~InternalBoard.AllPieces) != isolatedPawnlsb)
+                {
+                    validPawnMoves &= ~(RankMasks[(currentPawnPos / 8) + 1]);
+                }
+
+                if(WhitePawnsAbleToPushTwoSquares(isolatedPawnlsb, ~InternalBoard.AllPieces) != isolatedPawnlsb)
+                {
+                    validPawnMoves &= ~(RankMasks[(currentPawnPos / 8) + 2]);
+                }
+
+                // if a pawn can capture any black piece it is a pseudo-legal capture
+                ulong validPawnCaptures = PrecomputedWhitePawnCaptures[currentPawnPos] & InternalBoard.AllBlackPieces;
+                validPawnMoves |= validPawnCaptures;
+
+                // TODO: add en passant here?
+
+                while (validPawnMoves != 0)
+                {
+                    ulong movelsb = validPawnMoves & (~validPawnMoves + 1);
+                    int validPawnMove = (int)Math.Log(movelsb, 2);
+
+                    validPawnMoves &= validPawnMoves - 1;
+                    whiteMoves.Add(AddLegalMove(currentPawnPos, validPawnMove, false, false, false));
+                }
+
+                // move to the next pawn
+                whitePawns &= whitePawns - 1;
+            }
+
             ulong whiteKnights = InternalBoard.WhiteKnights;
             while (whiteKnights != 0)
             {
