@@ -33,43 +33,6 @@ namespace Chess
         public const int PieceMoveStatusFlag = 32;
         //
 
-        // This section is being used for bitboard refactoring
-        //
-        //
-        //public class BitBoard
-        //{
-        //    public ulong Value { get; set; }
-
-        //    public BitBoard(ulong initialValue = 0UL)
-        //    {
-        //        Value = initialValue;
-        //    }
-
-        //    // Allows setting bits on the bitboard easily
-        //    public static BitBoard operator |(BitBoard a, BitBoard b)
-        //    {
-        //        return new BitBoard(a.Value | b.Value);
-        //    }
-
-        //    // Method to set a bit at a specific position
-        //    public void SetBit(int position)
-        //    {
-        //        Value |= 1UL << position;
-        //    }
-
-        //    public BitBoard ShiftBitLeft(int position)
-        //    {
-        //        Value = (Value << position) & notAFile;
-        //        return Value;
-        //    }
-
-        //    public BitBoard ShiftBitRight(int position)
-        //    {
-        //        Value = (Value >> position) & notHFile;
-        //        return Value;
-        //    }
-        //}
-
         public struct ChessBoard
         {
             public ulong WhitePawns;
@@ -108,7 +71,7 @@ namespace Chess
             public readonly ulong NorthNorthWest(ulong bitboard) { return (bitboard << 15) & AFileMask; }
             public readonly ulong NorthWestWest(ulong bitboard) { return (bitboard << 6) & ABFileMask; }
             public readonly ulong SouthWestWest(ulong bitboard) { return (bitboard >> 10) & ABFileMask; }
-            public readonly ulong SouthSouthWest(ulong bitboard) { return (bitboard >> 17) & ABFileMask; }
+            public readonly ulong SouthSouthWest(ulong bitboard) { return (bitboard >> 17) & AFileMask; }
 
         }
 
@@ -275,7 +238,7 @@ namespace Chess
             0x2844004428,
             0x5088008850,
             0xa0100010a0,
-            0x4020002000,
+            0x4020002040,
             0x20400040200,
             0x50800080500,
             0xa1100110a00,
@@ -283,7 +246,7 @@ namespace Chess
             0x284400442800,
             0x508800885000,
             0xa0100010a000,
-            0x402000200000,
+            0x402000204000,
             0x2040004020000,
             0x5080008050000,
             0xa1100110a0000,
@@ -291,7 +254,7 @@ namespace Chess
             0x28440044280000,
             0x50880088500000,
             0xa0100010a00000,
-            0x40200020000000,
+            0x40200020400000,
             0x204000402000000,
             0x508000805000000,
             0xa1100110a000000,
@@ -299,7 +262,7 @@ namespace Chess
             0x2844004428000000,
             0x5088008850000000,
             0xa0100010a0000000,
-            0x4020002000000000,
+            0x4020002040000000,
             0x400040200000000,
             0x800080500000000,
             0x1100110a00000000,
@@ -307,7 +270,7 @@ namespace Chess
             0x4400442800000000,
             0x8800885000000000,
             0x100010a000000000,
-            0x2000200000000000,
+            0x2000204000000000,
             0x4020000000000,
             0x8050000000000,
             0x110a0000000000,
@@ -315,7 +278,7 @@ namespace Chess
             0x44280000000000,
             0x88500000000000,
             0x10a00000000000,
-            0x20000000000000,
+            0x20400000000000,
         };
 
         public static ulong[] PrecomputedWhitePawnPushes =
@@ -1299,12 +1262,13 @@ namespace Chess
 
         public static List<LegalMove> GenerateLegalMovesWhitePieces()
         {
+            // create list to store legal moves
             List<LegalMove> whiteMoves = new();
 
 
             ulong whitePawns = InternalBoard.WhitePawns;
 
-            while(whitePawns  != 0)
+            while (whitePawns != 0)
             {
                 // isolates each pawn one by one
                 ulong isolatedPawnlsb = whitePawns & (~whitePawns + 1);
@@ -1316,12 +1280,12 @@ namespace Chess
 
                 if (WhitePawnsAbleToPushOneSquare(isolatedPawnlsb, ~InternalBoard.AllPieces) != isolatedPawnlsb)
                 {
-                    validPawnMoves &= ~(RankMasks[(currentPawnPos / 8) + 1]);
+                    validPawnMoves &= ~RankMasks[(currentPawnPos / 8) + 1];
                 }
 
-                if(WhitePawnsAbleToPushTwoSquares(isolatedPawnlsb, ~InternalBoard.AllPieces) != isolatedPawnlsb)
+                if (WhitePawnsAbleToPushTwoSquares(isolatedPawnlsb, ~InternalBoard.AllPieces) != isolatedPawnlsb)
                 {
-                    validPawnMoves &= ~(RankMasks[(currentPawnPos / 8) + 2]);
+                    validPawnMoves &= ~RankMasks[(currentPawnPos / 8) + 2];
                 }
 
                 // if a pawn can capture any black piece it is a pseudo-legal capture
@@ -1353,7 +1317,7 @@ namespace Chess
                 // valid knight moves only include either empty squares or squares the opponent pieces occupy
                 ulong validKnightMoves = PrecomputedKnightMoves[currentKnightPos] & ~InternalBoard.AllWhitePieces;
 
-                while(validKnightMoves != 0)
+                while (validKnightMoves != 0)
                 {
                     ulong movelsb = validKnightMoves & (~validKnightMoves + 1);
                     int validKnightMove = (int)Math.Log(movelsb, 2);
