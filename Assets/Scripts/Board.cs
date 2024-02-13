@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
 using System.Timers;
+using UnityEditor.Hardware;
+using Unity.VisualScripting;
+using UnityEngine.UIElements;
 
 namespace Chess
 {
@@ -71,6 +74,35 @@ namespace Chess
             public readonly ulong NorthWestWest(ulong bitboard) { return (bitboard << 6) & ABFileMask; }
             public readonly ulong SouthWestWest(ulong bitboard) { return (bitboard >> 10) & ABFileMask; }
             public readonly ulong SouthSouthWest(ulong bitboard) { return (bitboard >> 17) & AFileMask; }
+
+            public readonly ulong RankAttacks(int square)
+            {
+                return MoveTables.EastRayAttacks[square] | MoveTables.WestRayAttacks[square];
+            }
+            public readonly ulong FileAttacks(int square)
+            {
+                return MoveTables.NorthRayAttacks[square] | MoveTables.SouthRayAttacks[square];
+            }
+            public readonly ulong DiagonalAttacks(int square)
+            {
+                return MoveTables.NorthEastRayAttacks[square] | MoveTables.SouthWestRayAttacks[square];
+            }
+            public readonly ulong AntiDiagonalAttacks(int square)
+            {
+                return MoveTables.NorthWestRayAttacks[square] | MoveTables.SouthEastRayAttacks[square];
+            }
+            public readonly ulong RookAttacks(int square)
+            {
+                return RankAttacks(square) | FileAttacks(square);
+            }
+            public readonly ulong BishopAttacks(int square)
+            {
+                return DiagonalAttacks(square) | AntiDiagonalAttacks(square);
+            }
+            public readonly ulong QueenAttacks(int square)
+            {
+                return BishopAttacks(square) | RookAttacks(square);
+            }
 
         }
 
@@ -900,10 +932,80 @@ namespace Chess
         }
         //
 
+
+        private static ulong GetPrecomputedMoves(string direction, int currentQueenPos)
+        {
+            switch (direction)
+            {
+                case "North":
+                    return MoveTables.NorthRayAttacks[currentQueenPos];
+                case "South":
+                    return MoveTables.SouthRayAttacks[currentQueenPos];
+                case "East":
+                    return MoveTables.EastRayAttacks[currentQueenPos];
+                case "West":
+                    return MoveTables.WestRayAttacks[currentQueenPos];
+                case "NorthWest":
+                    return MoveTables.NorthWestRayAttacks[currentQueenPos];
+                case "NorthEast":
+                    return MoveTables.NorthEastRayAttacks[currentQueenPos];
+                case "SouthWest":
+                    return MoveTables.SouthWestRayAttacks[currentQueenPos];
+                case "SouthEast":
+                    return MoveTables.SouthEastRayAttacks[currentQueenPos];
+                default:
+                    return 0 ;
+            }
+        }
+
+        public static int FindClosestBlocker(string direction, int queenPosition, ulong blockers)
+        {
+
+            // for north as a test
+            ulong isolatedclosestBlockerNorth = blockers & (~blockers + 1);
+
+            ulong blockerBitMask = ~isolatedclosestBlockerNorth;
+
+
+
+            return 1;
+        }
+
         public static List<LegalMove> GenerateLegalMovesWhitePieces()
         {
             // create list to store legal moves
             List<LegalMove> whiteMoves = new();
+
+            ulong whiteQueens = InternalBoard.WhiteQueens;
+
+            while (whiteQueens != 0)
+            {
+                // and with twos complement to isolate each queen
+                ulong isolatedQueenlsb = whiteQueens & (~whiteQueens + 1);
+                int currentQueenPos = (int)Math.Log(isolatedQueenlsb, 2);
+
+                ulong validQueenMoves = InternalBoard.QueenAttacks(currentQueenPos);
+
+
+                //// this is the classical method, I am opting to not implement magic bitboards as of now because I want to focus more on engine development,
+                //// This is not quite as efficient as magic bitboards 
+                //foreach (var direction in Enum.GetNames(typeof(Direction)))
+                //{
+                //    ulong movesInDirection = GetPrecomputedMoves(direction, currentQueenPos);
+                //    ulong blockers = movesInDirection & InternalBoard.AllPieces;
+                //    int closestBlockerPosition = FindClosestBlocker(direction, currentQueenPos, blockers);
+                //}
+
+                while (validQueenMoves != 0)
+                {
+                    ulong movelsb = validQueenMoves & (~validQueenMoves + 1);
+                    int validQueenMove = (int)Math.Log(movelsb, 2);
+
+                    validQueenMoves &= validQueenMoves - 1;
+                    whiteMoves.Add(AddLegalMove(currentQueenPos, validQueenMove, false, false, false));
+                }
+                whiteQueens &= whiteQueens - 1;
+            }
 
 
             ulong whitePawns = InternalBoard.WhitePawns;
@@ -950,8 +1052,8 @@ namespace Chess
             while (whiteKnights != 0)
             {
                 // isolate each knight
-                ulong lsb = whiteKnights & (~whiteKnights + 1);
-                int currentKnightPos = (int)Math.Log(lsb, 2);
+                ulong isolatedKnightlsb = whiteKnights & (~whiteKnights + 1);
+                int currentKnightPos = (int)Math.Log(isolatedKnightlsb, 2);
 
                 // valid knight moves only include either empty squares or squares the opponent pieces occupy
                 ulong validKnightMoves = MoveTables.PrecomputedKnightMoves[currentKnightPos] & ~InternalBoard.AllWhitePieces;
