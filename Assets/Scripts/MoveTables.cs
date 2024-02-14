@@ -831,7 +831,7 @@ namespace Chess
             0x20100804020100,
             0x40201008040201,
         };
-        
+
         public static ulong[] SouthEastRayAttacks = {
             0x0,
             0x0,

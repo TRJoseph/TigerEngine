@@ -954,21 +954,48 @@ namespace Chess
                 case "SouthEast":
                     return MoveTables.SouthEastRayAttacks[currentQueenPos];
                 default:
-                    return 0 ;
+                    return 0;
             }
         }
 
-        public static int FindClosestBlocker(string direction, int queenPosition, ulong blockers)
+        public static ulong TruncateRayAttack(ulong blockers, ulong rayAttack)
         {
-
-            // for north as a test
             ulong isolatedclosestBlockerNorth = blockers & (~blockers + 1);
 
-            ulong blockerBitMask = ~isolatedclosestBlockerNorth;
+            // 'InternalBoard.AllBlackPieces' will have to change to reflect the current turn
+            ulong attackedPiece = blockers & InternalBoard.AllBlackPieces & rayAttack;
 
+            ulong blockerBitMask = ~(~isolatedclosestBlockerNorth + 1);
 
+            ulong northMovesNotBlocked = (rayAttack & blockerBitMask) | attackedPiece;
 
-            return 1;
+            return northMovesNotBlocked;
+        }
+
+        public static ulong TruncateBlockedMoves(string direction, int queenPosition, ulong blockers)
+        {
+
+            switch (direction)
+            {
+                case "North":
+                    return TruncateRayAttack(blockers, MoveTables.NorthRayAttacks[queenPosition]);
+                case "South":
+                    return 0;
+                case "East":
+                    return 0;
+                case "West":
+                    return TruncateRayAttack(blockers, MoveTables.WestRayAttacks[queenPosition]);
+                case "NorthWest":
+                    return TruncateRayAttack(blockers, MoveTables.NorthWestRayAttacks[queenPosition]);
+                case "NorthEast":
+                    return TruncateRayAttack(blockers, MoveTables.NorthEastRayAttacks[queenPosition]);
+                case "SouthWest":
+                    return 0;
+                case "SouthEast":
+                    return 0;
+                default:
+                    return 0;
+            }
         }
 
         public static List<LegalMove> GenerateLegalMovesWhitePieces()
@@ -984,17 +1011,18 @@ namespace Chess
                 ulong isolatedQueenlsb = whiteQueens & (~whiteQueens + 1);
                 int currentQueenPos = (int)Math.Log(isolatedQueenlsb, 2);
 
-                ulong validQueenMoves = InternalBoard.QueenAttacks(currentQueenPos);
+                //ulong validQueenMoves = InternalBoard.QueenAttacks(currentQueenPos);
 
+                ulong validQueenMoves = 0;
 
-                //// this is the classical method, I am opting to not implement magic bitboards as of now because I want to focus more on engine development,
-                //// This is not quite as efficient as magic bitboards 
-                //foreach (var direction in Enum.GetNames(typeof(Direction)))
-                //{
-                //    ulong movesInDirection = GetPrecomputedMoves(direction, currentQueenPos);
-                //    ulong blockers = movesInDirection & InternalBoard.AllPieces;
-                //    int closestBlockerPosition = FindClosestBlocker(direction, currentQueenPos, blockers);
-                //}
+                // this is the classical method, I am opting to not implement magic bitboards as of now because I want to focus more on engine development,
+                // This is not quite as efficient as magic bitboards 
+                foreach (var direction in Enum.GetNames(typeof(Direction)))
+                {
+                    ulong movesInDirection = GetPrecomputedMoves(direction, currentQueenPos);
+                    ulong blockers = movesInDirection & InternalBoard.AllPieces;
+                    validQueenMoves |= TruncateBlockedMoves(direction, currentQueenPos, blockers);
+                }
 
                 while (validQueenMoves != 0)
                 {
@@ -1026,7 +1054,12 @@ namespace Chess
 
                 if (WhitePawnsAbleToPushTwoSquares(isolatedPawnlsb, ~InternalBoard.AllPieces) != isolatedPawnlsb)
                 {
-                    validPawnMoves &= ~MoveTables.RankMasks[(currentPawnPos / 8) + 2];
+                    // fix this later
+                    if (currentPawnPos < 48)
+                    {
+                        validPawnMoves &= ~MoveTables.RankMasks[(currentPawnPos / 8) + 2];
+                    }
+
                 }
 
                 // if a pawn can capture any black piece it is a pseudo-legal capture
