@@ -958,19 +958,59 @@ namespace Chess
             }
         }
 
+        public static ulong GetMostSignificantBit(ulong value)
+        {
+            if (value == 0) return 0;
+            ulong msb = value;
+            msb |= (msb >> 1);
+            msb |= (msb >> 2);
+            msb |= (msb >> 4);
+            msb |= (msb >> 8);
+            msb |= (msb >> 16);
+            msb |= (msb >> 32);
+            return msb - (msb >> 1);
+        }
+
+
+        /////////
+        /// <summary>
+        /// This Function's primary purpose is to drop bits representing moves that are 'past' the blocked piece in the position given any ray attack.
+        /// For example, a ray attack north of a white queen can have a few different outcomes. First, if a friendly piece is blocking, all moves past the blocked piece
+        /// need to be excluded (bitwise anded) out of the bitboard. Secondly, if the piece is an enemy piece, the piece 'blocking' needs to be included in the
+        /// attack bitboard. Finally, if there are no blockers, the original ray attack bitboard needs to be preserved.
+        /// </summary>
+        /// <param name="blockers"></param>
+        /// <param name="rayAttack"></param>
+        /// <returns></returns>
         public static ulong TruncateRayAttack(ulong blockers, ulong rayAttack)
         {
-            ulong isolatedclosestBlockerNorth = blockers & (~blockers + 1);
+            ulong isolatedclosestBlocker = blockers & (~blockers + 1);
 
-            // 'InternalBoard.AllBlackPieces' will have to change to reflect the current turn
-            ulong attackedPiece = blockers & InternalBoard.AllBlackPieces & rayAttack;
+            ulong attackedPiece = isolatedclosestBlocker & rayAttack & (BoardManager.whiteToMove ? InternalBoard.AllBlackPieces : InternalBoard.AllWhitePieces);
 
-            ulong blockerBitMask = ~(~isolatedclosestBlockerNorth + 1);
+            ulong blockerBitMask = ~(~isolatedclosestBlocker + 1);
 
-            ulong northMovesNotBlocked = (rayAttack & blockerBitMask) | attackedPiece;
+            ulong MovesNotBlocked = (rayAttack & blockerBitMask) | attackedPiece;
 
-            return northMovesNotBlocked;
+            return MovesNotBlocked;
         }
+
+        public static ulong TruncateRayAttackReverse(ulong blockers, ulong rayAttack)
+        {
+            ulong mostSignificantBlocker = GetMostSignificantBit(blockers);
+
+            // If mostSignificantBlocker is zero, it means there are no blockers, and the entire ray attack is valid.
+            if (mostSignificantBlocker == 0) return rayAttack;
+
+            ulong attackedPiece = mostSignificantBlocker & rayAttack & (BoardManager.whiteToMove ? InternalBoard.AllBlackPieces : InternalBoard.AllWhitePieces);
+
+            ulong blockerBitMask = mostSignificantBlocker | (mostSignificantBlocker - 1);
+
+            ulong MovesNotBlocked = rayAttack & ~blockerBitMask | attackedPiece;
+
+            return MovesNotBlocked;
+        }
+        /////////
 
         public static ulong TruncateBlockedMoves(string direction, int queenPosition, ulong blockers)
         {
@@ -980,19 +1020,19 @@ namespace Chess
                 case "North":
                     return TruncateRayAttack(blockers, MoveTables.NorthRayAttacks[queenPosition]);
                 case "South":
-                    return 0;
+                    return TruncateRayAttackReverse(blockers, MoveTables.SouthRayAttacks[queenPosition]);
                 case "East":
-                    return 0;
+                    return TruncateRayAttack(blockers, MoveTables.EastRayAttacks[queenPosition]);
                 case "West":
-                    return TruncateRayAttack(blockers, MoveTables.WestRayAttacks[queenPosition]);
+                    return TruncateRayAttackReverse(blockers, MoveTables.WestRayAttacks[queenPosition]);
                 case "NorthWest":
                     return TruncateRayAttack(blockers, MoveTables.NorthWestRayAttacks[queenPosition]);
                 case "NorthEast":
                     return TruncateRayAttack(blockers, MoveTables.NorthEastRayAttacks[queenPosition]);
                 case "SouthWest":
-                    return 0;
+                    return TruncateRayAttackReverse(blockers, MoveTables.SouthWestRayAttacks[queenPosition]);
                 case "SouthEast":
-                    return 0;
+                    return TruncateRayAttackReverse(blockers, MoveTables.SouthEastRayAttacks[queenPosition]);
                 default:
                     return 0;
             }
@@ -1015,8 +1055,8 @@ namespace Chess
 
                 ulong validQueenMoves = 0;
 
-                // this is the classical method, I am opting to not implement magic bitboards as of now because I want to focus more on engine development,
-                // This is not quite as efficient as magic bitboards 
+                // This is the classical method, I am opting to not implement magic bitboards as of now because I want to focus more on engine development.
+                // This is not quite as efficient as magic bitboards as this introduces a level of complexity to the calculations
                 foreach (var direction in Enum.GetNames(typeof(Direction)))
                 {
                     ulong movesInDirection = GetPrecomputedMoves(direction, currentQueenPos);
