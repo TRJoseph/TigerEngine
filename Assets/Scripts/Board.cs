@@ -1038,10 +1038,24 @@ namespace Chess
             }
         }
 
-        public static List<LegalMove> GenerateLegalMovesWhitePieces()
+        public static List<LegalMove> GenerateWhiteRookMoves()
         {
-            // create list to store legal moves
-            List<LegalMove> whiteMoves = new();
+            List<LegalMove> whiteRookMoves = new();
+
+
+            return whiteRookMoves;
+        }
+
+        public static List<LegalMove> GenerateWhiteBishopMoves()
+        {
+            List<LegalMove> whiteBishopMoves = new();
+
+            return whiteBishopMoves;
+        }
+
+        public static List<LegalMove> GenerateWhiteQueenMoves()
+        {
+            List<LegalMove> whiteQueenMoves = new();
 
             ulong whiteQueens = InternalBoard.WhiteQueens;
 
@@ -1070,11 +1084,17 @@ namespace Chess
                     int validQueenMove = (int)Math.Log(movelsb, 2);
 
                     validQueenMoves &= validQueenMoves - 1;
-                    whiteMoves.Add(AddLegalMove(currentQueenPos, validQueenMove, false, false, false));
+                    whiteQueenMoves.Add(AddLegalMove(currentQueenPos, validQueenMove, false, false, false));
                 }
                 whiteQueens &= whiteQueens - 1;
             }
 
+            return whiteQueenMoves;
+        }
+
+        public static List<LegalMove> GenerateWhitePawnMoves()
+        {
+            List<LegalMove> whitePawnMoves = new();
 
             ulong whitePawns = InternalBoard.WhitePawns;
 
@@ -1099,7 +1119,6 @@ namespace Chess
                     {
                         validPawnMoves &= ~MoveTables.RankMasks[(currentPawnPos / 8) + 2];
                     }
-
                 }
 
                 // if a pawn can capture any black piece it is a pseudo-legal capture
@@ -1114,12 +1133,19 @@ namespace Chess
                     int validPawnMove = (int)Math.Log(movelsb, 2);
 
                     validPawnMoves &= validPawnMoves - 1;
-                    whiteMoves.Add(AddLegalMove(currentPawnPos, validPawnMove, false, false, false));
+                    whitePawnMoves.Add(AddLegalMove(currentPawnPos, validPawnMove, false, false, false));
                 }
 
                 // move to the next pawn
                 whitePawns &= whitePawns - 1;
             }
+
+            return whitePawnMoves;
+        }
+
+        public static List<LegalMove> GenerateWhiteKnightMoves()
+        {
+            List<LegalMove> whiteKnightMoves = new();
 
             ulong whiteKnights = InternalBoard.WhiteKnights;
             while (whiteKnights != 0)
@@ -1137,14 +1163,18 @@ namespace Chess
                     int validKnightMove = (int)Math.Log(movelsb, 2);
 
                     validKnightMoves &= validKnightMoves - 1;
-                    whiteMoves.Add(AddLegalMove(currentKnightPos, validKnightMove, false, false, false));
+                    whiteKnightMoves.Add(AddLegalMove(currentKnightPos, validKnightMove, false, false, false));
                 }
 
                 // move to next knight
                 whiteKnights &= whiteKnights - 1;
             }
+            return whiteKnightMoves;
+        }
 
-            //ulong validKingMoves = ComputeKingMoves(InternalBoard.WhiteKing);
+        public static List<LegalMove> GenerateWhiteKingMoves()
+        {
+            List<LegalMove> whiteKingMoves = new();
 
             // king index converts the king bitboard 
             int kingIndex = (int)Math.Log(InternalBoard.WhiteKing, 2);
@@ -1164,9 +1194,23 @@ namespace Chess
 
                 validKingMoves &= validKingMoves - 1;
 
-                whiteMoves.Add(AddLegalMove(kingIndex, validKingMove, false, false, false));
+                whiteKingMoves.Add(AddLegalMove(kingIndex, validKingMove, false, false, false));
             }
 
+            return whiteKingMoves;
+        }
+
+        public static List<LegalMove> GenerateLegalMovesWhitePieces()
+        {
+            // create list to store legal moves
+            List<LegalMove> whiteMoves = new();
+
+            whiteMoves.AddRange(GenerateWhiteQueenMoves());
+            whiteMoves.AddRange(GenerateWhitePawnMoves());
+            whiteMoves.AddRange(GenerateWhiteKnightMoves());
+            whiteMoves.AddRange(GenerateWhiteKingMoves());
+
+            //ulong validKingMoves = ComputeKingMoves(InternalBoard.WhiteKing);
             return whiteMoves;
 
         }
