@@ -34,13 +34,13 @@ namespace Chess
         [SerializeField] public GameObject chessPiecePrefab;
 
         // Forsyth-Edwards Notation representing positions in a chess game
-        //private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
+        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
 
         // FEN string for testing pawn promotions
         //private readonly string FENString = "8/8/8/6P1/6p1/8/8/8";
 
         // second FEN string for testings king interactivity
-        private readonly string FENString = "4k3/8/4r3/4P3/p7/1QP2Pq1/PP3P1P/4K3";
+        //private readonly string FENString = "4k3/8/8/8/8/8/8/4K3";
 
         // another FEN string for testing king castling
         //private readonly string FENString = "r3k2r/p7/6N1/8/8/8/8/4K2R";
@@ -75,7 +75,7 @@ namespace Chess
 
             //legalMoves = GenerateLegalMoves();
 
-            legalMoves = GenerateLegalMovesBitBoard();
+            legalMoves = GenerateLegalMovesBitboard();
 
             /* ChooseSide controls what side the player will play 
             For example, if Sides.White is passed in, the player will be able to control the white pieces
