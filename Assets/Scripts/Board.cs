@@ -215,7 +215,7 @@ namespace Chess
 
             // remove any captured piece from bitboards
             ulong isolatedCapturedPieceBitmask = ~toSquare;
-            if(BoardManager.whiteToMove)
+            if (BoardManager.whiteToMove)
             {
                 InternalBoard.BlackBishops &= isolatedCapturedPieceBitmask;
                 InternalBoard.BlackKnights &= isolatedCapturedPieceBitmask;
@@ -223,7 +223,8 @@ namespace Chess
                 InternalBoard.BlackPawns &= isolatedCapturedPieceBitmask;
                 InternalBoard.BlackQueens &= isolatedCapturedPieceBitmask;
                 InternalBoard.AllBlackPieces &= isolatedCapturedPieceBitmask;
-            } else
+            }
+            else
             {
                 InternalBoard.WhiteBishops &= isolatedCapturedPieceBitmask;
                 InternalBoard.WhiteKnights &= isolatedCapturedPieceBitmask;
@@ -234,13 +235,14 @@ namespace Chess
             }
             InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
 
-            if(BoardManager.whiteToMove)
+            if (BoardManager.whiteToMove)
             {
                 RemoveAndAddPieceBitboards(move, fromSquare, toSquare, ref InternalBoard.AllWhitePieces, ref InternalBoard.WhiteKing, ref InternalBoard.WhiteKnights,
                     ref InternalBoard.WhiteBishops, ref InternalBoard.WhiteRooks, ref InternalBoard.WhiteQueens, ref InternalBoard.WhitePawns);
-            } else
+            }
+            else
             {
-                RemoveAndAddPieceBitboards(move, fromSquare, toSquare,ref InternalBoard.AllBlackPieces, ref InternalBoard.BlackKing, ref InternalBoard.BlackKnights,
+                RemoveAndAddPieceBitboards(move, fromSquare, toSquare, ref InternalBoard.AllBlackPieces, ref InternalBoard.BlackKing, ref InternalBoard.BlackKnights,
                     ref InternalBoard.BlackBishops, ref InternalBoard.BlackRooks, ref InternalBoard.BlackQueens, ref InternalBoard.BlackPawns);
             }
 
@@ -998,7 +1000,7 @@ namespace Chess
         }
 
 
-        /* these two functions came from "https://www.chessprogramming.org/Pawn_Pushes_(Bitboards)"
+        /* these functions came from "https://www.chessprogramming.org/Pawn_Pushes_(Bitboards)"
         * the pawn is able to push if no impeding piece (friendly or foe) is blocking the path, these functions traverse
         * the intersection of pawns with the shifted down empty squares in the opposite direction
         */
@@ -1014,6 +1016,20 @@ namespace Chess
             ulong emptyRank3 = InternalBoard.SouthOne(emptySquares & rank4) & emptySquares;
             return WhitePawnsAbleToPushOneSquare(wpawns, emptyRank3);
         }
+
+        static ulong BlackPawnsAbleToPushOneSquare(ulong wpawns, ulong emptySquares)
+        {
+            ulong result = InternalBoard.NorthOne(emptySquares) & wpawns;
+            return result;
+        }
+
+        static ulong BlackPawnsAbleToPushTwoSquares(ulong wpawns, ulong emptySquares)
+        {
+            ulong rank5 = MoveTables.RankMasks[4];
+            ulong emptyRank6 = InternalBoard.NorthOne(emptySquares & rank5) & emptySquares;
+            return BlackPawnsAbleToPushOneSquare(wpawns, emptyRank6);
+        }
+
         //
 
 
@@ -1130,7 +1146,7 @@ namespace Chess
 
             while (rooks != 0)
             {
-                // and with twos complement to isolate each queen
+                // and with twos complement to isolate each rook
                 ulong isolatedRooklsb = rooks & (~rooks + 1);
                 int currentRookPos = (int)Math.Log(isolatedRooklsb, 2);
 
@@ -1174,7 +1190,7 @@ namespace Chess
 
             while (bishops != 0)
             {
-                // and with twos complement to isolate each queen
+                // and with twos complement to isolate each bishop
                 ulong isolatedBishoplsb = bishops & (~bishops + 1);
                 int currentBishopPos = (int)Math.Log(isolatedBishoplsb, 2);
 
@@ -1210,7 +1226,7 @@ namespace Chess
 
             return bishopMoves;
         }
-         
+
         public static List<LegalMove> GenerateQueenMoves(ref ulong queenBitboard)
         {
             List<LegalMove> queenMoves = new();
@@ -1305,7 +1321,8 @@ namespace Chess
         {
             List<LegalMove> blackPawnMoves = new();
 
-            // TODO: implement
+            ulong blackPawns = InternalBoard.BlackPawns;
+
             return blackPawnMoves;
         }
 
@@ -1371,7 +1388,7 @@ namespace Chess
             // create list to store legal moves
             List<LegalMove> moves = new();
 
-            if(BoardManager.whiteToMove)
+            if (BoardManager.whiteToMove)
             {
                 moves.AddRange(GenerateBishopMoves(ref InternalBoard.WhiteBishops));
                 moves.AddRange(GenerateRookMoves(ref InternalBoard.WhiteRooks));
@@ -1379,7 +1396,8 @@ namespace Chess
                 moves.AddRange(GenerateWhitePawnMoves());
                 moves.AddRange(GenerateKnightMoves(ref InternalBoard.WhiteKnights, ref InternalBoard.AllWhitePieces));
                 moves.AddRange(GenerateKingMoves(ref InternalBoard.WhiteKing, ref InternalBoard.AllWhitePieces));
-            } else
+            }
+            else
             {
                 moves.AddRange(GenerateBishopMoves(ref InternalBoard.BlackBishops));
                 moves.AddRange(GenerateRookMoves(ref InternalBoard.BlackRooks));
@@ -1389,7 +1407,7 @@ namespace Chess
                 moves.AddRange(GenerateKingMoves(ref InternalBoard.BlackKing, ref InternalBoard.AllBlackPieces));
             }
 
- 
+
             //ulong validKingMoves = ComputeKingMoves(InternalBoard.WhiteKing);
             return moves;
 
