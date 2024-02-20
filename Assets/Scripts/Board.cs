@@ -217,12 +217,17 @@ namespace Chess
             ulong isolatedCapturedPieceBitmask = ~toSquare;
             if (BoardManager.whiteToMove)
             {
+                // update potential captured piece 
                 InternalBoard.BlackBishops &= isolatedCapturedPieceBitmask;
                 InternalBoard.BlackKnights &= isolatedCapturedPieceBitmask;
                 InternalBoard.BlackRooks &= isolatedCapturedPieceBitmask;
                 InternalBoard.BlackPawns &= isolatedCapturedPieceBitmask;
                 InternalBoard.BlackQueens &= isolatedCapturedPieceBitmask;
                 InternalBoard.AllBlackPieces &= isolatedCapturedPieceBitmask;
+
+                // remove appropriate white piece from old square and move it to new square, update bitboards correspondingly 
+                RemoveAndAddPieceBitboards(move, fromSquare, toSquare, ref InternalBoard.AllWhitePieces, ref InternalBoard.WhiteKing, ref InternalBoard.WhiteKnights,
+                    ref InternalBoard.WhiteBishops, ref InternalBoard.WhiteRooks, ref InternalBoard.WhiteQueens, ref InternalBoard.WhitePawns);
             }
             else
             {
@@ -232,19 +237,11 @@ namespace Chess
                 InternalBoard.WhitePawns &= isolatedCapturedPieceBitmask;
                 InternalBoard.WhiteQueens &= isolatedCapturedPieceBitmask;
                 InternalBoard.AllWhitePieces &= isolatedCapturedPieceBitmask;
-            }
-            InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
 
-            if (BoardManager.whiteToMove)
-            {
-                RemoveAndAddPieceBitboards(move, fromSquare, toSquare, ref InternalBoard.AllWhitePieces, ref InternalBoard.WhiteKing, ref InternalBoard.WhiteKnights,
-                    ref InternalBoard.WhiteBishops, ref InternalBoard.WhiteRooks, ref InternalBoard.WhiteQueens, ref InternalBoard.WhitePawns);
-            }
-            else
-            {
                 RemoveAndAddPieceBitboards(move, fromSquare, toSquare, ref InternalBoard.AllBlackPieces, ref InternalBoard.BlackKing, ref InternalBoard.BlackKnights,
                     ref InternalBoard.BlackBishops, ref InternalBoard.BlackRooks, ref InternalBoard.BlackQueens, ref InternalBoard.BlackPawns);
             }
+            InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
 
             // update composite bitboards
             InternalBoard.AllWhitePieces = InternalBoard.WhitePawns | InternalBoard.WhiteKnights | InternalBoard.WhiteBishops | InternalBoard.WhiteRooks | InternalBoard.WhiteQueens | InternalBoard.WhiteKing;
