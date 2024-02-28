@@ -149,6 +149,8 @@ namespace Chess
 
         private static int lastPawnDoubleMoveSquare = -1;
 
+        private static ulong lastPawnDoubleMoveBitboard = 0;
+
         private static readonly int[,] knightOffsets = { { 17, -15, 15, -17 }, { 10, -6, 6, -10 } };
 
         // These flags are for game-ending conditions
@@ -208,8 +210,52 @@ namespace Chess
 
             LegalMove move = legalMoves.Single(move => move.startSquare == oldPiecePosition && move.endSquare == newPiecePosition);
 
+            // update last pawn double square move
+            if (move.movedPiece == Piece.Pawn)
+            {
+
+                // double pawn move
+                if (Math.Abs(oldPiecePosition - newPiecePosition) == 16)
+                {
+                    if (BoardManager.whiteToMove)
+                    {
+                        lastPawnDoubleMoveBitboard = 1UL << newPiecePosition - 8;
+                    }
+                    else
+                    {
+                        lastPawnDoubleMoveBitboard = 1UL << newPiecePosition + 8;
+                    }
+
+                }
+                else
+                {
+                    lastPawnDoubleMoveBitboard = 0;
+                }
+            }
+            else
+            {
+                lastPawnDoubleMoveBitboard = 0;
+            }
+
+            ///
+
             ulong fromSquare = 1UL << move.startSquare;
             ulong toSquare = 1UL << move.endSquare;
+
+
+            if (move.enPassant == true)
+            {
+                if (BoardManager.whiteToMove)
+                {
+                    // TODO: why does this not work 
+                    //InternalBoard.BlackPawns &= ~(toSquare << 8);
+                    InternalBoard.BlackPawns &= ~(1UL << (move.endSquare - 8));
+                }
+                else
+                {
+
+                }
+            }
 
             // for a captured piece, AND the InternalBoard bitboards with the NOT of the isolated captured piece bitboard (endsquare)
 
@@ -1297,6 +1343,28 @@ namespace Chess
                 validPawnMoves |= validPawnCaptures;
 
                 // TODO: add en passant here?
+
+                if (lastPawnDoubleMoveBitboard != 0)
+                {
+
+                    // northwest potential en passant capture square
+                    if ((int)Math.Log(lastPawnDoubleMoveBitboard, 2) - currentPawnPos == 7)
+                    {
+                        if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
+                        {
+                            whitePawnMoves.Add(AddLegalMove(currentPawnPos, (int)Math.Log(lastPawnDoubleMoveBitboard, 2), false, false, true, Piece.Pawn));
+                        }
+                    }
+
+                    // northeast potential en passant capture square 
+                    if ((int)Math.Log(lastPawnDoubleMoveBitboard, 2) - currentPawnPos == 9)
+                    {
+                        if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
+                        {
+                            whitePawnMoves.Add(AddLegalMove(currentPawnPos, (int)Math.Log(lastPawnDoubleMoveBitboard, 2), false, false, true, Piece.Pawn));
+                        }
+                    }
+                }
 
                 while (validPawnMoves != 0)
                 {
