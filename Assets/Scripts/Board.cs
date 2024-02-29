@@ -247,13 +247,12 @@ namespace Chess
             {
                 if (BoardManager.whiteToMove)
                 {
-                    // TODO: why does this not work 
-                    //InternalBoard.BlackPawns &= ~(toSquare << 8);
-                    InternalBoard.BlackPawns &= ~(1UL << (move.endSquare - 8));
+                    // shift down 8 squares to remove pawn captured via en passant a rank "below" the capturing pawn
+                    InternalBoard.BlackPawns &= ~(toSquare >> 8);
                 }
                 else
                 {
-
+                    InternalBoard.WhitePawns &= ~(toSquare << 8);
                 }
             }
 
