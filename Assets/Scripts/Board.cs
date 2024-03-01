@@ -115,6 +115,8 @@ namespace Chess
         public const ulong ABFileMask = 0x3F3F3F3F3F3F3F3F;
         public const ulong GHFileMask = 0xFCFCFCFCFCFCFCFC;
 
+        public static int CastlingRights = 0xF;
+
         public const int BoardSize = 64;
         public static InternalSquare[] Squares = new InternalSquare[BoardSize];
 
@@ -199,24 +201,17 @@ namespace Chess
             }
 
             // special moves here
-
-
         }
 
-        public static void UpdateBitboards(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
+        public static void UpdateLastPawnDoubleSquareMove(int movedPiece, int oldPiecePosition, int newPiecePosition)
         {
-            int oldPiecePosition = originalYPosition * 8 + originalXPosition;
-            int newPiecePosition = newYPosition * 8 + newXPosition;
-
-            LegalMove move = legalMoves.Single(move => move.startSquare == oldPiecePosition && move.endSquare == newPiecePosition);
-
             // update last pawn double square move
-            if (move.movedPiece == Piece.Pawn)
+            if (movedPiece == Piece.Pawn)
             {
-
                 // double pawn move
                 if (Math.Abs(oldPiecePosition - newPiecePosition) == 16)
                 {
+
                     if (BoardManager.whiteToMove)
                     {
                         lastPawnDoubleMoveBitboard = 1UL << newPiecePosition - 8;
@@ -236,7 +231,41 @@ namespace Chess
             {
                 lastPawnDoubleMoveBitboard = 0;
             }
+        }
 
+
+
+        public static void UpdateBitboards(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
+        {
+            int oldPiecePosition = originalYPosition * 8 + originalXPosition;
+            int newPiecePosition = newYPosition * 8 + newXPosition;
+
+            LegalMove move = legalMoves.Single(move => move.startSquare == oldPiecePosition && move.endSquare == newPiecePosition);
+
+            UpdateLastPawnDoubleSquareMove(move.movedPiece, oldPiecePosition, newPiecePosition);
+
+            ///
+            // Example: Moving the white king from e1 (square 4) or black king from e8 (square 60)
+            if (move.startSquare == 4) CastlingRights &= 0b1100; // White moves, clear white's rights
+            if (move.startSquare == 60) CastlingRights &= 0b0011; // Black moves, clear black's rights
+
+            // white queenside rook 
+            if (move.startSquare == 0) CastlingRights &= 0b1101;
+
+            // white kingside rook
+            if (move.startSquare == 7) CastlingRights &= 0b1110;
+
+            // black queenside rook
+            if (move.startSquare == 56) CastlingRights &= 0b0111;
+
+            // black kingside rook
+            if (move.startSquare == 63) CastlingRights &= 0b1011;
+
+            // if any piece moves to any of these individual squares it is safe to assume the rook is either captured or not there anymore, either way removing castling rights
+            if (move.endSquare == 0) CastlingRights &= 0b1110; // White queenside rook captured
+            if (move.endSquare == 7) CastlingRights &= 0b1101; // White kingside rook captured
+            if (move.endSquare == 56) CastlingRights &= 0b1011; // Black queenside rook captured
+            if (move.endSquare == 63) CastlingRights &= 0b0111; // Black kingside rook captured
             ///
 
             ulong fromSquare = 1UL << move.startSquare;
@@ -255,6 +284,7 @@ namespace Chess
                     InternalBoard.WhitePawns &= ~(toSquare << 8);
                 }
             }
+
 
             // for a captured piece, AND the InternalBoard bitboards with the NOT of the isolated captured piece bitboard (endsquare)
 
@@ -1413,6 +1443,28 @@ namespace Chess
                 ulong validPawnCaptures = MoveTables.PrecomputedBlackPawnCaptures[currentPawnPos] & InternalBoard.AllWhitePieces;
                 validPawnMoves |= validPawnCaptures;
 
+                if (lastPawnDoubleMoveBitboard != 0)
+                {
+
+                    // southwest potential en passant capture square
+                    if (currentPawnPos - (int)Math.Log(lastPawnDoubleMoveBitboard, 2) == 9)
+                    {
+                        if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
+                        {
+                            blackPawnMoves.Add(AddLegalMove(currentPawnPos, (int)Math.Log(lastPawnDoubleMoveBitboard, 2), false, false, true, Piece.Pawn));
+                        }
+                    }
+
+                    // southeast potential en passant capture square 
+                    if (currentPawnPos - (int)Math.Log(lastPawnDoubleMoveBitboard, 2) == 7)
+                    {
+                        if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
+                        {
+                            blackPawnMoves.Add(AddLegalMove(currentPawnPos, (int)Math.Log(lastPawnDoubleMoveBitboard, 2), false, false, true, Piece.Pawn));
+                        }
+                    }
+                }
+
                 while (validPawnMoves != 0)
                 {
                     ulong movelsb = validPawnMoves & (~validPawnMoves + 1);
@@ -1457,6 +1509,51 @@ namespace Chess
             return knightMoves;
         }
 
+        private static bool CanCastleKingsideWhite()
+        {
+            // check to make sure squares between king and kingside rook are empty
+            if (((InternalBoard.AllPieces) & 0x60) != 0)
+            {
+                return false;
+            }
+
+            if ((CastlingRights & 0b0001) == 0)
+            {
+                return false;
+            }
+
+            // check if squares between king and kingside rook are underattack
+
+
+            return true;// Check if white can castle kingside
+        }
+
+        private static bool CanCastleQueensideWhite()
+        {
+
+            // check to make sure squares between king and queenside rook are empty
+            if (((InternalBoard.AllPieces) & 0xD) != 0)
+            {
+                return false;
+            }
+
+            if ((CastlingRights & 0b0010) == 0)
+            {
+                return false;
+            }
+            return true; // Check if white can castle queenside
+        }
+
+        private static bool CanCastleKingsideBlack()
+        {
+            return (CastlingRights & 0b0100) != 0; // Check if white can castle kingside
+        }
+
+        private static bool CanCastleQueensideBlack()
+        {
+            return (CastlingRights & 0b1000) != 0; // Check if white can castle queenside
+        }
+
         public static List<LegalMove> GenerateKingMoves(ref ulong king, ref ulong friendlyPieces)
         {
             List<LegalMove> kingMoves = new();
@@ -1469,6 +1566,21 @@ namespace Chess
 
             // valid king moves only include either empty squares or squares the opponent pieces occupy (for now, this will change when check is implemented)
             validKingMoves &= ~friendlyPieces;
+
+            // castling
+            if (BoardManager.whiteToMove)
+            {
+                if (CanCastleKingsideWhite())
+                {
+
+                }
+
+                if (CanCastleQueensideWhite())
+                {
+
+                }
+
+            }
 
             while (validKingMoves != 0)
             {
@@ -1515,24 +1627,6 @@ namespace Chess
 
         }
 
-        public static List<LegalMove> GenerateLegalMovesBlackPieces()
-        {
-            List<LegalMove> blackMoves = new();
-
-
-            return blackMoves;
-        }
-
-        //public static List<LegalMove> GenerateLegalMovesBitBoard()
-        //{
-        //    List<LegalMove> pseudoLegalMoves = new List<LegalMove>();
-
-
-        //    pseudoLegalMoves.AddRange(GenerateLegalMovesBitboards(BoardManager.whiteToMove));
-
-
-        //    return pseudoLegalMoves;
-        //}
 
         public static ulong ComputeKnightMoves(ulong knight_loc)
         {
