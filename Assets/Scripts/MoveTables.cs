@@ -280,14 +280,14 @@ namespace Chess
 
         public static ulong[] PrecomputedWhitePawnCaptures =
         {
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
+            0x200,
+            0x500,
+            0xa00,
+            0x1400,
+            0x2800,
+            0x5000,
+            0xa000,
+            0x4000,
             0x20000,
             0x50000,
             0xa0000,
@@ -470,14 +470,14 @@ namespace Chess
             0x500000000000,
             0xa00000000000,
             0x400000000000,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
+            0x2000000000000,
+            0x5000000000000,
+            0xa000000000000,
+            0x14000000000000,
+            0x28000000000000,
+            0x50000000000000,
+            0xa0000000000000,
+            0x40000000000000,
         };
 
         // starting from the 1st rank (index 0) to the 8th rank (index 7)
@@ -1032,6 +1032,8 @@ namespace Chess
             0x80000000000000,
             0x0,
         };
+
+
 
 
     }

@@ -1105,26 +1105,26 @@ namespace Chess
         //
 
 
-        private static ulong GetPrecomputedMoves(string direction, int currentQueenPos)
+        private static ulong GetPrecomputedMoves(string direction, int currentPiecePos)
         {
             switch (direction)
             {
                 case "North":
-                    return MoveTables.NorthRayAttacks[currentQueenPos];
+                    return MoveTables.NorthRayAttacks[currentPiecePos];
                 case "South":
-                    return MoveTables.SouthRayAttacks[currentQueenPos];
+                    return MoveTables.SouthRayAttacks[currentPiecePos];
                 case "East":
-                    return MoveTables.EastRayAttacks[currentQueenPos];
+                    return MoveTables.EastRayAttacks[currentPiecePos];
                 case "West":
-                    return MoveTables.WestRayAttacks[currentQueenPos];
+                    return MoveTables.WestRayAttacks[currentPiecePos];
                 case "NorthWest":
-                    return MoveTables.NorthWestRayAttacks[currentQueenPos];
+                    return MoveTables.NorthWestRayAttacks[currentPiecePos];
                 case "NorthEast":
-                    return MoveTables.NorthEastRayAttacks[currentQueenPos];
+                    return MoveTables.NorthEastRayAttacks[currentPiecePos];
                 case "SouthWest":
-                    return MoveTables.SouthWestRayAttacks[currentQueenPos];
+                    return MoveTables.SouthWestRayAttacks[currentPiecePos];
                 case "SouthEast":
-                    return MoveTables.SouthEastRayAttacks[currentQueenPos];
+                    return MoveTables.SouthEastRayAttacks[currentPiecePos];
                 default:
                     return 0;
             }
@@ -1517,41 +1517,65 @@ namespace Chess
                 return false;
             }
 
-            if ((CastlingRights & 0b0001) == 0)
+            if ((CastlingRights & 0x1) == 0)
             {
                 return false;
             }
 
             // check if squares between king and kingside rook are underattack
 
+            SquareAttackedBy(InternalBoard.AllPieces, 1);
 
-            return true;// Check if white can castle kingside
+
+            return true;
         }
 
         private static bool CanCastleQueensideWhite()
         {
 
             // check to make sure squares between king and queenside rook are empty
-            if (((InternalBoard.AllPieces) & 0xD) != 0)
+            if (((InternalBoard.AllPieces) & 0xE) != 0)
             {
                 return false;
             }
 
-            if ((CastlingRights & 0b0010) == 0)
+            if ((CastlingRights & 0x2) == 0)
             {
                 return false;
             }
-            return true; // Check if white can castle queenside
+            return true; 
         }
 
         private static bool CanCastleKingsideBlack()
         {
-            return (CastlingRights & 0b0100) != 0; // Check if white can castle kingside
+
+            // check to make sure squares between king and kingside rook are empty
+            if (((InternalBoard.AllPieces) & 0x6000000000000000) != 0)
+            {
+                return false;
+            }
+
+            if ((CastlingRights & 0x4) == 0)
+            {
+                return false;
+            }
+
+            return true; // Check if white can castle kingside
         }
 
         private static bool CanCastleQueensideBlack()
         {
-            return (CastlingRights & 0b1000) != 0; // Check if white can castle queenside
+            // check to make sure squares between king and queenside rook are empty
+            if (((InternalBoard.AllPieces) & 0xE00000000000000) != 0)
+            {
+                return false;
+            }
+
+            if ((CastlingRights & 0x8) == 0)
+            {
+                return false;
+            }
+            return true; // Check if white can castle queenside
         }
 
         public static List<LegalMove> GenerateKingMoves(ref ulong king, ref ulong friendlyPieces)
@@ -1625,6 +1649,41 @@ namespace Chess
 
             return moves;
 
+        }
+
+        // returns true if a piece is attacking the square
+        private static bool SquareAttackedBy(ulong occupiedSquares, int square)
+        {
+
+            /* What is going on here is confusing at first glance. For example, with pawn captures, if we want to find if a square is under
+             * attack by a white pawn, we have to index the potential black pawn captures movetable to essentially
+             * look from the perspective of that square if it had a black pawn on it and see if its potential capture squares intersect with
+             * the white pawn we were originally addressing. Pawns capture opposite ways on opposite sides but in the same manner (diagonally).
+             * */
+
+
+            if(BoardManager.whiteToMove)
+            {
+                if ((MoveTables.PrecomputedWhitePawnCaptures[square] & InternalBoard.BlackPawns) != 0) return true;
+
+                if ((MoveTables.PrecomputedKnightMoves[square] & InternalBoard.BlackKnights) != 0) return true;
+
+                if ((MoveTables.PrecomputedKingMoves[square] & InternalBoard.BlackKing) != 0) return true;
+
+                ulong bishopsAndQueens = InternalBoard.BlackQueens | InternalBoard.BlackBishops;
+
+            } else
+            {
+
+                if ((MoveTables.PrecomputedBlackPawnCaptures[square] & InternalBoard.WhitePawns) != 0) return true;
+
+                if ((MoveTables.PrecomputedKnightMoves[square] & InternalBoard.WhiteKnights) != 0) return true;
+
+                if ((MoveTables.PrecomputedKingMoves[square] & InternalBoard.WhiteKing) != 0) return true;
+            }
+
+
+            return false;
         }
 
 
