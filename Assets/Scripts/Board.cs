@@ -74,35 +74,6 @@ namespace Chess
             public readonly ulong SouthWestWest(ulong bitboard) { return (bitboard >> 10) & ABFileMask; }
             public readonly ulong SouthSouthWest(ulong bitboard) { return (bitboard >> 17) & AFileMask; }
 
-            public readonly ulong RankAttacks(int square)
-            {
-                return MoveTables.EastRayAttacks[square] | MoveTables.WestRayAttacks[square];
-            }
-            public readonly ulong FileAttacks(int square)
-            {
-                return MoveTables.NorthRayAttacks[square] | MoveTables.SouthRayAttacks[square];
-            }
-            public readonly ulong DiagonalAttacks(int square)
-            {
-                return MoveTables.NorthEastRayAttacks[square] | MoveTables.SouthWestRayAttacks[square];
-            }
-            public readonly ulong AntiDiagonalAttacks(int square)
-            {
-                return MoveTables.NorthWestRayAttacks[square] | MoveTables.SouthEastRayAttacks[square];
-            }
-            public readonly ulong RookAttacks(int square)
-            {
-                return RankAttacks(square) | FileAttacks(square);
-            }
-            public readonly ulong BishopAttacks(int square)
-            {
-                return DiagonalAttacks(square) | AntiDiagonalAttacks(square);
-            }
-            public readonly ulong QueenAttacks(int square)
-            {
-                return BishopAttacks(square) | RookAttacks(square);
-            }
-
         }
 
         public static ChessBoard InternalBoard = new();
@@ -1104,113 +1075,7 @@ namespace Chess
 
         //
 
-
-        private static ulong GetPrecomputedMoves(string direction, int currentPiecePos)
-        {
-            switch (direction)
-            {
-                case "North":
-                    return MoveTables.NorthRayAttacks[currentPiecePos];
-                case "South":
-                    return MoveTables.SouthRayAttacks[currentPiecePos];
-                case "East":
-                    return MoveTables.EastRayAttacks[currentPiecePos];
-                case "West":
-                    return MoveTables.WestRayAttacks[currentPiecePos];
-                case "NorthWest":
-                    return MoveTables.NorthWestRayAttacks[currentPiecePos];
-                case "NorthEast":
-                    return MoveTables.NorthEastRayAttacks[currentPiecePos];
-                case "SouthWest":
-                    return MoveTables.SouthWestRayAttacks[currentPiecePos];
-                case "SouthEast":
-                    return MoveTables.SouthEastRayAttacks[currentPiecePos];
-                default:
-                    return 0;
-            }
-        }
-
-        public static ulong GetMostSignificantBit(ulong value)
-        {
-            if (value == 0) return 0;
-            ulong msb = value;
-            msb |= (msb >> 1);
-            msb |= (msb >> 2);
-            msb |= (msb >> 4);
-            msb |= (msb >> 8);
-            msb |= (msb >> 16);
-            msb |= (msb >> 32);
-            return msb - (msb >> 1);
-        }
-
-
-        /////////
-        /// <summary>
-        /// This Function's primary purpose is to drop bits representing moves that are 'past' the blocked piece in the position given any ray attack.
-        /// For example, a ray attack north of a white queen can have a few different outcomes. First, if a friendly piece is blocking, all moves past the blocked piece
-        /// need to be excluded (bitwise anded) out of the bitboard. Secondly, if the piece is an enemy piece, the piece 'blocking' needs to be included in the
-        /// attack bitboard. Finally, if there are no blockers, the original ray attack bitboard needs to be preserved.
-        /// </summary>
-        /// <param name="blockers"></param>
-        /// <param name="rayAttack"></param>
-        /// <returns></returns>
-        public static ulong TruncateRayAttack(ulong blockers, ulong rayAttack)
-        {
-            ulong isolatedclosestBlocker = blockers & (~blockers + 1);
-
-            ulong attackedPiece = isolatedclosestBlocker & rayAttack & (BoardManager.whiteToMove ? InternalBoard.AllBlackPieces : InternalBoard.AllWhitePieces);
-
-            ulong blockerBitMask = ~(~isolatedclosestBlocker + 1);
-
-            ulong MovesNotBlocked = (rayAttack & blockerBitMask) | attackedPiece;
-
-            return MovesNotBlocked;
-        }
-
-        public static ulong TruncateRayAttackReverse(ulong blockers, ulong rayAttack)
-        {
-            ulong mostSignificantBlocker = GetMostSignificantBit(blockers);
-
-            // If mostSignificantBlocker is zero, it means there are no blockers, and the entire ray attack is valid.
-            if (mostSignificantBlocker == 0) return rayAttack;
-
-            ulong attackedPiece = mostSignificantBlocker & rayAttack & (BoardManager.whiteToMove ? InternalBoard.AllBlackPieces : InternalBoard.AllWhitePieces);
-
-            ulong blockerBitMask = mostSignificantBlocker | (mostSignificantBlocker - 1);
-
-            ulong MovesNotBlocked = rayAttack & ~blockerBitMask | attackedPiece;
-
-            return MovesNotBlocked;
-        }
-        /////////
-
-        public static ulong TruncateBlockedMoves(string direction, int queenPosition, ulong blockers)
-        {
-
-            switch (direction)
-            {
-                case "North":
-                    return TruncateRayAttack(blockers, MoveTables.NorthRayAttacks[queenPosition]);
-                case "South":
-                    return TruncateRayAttackReverse(blockers, MoveTables.SouthRayAttacks[queenPosition]);
-                case "East":
-                    return TruncateRayAttack(blockers, MoveTables.EastRayAttacks[queenPosition]);
-                case "West":
-                    return TruncateRayAttackReverse(blockers, MoveTables.WestRayAttacks[queenPosition]);
-                case "NorthWest":
-                    return TruncateRayAttack(blockers, MoveTables.NorthWestRayAttacks[queenPosition]);
-                case "NorthEast":
-                    return TruncateRayAttack(blockers, MoveTables.NorthEastRayAttacks[queenPosition]);
-                case "SouthWest":
-                    return TruncateRayAttackReverse(blockers, MoveTables.SouthWestRayAttacks[queenPosition]);
-                case "SouthEast":
-                    return TruncateRayAttackReverse(blockers, MoveTables.SouthEastRayAttacks[queenPosition]);
-                default:
-                    return 0;
-            }
-        }
-
-        public static List<LegalMove> GenerateRookMoves(ref ulong rookBitboard)
+        public static List<LegalMove> GenerateRookMoves(ref ulong rookBitboard, ref ulong friendlyPieces)
         {
             List<LegalMove> rookMoves = new();
 
@@ -1222,23 +1087,10 @@ namespace Chess
                 ulong isolatedRooklsb = rooks & (~rooks + 1);
                 int currentRookPos = (int)Math.Log(isolatedRooklsb, 2);
 
-                ulong validRookMoves = 0;
+                ulong validRookMoves = GetRookAttacks(InternalBoard.AllPieces, currentRookPos);
 
-                ulong movesInDirection = GetPrecomputedMoves("North", currentRookPos);
-                ulong blockers = movesInDirection & InternalBoard.AllPieces;
-                validRookMoves |= TruncateBlockedMoves("North", currentRookPos, blockers);
-
-                movesInDirection = GetPrecomputedMoves("South", currentRookPos);
-                blockers = movesInDirection & InternalBoard.AllPieces;
-                validRookMoves |= TruncateBlockedMoves("South", currentRookPos, blockers);
-
-                movesInDirection = GetPrecomputedMoves("East", currentRookPos);
-                blockers = movesInDirection & InternalBoard.AllPieces;
-                validRookMoves |= TruncateBlockedMoves("East", currentRookPos, blockers);
-
-                movesInDirection = GetPrecomputedMoves("West", currentRookPos);
-                blockers = movesInDirection & InternalBoard.AllPieces;
-                validRookMoves |= TruncateBlockedMoves("West", currentRookPos, blockers);
+                // remove friendly piece blockers from potential captures 
+                validRookMoves &= ~friendlyPieces;
 
                 while (validRookMoves != 0)
                 {
@@ -1254,7 +1106,7 @@ namespace Chess
             return rookMoves;
         }
 
-        public static List<LegalMove> GenerateBishopMoves(ref ulong bishopBitboard)
+        public static List<LegalMove> GenerateBishopMoves(ref ulong bishopBitboard, ref ulong friendlyPieces)
         {
             List<LegalMove> bishopMoves = new();
 
@@ -1266,24 +1118,10 @@ namespace Chess
                 ulong isolatedBishoplsb = bishops & (~bishops + 1);
                 int currentBishopPos = (int)Math.Log(isolatedBishoplsb, 2);
 
-                ulong validBishopMoves = 0;
+                ulong validBishopMoves = GetBishopAttacks(InternalBoard.AllPieces, currentBishopPos);
 
-                ulong movesInDirection = GetPrecomputedMoves("NorthWest", currentBishopPos);
-                ulong blockers = movesInDirection & InternalBoard.AllPieces;
-                validBishopMoves |= TruncateBlockedMoves("NorthWest", currentBishopPos, blockers);
-
-                movesInDirection = GetPrecomputedMoves("SouthWest", currentBishopPos);
-                blockers = movesInDirection & InternalBoard.AllPieces;
-                validBishopMoves |= TruncateBlockedMoves("SouthWest", currentBishopPos, blockers);
-
-                movesInDirection = GetPrecomputedMoves("NorthEast", currentBishopPos);
-                blockers = movesInDirection & InternalBoard.AllPieces;
-                validBishopMoves |= TruncateBlockedMoves("NorthEast", currentBishopPos, blockers);
-
-                movesInDirection = GetPrecomputedMoves("SouthEast", currentBishopPos);
-                blockers = movesInDirection & InternalBoard.AllPieces;
-                validBishopMoves |= TruncateBlockedMoves("SouthEast", currentBishopPos, blockers);
-
+                // remove friendly piece blockers from potential captures 
+                validBishopMoves &= ~friendlyPieces;
 
                 while (validBishopMoves != 0)
                 {
@@ -1299,7 +1137,7 @@ namespace Chess
             return bishopMoves;
         }
 
-        public static List<LegalMove> GenerateQueenMoves(ref ulong queenBitboard)
+        public static List<LegalMove> GenerateQueenMoves(ref ulong queenBitboard, ref ulong friendlyPieces)
         {
             List<LegalMove> queenMoves = new();
 
@@ -1311,18 +1149,11 @@ namespace Chess
                 ulong isolatedQueenlsb = queens & (~queens + 1);
                 int currentQueenPos = (int)Math.Log(isolatedQueenlsb, 2);
 
-                //ulong validQueenMoves = InternalBoard.QueenAttacks(currentQueenPos);
+                ulong validQueenMoves = GetBishopAttacks(InternalBoard.AllPieces, currentQueenPos);
+                validQueenMoves |= GetRookAttacks(InternalBoard.AllPieces, currentQueenPos);
 
-                ulong validQueenMoves = 0;
-
-                // This is the classical method, I am opting to not implement magic bitboards as of now because I want to focus more on engine development.
-                // This is not quite as efficient as magic bitboards as this introduces a level of complexity to the calculations
-                foreach (var direction in Enum.GetNames(typeof(Direction)))
-                {
-                    ulong movesInDirection = GetPrecomputedMoves(direction, currentQueenPos);
-                    ulong blockers = movesInDirection & InternalBoard.AllPieces;
-                    validQueenMoves |= TruncateBlockedMoves(direction, currentQueenPos, blockers);
-                }
+                // remove friendly piece blockers from potential captures 
+                validQueenMoves &= ~friendlyPieces;
 
                 while (validQueenMoves != 0)
                 {
@@ -1509,6 +1340,222 @@ namespace Chess
             return knightMoves;
         }
 
+        /* 
+         *  The following functions were implemented through the help of these resources. Using magic bitboards is a complex process.
+         *  Functions below "InitBishopLookup" and "InitRookLookup" are executed once to fill the lookup tables for magic bitboards. I chose to use
+         *  the 'Plain Magic Bitboards' found on the chess programming wikipedia as it was the simplest for me to wrap my mind around.
+         *  
+         *  The magic numbers themselves I did not generate, as it was much easier to find a suitable precomputed table online.
+         *  The Movetables C# class contains the array of magic bitboards
+         *  
+         *  https://www.chessprogramming.org/Magic_Bitboards#Plain
+         *  https://stackoverflow.com/questions/67513005/how-to-generate-this-preinitialized-array-for-magic-bitboards
+         */
+        private static ulong GetBishopAttacks(ulong occupied, int square)
+        {
+            ulong blockers = occupied & MoveTables.BishopRelevantOccupancy[square];
+            ulong index = (blockers * MoveTables.BishopMagics[square]) >> MoveTables.PrecomputedBishopShifts[square];
+            return MoveTables.BishopAttackTable[square, index];
+        }
+
+        private static ulong GetRookAttacks(ulong occupied, int square)
+        {
+            ulong blockers = occupied & MoveTables.RookRelevantOccupancy[square];
+            ulong index = (blockers * MoveTables.RookMagics[square]) >> MoveTables.PrecomputedRookShifts[square];
+            return MoveTables.RookAttackTable[square, index];
+        }
+
+
+        private static int GetFile(int square)
+        {
+            return square % 8;
+        }
+
+        private static int GetRank(int square)
+        {
+            return square / 8;
+        }
+
+        private static int GetSquare(int rank, int file)
+        {
+            return rank * 8 + file;
+        }
+
+        // Generates the key, similar to the Java code snippet
+        private static int Transform(ulong blockers, ulong magic, int shift)
+        {
+            return (int)((blockers * magic) >> shift);
+        }
+
+        private static int TrailingZeroCount(ulong value)
+        {
+            if (value == 0) return 64;
+            int count = 0;
+
+            while ((value & 1) == 0)
+            {
+                count++;
+                value >>= 1;
+            }
+
+            return count;
+        }
+
+        private static int PopCount(ulong x)
+        {
+            int count;
+            for (count = 0; x != 0; count++)
+            {
+                x &= x - 1; // Clear the least significant bit set
+            }
+            return count;
+        }
+
+        public static void InitBishopLookup()
+        {
+            for (int square = 0; square < 64; square++)
+            {
+                ulong mask = MoveTables.BishopRelevantOccupancy[square];
+                int permutationCount = 1 << PopCount(mask);
+
+                for (int i = 0; i < permutationCount; i++)
+                {
+                    ulong blockers = BlockersPermutation(i, mask);
+                    ulong attacks = 0UL;
+                    int rank = GetRank(square), r;
+                    int file = GetFile(square), f;
+
+                    for (r = rank + 1, f = file + 1; r <= 7 && f <= 7; r++, f++)
+                    {
+                        attacks |= 1UL << GetSquare(r, f);
+                        if ((blockers & (1UL << GetSquare(r, f))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    for (r = rank - 1, f = file + 1; r >= 0 && f <= 7; r--, f++)
+                    {
+                        attacks |= 1UL << GetSquare(r, f);
+                        if ((blockers & (1UL << GetSquare(r, f))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    for (r = rank - 1, f = file - 1; r >= 0 && f >= 0; r--, f--)
+                    {
+                        attacks |= 1UL << GetSquare(r, f);
+                        if ((blockers & (1UL << GetSquare(r, f))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    for (r = rank + 1, f = file - 1; r <= 7 && f >= 0; r++, f--)
+                    {
+                        attacks |= 1UL << GetSquare(r, f);
+                        if ((blockers & (1UL << GetSquare(r, f))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    int key = Transform(blockers, MoveTables.BishopMagics[square], MoveTables.PrecomputedBishopShifts[square]);
+
+                    MoveTables.BishopAttackTable[square, key] = attacks;
+                }
+            }
+        }
+
+        public static void InitRookLookup()
+        {
+            for (int square = 0; square < 64; square++)
+            {
+                ulong mask = MoveTables.RookRelevantOccupancy[square];
+                int permutationCount = 1 << PopCount(mask);
+
+                for (int i = 0; i < permutationCount; i++)
+                {
+                    ulong blockers = BlockersPermutation(i, mask);
+                    ulong attacks = 0UL;
+                    int rank = GetRank(square), r;
+                    int file = GetFile(square), f;
+
+                    // Horizontal attacks to the right
+                    for (f = file + 1; f <= 7; f++)
+                    {
+                        attacks |= 1UL << GetSquare(rank, f);
+                        if ((blockers & (1UL << GetSquare(rank, f))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    // Horizontal attacks to the left
+                    for (f = file - 1; f >= 0; f--)
+                    {
+                        attacks |= 1UL << GetSquare(rank, f);
+                        if ((blockers & (1UL << GetSquare(rank, f))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    // Vertical attacks upwards
+                    for (r = rank + 1; r <= 7; r++)
+                    {
+                        attacks |= 1UL << GetSquare(r, file);
+                        if ((blockers & (1UL << GetSquare(r, file))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    // Vertical attacks downwards
+                    for (r = rank - 1; r >= 0; r--)
+                    {
+                        attacks |= 1UL << GetSquare(r, file);
+                        if ((blockers & (1UL << GetSquare(r, file))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    int key = Transform(blockers, MoveTables.RookMagics[square], MoveTables.PrecomputedRookShifts[square]);
+
+                    MoveTables.RookAttackTable[square, key] = attacks;
+                }
+            }
+        }
+
+
+        private static ulong BlockersPermutation(int iteration, ulong mask)
+        {
+            ulong blockers = 0;
+
+            while (iteration != 0)
+            {
+                if ((iteration & 1) != 0)
+                {
+                    int shift = TrailingZeroCount(mask);
+                    blockers |= 1UL << shift;
+                }
+
+                iteration >>= 1;
+                mask &= mask - 1; // Kernighan's bit count algorithm step
+            }
+
+            return blockers;
+        }
+
+        /*
+         * 
+         * 
+         */
+
+       
+
         private static bool CanCastleKingsideWhite()
         {
             // check to make sure squares between king and kingside rook are empty
@@ -1523,9 +1570,11 @@ namespace Chess
             }
 
             // check if squares between king and kingside rook are underattack
-
-            SquareAttackedBy(InternalBoard.AllPieces, 1);
-
+            // from e1 to g1
+            for (int i = 4; i < 7; i ++)
+            {
+                if (SquareAttackedBy(i)) return false;
+            }
 
             return true;
         }
@@ -1542,6 +1591,13 @@ namespace Chess
             if ((CastlingRights & 0x2) == 0)
             {
                 return false;
+            }
+
+            // check if squares between king and kingside rook are underattack
+            // from c1 to e1
+            for (int i = 2; i < 5; i++)
+            {
+                if (SquareAttackedBy(i)) return false;
             }
             return true; 
         }
@@ -1560,7 +1616,13 @@ namespace Chess
                 return false;
             }
 
-            return true; // Check if white can castle kingside
+            // from e8 to g8
+            for (int i = 60; i < 63; i++)
+            {
+                if (SquareAttackedBy(i)) return false;
+            }
+
+            return true;
         }
 
         private static bool CanCastleQueensideBlack()
@@ -1575,7 +1637,14 @@ namespace Chess
             {
                 return false;
             }
-            return true; // Check if white can castle queenside
+
+            // from c8 to e8
+            for (int i = 58; i < 61; i++)
+            {
+                if (SquareAttackedBy(i)) return false;
+            }
+
+            return true; 
         }
 
         public static List<LegalMove> GenerateKingMoves(ref ulong king, ref ulong friendlyPieces)
@@ -1596,14 +1665,25 @@ namespace Chess
             {
                 if (CanCastleKingsideWhite())
                 {
-
+                    kingMoves.Add(AddLegalMove(kingIndex, 6, true, false, false, Piece.King));
                 }
 
                 if (CanCastleQueensideWhite())
                 {
-
+                    kingMoves.Add(AddLegalMove(kingIndex, 2, false, true, false, Piece.King));
                 }
 
+            } else
+            {
+                if (CanCastleKingsideBlack())
+                {
+                    kingMoves.Add(AddLegalMove(kingIndex, 62, true, false, false, Piece.King));
+                }
+
+                if (CanCastleQueensideBlack())
+                {
+                    kingMoves.Add(AddLegalMove(kingIndex, 58, false, true, false, Piece.King));
+                }
             }
 
             while (validKingMoves != 0)
@@ -1630,18 +1710,18 @@ namespace Chess
 
             if (BoardManager.whiteToMove)
             {
-                moves.AddRange(GenerateBishopMoves(ref InternalBoard.WhiteBishops));
-                moves.AddRange(GenerateRookMoves(ref InternalBoard.WhiteRooks));
-                moves.AddRange(GenerateQueenMoves(ref InternalBoard.WhiteQueens));
+                moves.AddRange(GenerateBishopMoves(ref InternalBoard.WhiteBishops, ref InternalBoard.AllWhitePieces));
+                moves.AddRange(GenerateRookMoves(ref InternalBoard.WhiteRooks, ref InternalBoard.AllWhitePieces));
+                moves.AddRange(GenerateQueenMoves(ref InternalBoard.WhiteQueens, ref InternalBoard.AllWhitePieces));
                 moves.AddRange(GenerateWhitePawnMoves(ref InternalBoard.WhitePawns));
                 moves.AddRange(GenerateKnightMoves(ref InternalBoard.WhiteKnights, ref InternalBoard.AllWhitePieces));
                 moves.AddRange(GenerateKingMoves(ref InternalBoard.WhiteKing, ref InternalBoard.AllWhitePieces));
             }
             else
             {
-                moves.AddRange(GenerateBishopMoves(ref InternalBoard.BlackBishops));
-                moves.AddRange(GenerateRookMoves(ref InternalBoard.BlackRooks));
-                moves.AddRange(GenerateQueenMoves(ref InternalBoard.BlackQueens));
+                moves.AddRange(GenerateBishopMoves(ref InternalBoard.BlackBishops, ref InternalBoard.AllBlackPieces));
+                moves.AddRange(GenerateRookMoves(ref InternalBoard.BlackRooks, ref InternalBoard.AllBlackPieces));
+                moves.AddRange(GenerateQueenMoves(ref InternalBoard.BlackQueens, ref InternalBoard.AllBlackPieces));
                 moves.AddRange(GenerateBlackPawnMoves(ref InternalBoard.BlackPawns));
                 moves.AddRange(GenerateKnightMoves(ref InternalBoard.BlackKnights, ref InternalBoard.AllBlackPieces));
                 moves.AddRange(GenerateKingMoves(ref InternalBoard.BlackKing, ref InternalBoard.AllBlackPieces));
@@ -1652,7 +1732,7 @@ namespace Chess
         }
 
         // returns true if a piece is attacking the square
-        private static bool SquareAttackedBy(ulong occupiedSquares, int square)
+        private static bool SquareAttackedBy(int square)
         {
 
             /* What is going on here is confusing at first glance. For example, with pawn captures, if we want to find if a square is under
@@ -1671,8 +1751,14 @@ namespace Chess
                 if ((MoveTables.PrecomputedKingMoves[square] & InternalBoard.BlackKing) != 0) return true;
 
                 ulong bishopsAndQueens = InternalBoard.BlackQueens | InternalBoard.BlackBishops;
+                ulong rooksAndQueens = InternalBoard.BlackQueens | InternalBoard.BlackRooks;
 
-            } else
+                if ((GetBishopAttacks(InternalBoard.AllPieces, square) & bishopsAndQueens) != 0) return true;
+
+                if ((GetRookAttacks(InternalBoard.AllPieces, square) & rooksAndQueens) != 0) return true;
+
+            }
+            else
             {
 
                 if ((MoveTables.PrecomputedBlackPawnCaptures[square] & InternalBoard.WhitePawns) != 0) return true;
@@ -1680,6 +1766,13 @@ namespace Chess
                 if ((MoveTables.PrecomputedKnightMoves[square] & InternalBoard.WhiteKnights) != 0) return true;
 
                 if ((MoveTables.PrecomputedKingMoves[square] & InternalBoard.WhiteKing) != 0) return true;
+
+                ulong bishopsAndQueens = InternalBoard.WhiteQueens | InternalBoard.WhiteBishops;
+                ulong rooksAndQueens = InternalBoard.WhiteQueens | InternalBoard.WhiteRooks;
+
+                if ((GetBishopAttacks(InternalBoard.AllPieces, square) & bishopsAndQueens) != 0) return true;
+
+                if ((GetRookAttacks(InternalBoard.AllPieces, square) & rooksAndQueens) != 0) return true;
             }
 
 

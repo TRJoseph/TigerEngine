@@ -43,7 +43,7 @@ namespace Chess
         //private readonly string FENString = "4k3/8/8/8/8/8/8/4K3";
 
         // another FEN string for testing king castling
-        //private readonly string FENString = "r3k2r/p7/6N1/8/8/8/8/4K2R";
+        //private readonly string FENString = "4k3/8/8/8/8/4b3/8/R3K2R";
 
         // another FEN string for testing checkmate 
         //private readonly string FENString = "rnbqkbnr/p1pp1ppp/1p6/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR";
@@ -74,6 +74,9 @@ namespace Chess
             RenderPiecesOnBoardBitBoard();
 
             //legalMoves = GenerateLegalMoves();
+
+            InitBishopLookup();
+            InitRookLookup();
 
             legalMoves = GenerateLegalMovesBitboard();
 
