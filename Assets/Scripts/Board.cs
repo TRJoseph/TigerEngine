@@ -174,7 +174,7 @@ namespace Chess
             // special moves here
         }
 
-        public static void UpdateLastPawnDoubleSquareMove(int movedPiece, int oldPiecePosition, int newPiecePosition)
+        private static void UpdateLastPawnDoubleSquareMove(int movedPiece, int oldPiecePosition, int newPiecePosition)
         {
             // update last pawn double square move
             if (movedPiece == Piece.Pawn)
@@ -204,16 +204,15 @@ namespace Chess
             }
         }
 
-
-
-        public static void UpdateBitboards(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
+        private static void UpdateCastlingRights(LegalMove move)
         {
-            int oldPiecePosition = originalYPosition * 8 + originalXPosition;
-            int newPiecePosition = newYPosition * 8 + newXPosition;
 
-            LegalMove move = legalMoves.Single(move => move.startSquare == oldPiecePosition && move.endSquare == newPiecePosition);
 
-            UpdateLastPawnDoubleSquareMove(move.movedPiece, oldPiecePosition, newPiecePosition);
+            // TODO: potentially need to check here if rooks actually exist in each corner of the board (this is useful for custom positions
+            // where castling might not be possible initially)
+            // Alternatively modify the FEN string parsing method in 'BoardManager.cs'
+
+
 
             ///
             // Example: Moving the white king from e1 (square 4) or black king from e8 (square 60)
@@ -238,11 +237,10 @@ namespace Chess
             if (move.endSquare == 56) CastlingRights &= 0b1011; // Black queenside rook captured
             if (move.endSquare == 63) CastlingRights &= 0b0111; // Black kingside rook captured
             ///
+        }
 
-            ulong fromSquare = 1UL << move.startSquare;
-            ulong toSquare = 1UL << move.endSquare;
-
-
+        private static void HandleSpecialMoveInternal(LegalMove move, ulong toSquare, ulong fromSquare)
+        {
             if (move.enPassant == true)
             {
                 if (BoardManager.whiteToMove)
@@ -254,8 +252,59 @@ namespace Chess
                 {
                     InternalBoard.WhitePawns &= ~(toSquare << 8);
                 }
+                return;
             }
 
+            if (move.kingSideCastling == true)
+            {
+                if (BoardManager.whiteToMove)
+                {
+                    InternalBoard.WhiteRooks &= ~(1UL << 7);
+                    InternalBoard.WhiteRooks |= 1UL << 5;
+                }
+                else
+                {
+                    InternalBoard.BlackRooks &= ~(1UL << 63);
+                    InternalBoard.BlackRooks |= 1UL << 61;
+                }
+
+                return;
+            }
+
+            if (move.queenSideCastling == true)
+            {
+
+                if (BoardManager.whiteToMove)
+                {
+                    InternalBoard.WhiteRooks &= ~1UL;
+                    InternalBoard.WhiteRooks |= 1UL << 3;
+                }
+                else
+                {
+                    InternalBoard.BlackRooks &= ~(1UL << 56);
+                    InternalBoard.BlackRooks |= 1UL << 59;
+                }
+
+                return;
+            }
+
+        }
+
+        public static void UpdateBitboards(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
+        {
+            int oldPiecePosition = originalYPosition * 8 + originalXPosition;
+            int newPiecePosition = newYPosition * 8 + newXPosition;
+
+            LegalMove move = legalMoves.Single(move => move.startSquare == oldPiecePosition && move.endSquare == newPiecePosition);
+
+            UpdateLastPawnDoubleSquareMove(move.movedPiece, oldPiecePosition, newPiecePosition);
+
+            UpdateCastlingRights(move);
+
+            ulong fromSquare = 1UL << move.startSquare;
+            ulong toSquare = 1UL << move.endSquare;
+
+            HandleSpecialMoveInternal(move, toSquare, fromSquare);
 
             // for a captured piece, AND the InternalBoard bitboards with the NOT of the isolated captured piece bitboard (endsquare)
 
@@ -1554,7 +1603,7 @@ namespace Chess
          * 
          */
 
-       
+
 
         private static bool CanCastleKingsideWhite()
         {
@@ -1564,6 +1613,7 @@ namespace Chess
                 return false;
             }
 
+            // checks to make sure neither the kingside rook or king has moved
             if ((CastlingRights & 0x1) == 0)
             {
                 return false;
@@ -1571,7 +1621,7 @@ namespace Chess
 
             // check if squares between king and kingside rook are underattack
             // from e1 to g1
-            for (int i = 4; i < 7; i ++)
+            for (int i = 4; i < 7; i++)
             {
                 if (SquareAttackedBy(i)) return false;
             }
@@ -1588,6 +1638,7 @@ namespace Chess
                 return false;
             }
 
+            // checks to make sure neither the queenside rook or king has moved
             if ((CastlingRights & 0x2) == 0)
             {
                 return false;
@@ -1599,7 +1650,7 @@ namespace Chess
             {
                 if (SquareAttackedBy(i)) return false;
             }
-            return true; 
+            return true;
         }
 
         private static bool CanCastleKingsideBlack()
@@ -1644,7 +1695,7 @@ namespace Chess
                 if (SquareAttackedBy(i)) return false;
             }
 
-            return true; 
+            return true;
         }
 
         public static List<LegalMove> GenerateKingMoves(ref ulong king, ref ulong friendlyPieces)
@@ -1673,7 +1724,8 @@ namespace Chess
                     kingMoves.Add(AddLegalMove(kingIndex, 2, false, true, false, Piece.King));
                 }
 
-            } else
+            }
+            else
             {
                 if (CanCastleKingsideBlack())
                 {
@@ -1742,7 +1794,7 @@ namespace Chess
              * */
 
 
-            if(BoardManager.whiteToMove)
+            if (BoardManager.whiteToMove)
             {
                 if ((MoveTables.PrecomputedWhitePawnCaptures[square] & InternalBoard.BlackPawns) != 0) return true;
 
