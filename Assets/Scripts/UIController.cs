@@ -18,7 +18,7 @@ namespace Chess
         public Image[] pieceButtons; // References to the Image components of the buttons
         public Button[] promotionButtons;
 
-        public string promotionSelection;
+        public int promotionSelection;
 
         public bool selectionMade = false;
 
@@ -39,30 +39,30 @@ namespace Chess
             switch (button)
             {
                 case "Queen":
-                    promotionSelection = "Queen";
+                    promotionSelection = Piece.Queen;
                     break;
                 case "Rook":
-                    promotionSelection = "Rook";
+                    promotionSelection = Piece.Rook;
                     break;
                 case "Bishop":
-                    promotionSelection = "Bishop";
+                    promotionSelection = Piece.Bishop;
                     break;
                 case "Knight":
-                    promotionSelection = "Knight";
+                    promotionSelection = Piece.Knight;
                     break;
                 default:
-                    promotionSelection = null;
+                    promotionSelection = Piece.Empty;
                     break;
             }
             selectionMade = true;
         }
 
-        public void ShowPromotionDropdown(int newPieceMove)
+        public void ShowPromotionDropdown(ulong toSquare)
         {
             Board.currentState = Board.GameState.AwaitingPromotion;
             PromotionPanel.gameObject.SetActive(true);
 
-            PromotionPanel.gameObject.transform.position = new Vector3((newPieceMove % 8) - 1, (newPieceMove / 8) - 2, -2);
+            PromotionPanel.gameObject.transform.position = new Vector3(((int)Math.Log(toSquare, 2) % 8) - 1, ((int)Math.Log(toSquare, 2) / 8) - 2, -2);
 
             List<Sprite> pieceSprites = BoardManager.whiteToMove ? whitePieceSprites : blackPieceSprites;
             for (int i = 0; i < pieceButtons.Length; i++)
@@ -71,14 +71,14 @@ namespace Chess
             }
 
             // this begins the coroutine that essential 'waits' for the user to select a new piece before allowing the game to continue
-            StartCoroutine(WaitForSelection(newPieceMove, PromotionPanel));
+            StartCoroutine(WaitForSelection(toSquare, PromotionPanel));
         }
 
         /* This method is important as it allows for the program to wait for the user to make a selection. During this time the gamestate is
         locked on "Awaiting Promotion". This prevents the main thread from attempting to calculate pawn moves off the edge of the board.
         Once the selection is made, the Board is set back to its normal game state and the internal board is updated with the new piece type information
         */
-        IEnumerator WaitForSelection(int newPieceMove, GameObject PromotionPanel)
+        IEnumerator WaitForSelection(ulong toSquare, GameObject PromotionPanel)
         {
             selectionMade = false;
 
@@ -94,7 +94,7 @@ namespace Chess
             Board.currentState = Board.GameState.Normal;
 
             // Now update pawn to new selected piece and recalculate moves
-            Board.UpdatePromotedPawn(newPieceMove);
+            Board.UpdatePromotedPawn(toSquare);
         }
 
 

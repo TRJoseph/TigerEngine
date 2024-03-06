@@ -177,31 +177,25 @@ namespace Chess
         private static void UpdateLastPawnDoubleSquareMove(int movedPiece, int oldPiecePosition, int newPiecePosition)
         {
             // update last pawn double square move
-            if (movedPiece == Piece.Pawn)
+            // double pawn move
+            if (Math.Abs(oldPiecePosition - newPiecePosition) == 16)
             {
-                // double pawn move
-                if (Math.Abs(oldPiecePosition - newPiecePosition) == 16)
+
+                if (BoardManager.whiteToMove)
                 {
-
-                    if (BoardManager.whiteToMove)
-                    {
-                        lastPawnDoubleMoveBitboard = 1UL << newPiecePosition - 8;
-                    }
-                    else
-                    {
-                        lastPawnDoubleMoveBitboard = 1UL << newPiecePosition + 8;
-                    }
-
+                    lastPawnDoubleMoveBitboard = 1UL << newPiecePosition - 8;
                 }
                 else
                 {
-                    lastPawnDoubleMoveBitboard = 0;
+                    lastPawnDoubleMoveBitboard = 1UL << newPiecePosition + 8;
                 }
+
             }
             else
             {
                 lastPawnDoubleMoveBitboard = 0;
             }
+
         }
 
         private static void UpdateCastlingRights(LegalMove move)
@@ -290,6 +284,26 @@ namespace Chess
 
         }
 
+        private static void HandlePawnPromotionInternal(ulong toSquare)
+        {
+            if (IsPawnPromotion(toSquare))
+            {
+                if (BoardManager.CurrentTurn == BoardManager.ComputerSide)
+                {
+                    UpdatePromotedPawnEngine(toSquare);
+                }
+                else
+                {
+                    UIController.Instance.ShowPromotionDropdown(toSquare);
+                }
+
+            }
+            else
+            {
+                return;
+            }
+        }
+
         public static void UpdateBitboards(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
         {
             int oldPiecePosition = originalYPosition * 8 + originalXPosition;
@@ -297,14 +311,14 @@ namespace Chess
 
             LegalMove move = legalMoves.Single(move => move.startSquare == oldPiecePosition && move.endSquare == newPiecePosition);
 
-            UpdateLastPawnDoubleSquareMove(move.movedPiece, oldPiecePosition, newPiecePosition);
-
-            UpdateCastlingRights(move);
-
             ulong fromSquare = 1UL << move.startSquare;
             ulong toSquare = 1UL << move.endSquare;
 
+            UpdateCastlingRights(move);
+
+
             HandleSpecialMoveInternal(move, toSquare, fromSquare);
+
 
             // for a captured piece, AND the InternalBoard bitboards with the NOT of the isolated captured piece bitboard (endsquare)
 
@@ -338,6 +352,19 @@ namespace Chess
             }
             InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
 
+            // for extra special pawn moves
+            // double square move keeps track of a double pawn move for potential en passant captures
+            // if the pawn makes it to the opposing sides last rank, initiate promotion
+            if (move.movedPiece == Piece.Pawn)
+            {
+                UpdateLastPawnDoubleSquareMove(move.movedPiece, oldPiecePosition, newPiecePosition);
+                HandlePawnPromotionInternal(toSquare);
+            }
+            else
+            {
+                lastPawnDoubleMoveBitboard = 0;
+            }
+
             // update composite bitboards
             InternalBoard.AllWhitePieces = InternalBoard.WhitePawns | InternalBoard.WhiteKnights | InternalBoard.WhiteBishops | InternalBoard.WhiteRooks | InternalBoard.WhiteQueens | InternalBoard.WhiteKing;
             InternalBoard.AllBlackPieces = InternalBoard.BlackPawns | InternalBoard.BlackKnights | InternalBoard.BlackBishops | InternalBoard.BlackRooks | InternalBoard.BlackQueens | InternalBoard.BlackKing;
@@ -365,7 +392,7 @@ namespace Chess
             // check for special move flags
 
             // checks for pawn promotions and handles them appropriately
-            HandlePawnPromotionInternal(newPieceMove, currentPiece, newYPosition);
+            //HandlePawnPromotionInternal(newPieceMove, currentPiece, newYPosition);
 
             // checks for a potential en passant capture
             HandleEnPassantInternal(currentPiece, originalXPosition, originalYPosition, newXPosition, newYPosition, newPieceMove);
@@ -377,110 +404,113 @@ namespace Chess
             HandleQueenSideCastleInternal(newPieceMove, newXPosition, newYPosition);
         }
 
-        private static void HandlePawnPromotionInternal(int newPieceMove, int currentPiece, int newYPosition)
-        {
-            if (IsPawnPromotion(currentPiece, newYPosition))
-            {
-                if (BoardManager.CurrentTurn == BoardManager.ComputerSide)
-                {
-                    UpdatePromotedPawnEngine(newPieceMove);
-                }
-                else
-                {
-                    UIController.Instance.ShowPromotionDropdown(newPieceMove);
-                }
+        // private static void HandlePawnPromotionInternal(int newPieceMove, int currentPiece, int newYPosition)
+        // {
+        //     if (IsPawnPromotion(currentPiece, newYPosition))
+        //     {
+        //         if (BoardManager.CurrentTurn == BoardManager.ComputerSide)
+        //         {
+        //             UpdatePromotedPawnEngine(newPieceMove);
+        //         }
+        //         else
+        //         {
+        //             UIController.Instance.ShowPromotionDropdown(newPieceMove);
+        //         }
 
+        //     }
+        // }
+
+
+        private static void UpdatePromotionPiece(int selectedPromotionPiece, ulong toSquare)
+        {
+
+            if (BoardManager.whiteToMove)
+            {
+                switch (selectedPromotionPiece)
+                {
+                    case Piece.Queen:
+                        InternalBoard.WhiteQueens |= toSquare;
+                        break;
+
+                    case Piece.Rook:
+                        InternalBoard.WhiteRooks |= toSquare;
+                        break;
+
+                    case Piece.Bishop:
+                        InternalBoard.WhiteBishops |= toSquare;
+                        break;
+
+                    case Piece.Knight:
+                        InternalBoard.WhiteKnights |= toSquare;
+                        break;
+
+                    default:
+
+                        // this should not happen
+                        throw new Exception();
+                }
+                InternalBoard.WhitePawns &= ~toSquare;
+            }
+            else
+            {
+                switch (selectedPromotionPiece)
+                {
+                    case Piece.Queen:
+                        InternalBoard.BlackQueens |= toSquare;
+                        break;
+
+                    case Piece.Rook:
+                        InternalBoard.BlackRooks |= toSquare;
+                        break;
+
+                    case Piece.Bishop:
+                        InternalBoard.BlackBishops |= toSquare;
+                        break;
+
+                    case Piece.Knight:
+                        InternalBoard.BlackKnights |= toSquare;
+                        break;
+
+                    default:
+
+                        // this should not happen
+                        throw new Exception();
+                }
+                InternalBoard.BlackPawns &= ~toSquare;
             }
         }
-
-        public static void UpdatePromotedPawnEngine(int newPieceMove)
+        public static void UpdatePromotedPawnEngine(ulong toSquare)
         {
             int chosenPiece = Engine.EvaluateBestPromotionPiece();
-            switch (chosenPiece)
-            {
-                case Piece.Queen:
-                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 5;
-                    break;
-
-                case Piece.Rook:
-                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 4;
-                    break;
-
-                case Piece.Bishop:
-                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 3;
-                    break;
-
-                case Piece.Knight:
-                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 2;
-                    break;
-
-                default:
-                    // this should not happen
-                    throw new Exception();
-            }
+            UpdatePromotionPiece(chosenPiece, toSquare);
 
             UIController.Instance.UpdateMoveStatusUIInformation();
         }
 
-        public static void UpdatePromotedPawn(int newPieceMove)
+        public static void UpdatePromotedPawn(ulong toSquare)
         {
-            // this line performs a logical and operation on the entire piece to remove the piece type from the three least-significant bits
-            Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece & (PieceColorMask + PieceMoveStatusFlag);
 
-            int newPieceXPos = newPieceMove % 8;
-            int newPieceYPos = newPieceMove / 8;
-
-            switch (UIController.Instance.promotionSelection)
-            {
-                case "Queen":
-                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 5;
-
-                    break;
-
-                case "Rook":
-                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 4;
-                    break;
-
-                case "Bishop":
-                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 3;
-                    break;
-
-                case "Knight":
-                    Squares[newPieceMove].encodedPiece = Squares[newPieceMove].encodedPiece | 2;
-                    break;
-
-                default:
-
-                    // this should not happen
-                    throw new Exception();
-            }
+            UpdatePromotionPiece(UIController.Instance.promotionSelection, toSquare);
 
             // update the front end sprite so the new correct piece is visible
-            PieceMovementManager.UpdateFrontEndPromotion(Squares[newPieceMove].encodedPiece, newPieceXPos, newPieceYPos);
+            PieceMovementManager.UpdateFrontEndPromotion(UIController.Instance.promotionSelection, (int)Math.Log(toSquare, 2) % 8, (int)Math.Log(toSquare, 2) / 8);
 
+            BoardManager.whiteToMove = !BoardManager.whiteToMove;
             // once the pawn has been swapped internally
             ClearListMoves();
 
             legalMoves = AfterMove();
 
             UIController.Instance.UpdateMoveStatusUIInformation();
-
         }
 
-        private static bool IsPawnPromotion(int currentPiece, int newYPosition)
+        private static bool IsPawnPromotion(ulong toSquare)
         {
-            if ((currentPiece & PieceTypeMask) == Piece.Pawn)
+            if (toSquare >> 8 == 0 || toSquare << 8 == 0)
             {
-                if ((currentPiece & PieceColorMask) == Piece.White && newYPosition == 7)
-                {
-                    return true;
-                }
-
-                if ((currentPiece & PieceColorMask) == Piece.Black && newYPosition == 0)
-                {
-                    return true;
-                }
+                return true;
             }
+
             return false;
         }
 

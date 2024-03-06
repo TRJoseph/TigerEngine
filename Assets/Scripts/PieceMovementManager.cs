@@ -167,11 +167,11 @@ namespace Chess
             boardManager.ClearExistingPieces();
             boardManager.RenderPiecesOnBoardBitBoard();
 
-            // update who's move it is
-            BoardManager.whiteToMove = !BoardManager.whiteToMove;
 
             if (Board.currentState == Board.GameState.Normal)
             {
+                // update who's move it is
+                BoardManager.whiteToMove = !BoardManager.whiteToMove;
                 // wipe the available moves once a move is executed
                 Board.ClearListMoves();
 
@@ -211,14 +211,12 @@ namespace Chess
             }
         }
 
-        public static void UpdateFrontEndPromotion(int encodedPiece, int xPos, int yPos)
+        public static void UpdateFrontEndPromotion(int pieceType, int xPos, int yPos)
         {
-            int decodedPieceColor = encodedPiece & 24;
-            int decodedPiece = encodedPiece & 7;
 
             PieceRender renderScript = FindChessPieceGameObject(xPos, yPos);
 
-            Sprite pieceSprite = BoardManager.GetSpriteForPiece(decodedPiece, decodedPieceColor, renderScript);
+            Sprite pieceSprite = BoardManager.GetSpriteForPiece(pieceType, BoardManager.whiteToMove ? Piece.White : Piece.Black, renderScript);
 
             renderScript.GetComponent<SpriteRenderer>().sprite = pieceSprite;
         }

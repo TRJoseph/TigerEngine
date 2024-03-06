@@ -396,9 +396,9 @@ namespace Chess
             Debug.Log(boardRepresentation);
         }
 
-        public static Sprite GetSpriteForPiece(int decodedPiece, int decodedPieceColor, PieceRender renderScript)
+        public static Sprite GetSpriteForPiece(int pieceType, int decodedPieceColor, PieceRender renderScript)
         {
-            switch (decodedPiece)
+            switch (pieceType)
             {
                 case Piece.Pawn:
                     return (decodedPieceColor == Piece.White) ? renderScript.whitePawn : renderScript.blackPawn;
