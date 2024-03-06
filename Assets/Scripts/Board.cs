@@ -168,13 +168,20 @@ namespace Chess
                 case Piece.Pawn:
                     pawns &= ~fromSquareMask;
                     pawns |= toSquareMask;
-                    break;
-            }
 
-            // special moves here
+                    // for extra special pawn moves
+                    // double square move keeps track of a double pawn move for potential en passant captures
+                    UpdateLastPawnDoubleSquareMove((int)Math.Log(fromSquareMask, 2), (int)Math.Log(toSquareMask, 2));
+                    // if the pawn makes it to the opposing sides last rank, initiate promotion
+                    HandlePawnPromotionInternal(toSquareMask);
+                    return;
+            }
+            // if not pawn move, remove last pawn double move for en passant
+            lastPawnDoubleMoveBitboard = 0;
+            return;
         }
 
-        private static void UpdateLastPawnDoubleSquareMove(int movedPiece, int oldPiecePosition, int newPiecePosition)
+        private static void UpdateLastPawnDoubleSquareMove(int oldPiecePosition, int newPiecePosition)
         {
             // update last pawn double square move
             // double pawn move
@@ -205,8 +212,6 @@ namespace Chess
             // TODO: potentially need to check here if rooks actually exist in each corner of the board (this is useful for custom positions
             // where castling might not be possible initially)
             // Alternatively modify the FEN string parsing method in 'BoardManager.cs'
-
-
 
             ///
             // Example: Moving the white king from e1 (square 4) or black king from e8 (square 60)
@@ -351,19 +356,6 @@ namespace Chess
                     ref InternalBoard.BlackBishops, ref InternalBoard.BlackRooks, ref InternalBoard.BlackQueens, ref InternalBoard.BlackPawns);
             }
             InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
-
-            // for extra special pawn moves
-            // double square move keeps track of a double pawn move for potential en passant captures
-            // if the pawn makes it to the opposing sides last rank, initiate promotion
-            if (move.movedPiece == Piece.Pawn)
-            {
-                UpdateLastPawnDoubleSquareMove(move.movedPiece, oldPiecePosition, newPiecePosition);
-                HandlePawnPromotionInternal(toSquare);
-            }
-            else
-            {
-                lastPawnDoubleMoveBitboard = 0;
-            }
 
             // update composite bitboards
             InternalBoard.AllWhitePieces = InternalBoard.WhitePawns | InternalBoard.WhiteKnights | InternalBoard.WhiteBishops | InternalBoard.WhiteRooks | InternalBoard.WhiteQueens | InternalBoard.WhiteKing;
