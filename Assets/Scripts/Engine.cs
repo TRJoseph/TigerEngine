@@ -21,7 +21,7 @@ namespace Chess
         {
             _engineThread = new Thread(Think);
             _engineThread.Start();
-        } 
+        }
 
         private void Think()
         {
@@ -48,20 +48,11 @@ namespace Chess
 
         private static Board.LegalMove SimpleEval()
         {
-            Board.LegalMove defaultMove = default(Board.LegalMove);
             // capture piece when available
-            var capturingMove = Board.legalMoves
-                        .FirstOrDefault(move => (Board.Squares[move.endSquare].encodedPiece & Board.PieceTypeMask) != Piece.Empty);
 
-            if(!capturingMove.Equals(defaultMove))
-            {
-                return capturingMove;
-
-            }else {
-                // make random move, for now
-                var random = new System.Random();
-                return Board.legalMoves[random.Next(Board.legalMoves.Count)];
-            }
+            // make random move, for now
+            var random = new System.Random();
+            return Board.legalMoves[random.Next(Board.legalMoves.Count)];
         }
     }
 

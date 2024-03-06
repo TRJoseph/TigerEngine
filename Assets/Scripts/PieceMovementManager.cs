@@ -185,17 +185,17 @@ namespace Chess
         public void HandleEngineMoveExecution(Board.LegalMove legalMove)
         {
 
-            int originalXPosition = legalMove.startSquare % 8;
-            int originalYPosition = legalMove.startSquare / 8;
+            int originalXPosition = (int)Math.Log(legalMove.startSquare, 2) % 8;
+            int originalYPosition = (int)Math.Log(legalMove.startSquare, 2) / 8;
 
-            int newXPosition = legalMove.endSquare % 8;
-            int newYPosition = legalMove.endSquare / 8;
+            int newXPosition = (int)Math.Log(legalMove.endSquare, 2) % 8;
+            int newYPosition = (int)Math.Log(legalMove.endSquare, 2) / 8;
 
             // update the internal board state when a move is made
-            Board.UpdateInternalState(originalXPosition, originalYPosition, newXPosition, newYPosition);
+            Board.UpdateBitboards(originalXPosition, originalYPosition, newXPosition, newYPosition);
 
             boardManager.ClearExistingPieces();
-            boardManager.RenderPiecesOnBoard();
+            boardManager.RenderPiecesOnBoardBitBoard();
 
             // update who's move it is
             BoardManager.whiteToMove = !BoardManager.whiteToMove;
@@ -248,15 +248,14 @@ namespace Chess
         private void DisplayLegalMoves(float xPos, float yPos)
         {
 
-            var selectedPiece = Board.Squares[(int)yPos * 8 + (int)xPos];
-
             int selectedPieceSquare = (int)yPos * 8 + (int)xPos;
 
             foreach (var move in Board.legalMoves)
             {
-                if (selectedPieceSquare == move.startSquare)
+                int legalmoveSquare = (int)Math.Log(move.startSquare, 2);
+                if (selectedPieceSquare == legalmoveSquare)
                 {
-                    Vector2 newPos2 = new Vector2(move.endSquare % 8, move.endSquare / 8);
+                    Vector2 newPos2 = new Vector2((int)Math.Log(move.endSquare, 2) % 8, (int)Math.Log(move.endSquare, 2) / 8);
                     Instantiate(highlightOverlayPrefab, newPos2, Quaternion.identity);
                 }
             }

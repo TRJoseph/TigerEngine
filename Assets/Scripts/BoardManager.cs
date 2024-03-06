@@ -70,7 +70,6 @@ namespace Chess
             GenerateGrid();
             //InitializeChessBoard();
             LoadFENString();
-            CalculateDistanceToEdge();
             RenderPiecesOnBoardBitBoard();
 
             //legalMoves = GenerateLegalMoves();
@@ -78,7 +77,7 @@ namespace Chess
             InitBishopLookup();
             InitRookLookup();
 
-            legalMoves = GenerateLegalMovesBitboard();
+            legalMoves = GenerateLegalMovesBitboard(BoardManager.whiteToMove);
 
             /* ChooseSide controls what side the player will play 
             For example, if Sides.White is passed in, the player will be able to control the white pieces
@@ -185,9 +184,6 @@ namespace Chess
                     // places all pieces in appropriate bitboard locations
                     InitializeBitBoards(piece, pieceColor, rank * 8 + file);
 
-                    // represented in binary with or operator
-                    Squares[rank * 8 + file].encodedPiece = pieceColor | piece;
-
                     file++;
                 }
             }
@@ -196,106 +192,47 @@ namespace Chess
             InternalBoard.AllWhitePieces = InternalBoard.WhitePawns | InternalBoard.WhiteKnights | InternalBoard.WhiteBishops | InternalBoard.WhiteRooks | InternalBoard.WhiteQueens | InternalBoard.WhiteKing;
             InternalBoard.AllBlackPieces = InternalBoard.BlackPawns | InternalBoard.BlackKnights | InternalBoard.BlackBishops | InternalBoard.BlackRooks | InternalBoard.BlackQueens | InternalBoard.BlackKing;
             InternalBoard.AllPieces = InternalBoard.AllBlackPieces | InternalBoard.AllWhitePieces;
-
-
-            //VisualizeBitboard(InternalBoard.WhiteKnights);
-            //InternalBoard.WhiteKnights.Value = InternalBoard.WhiteKnights.Value & pieceLookupTable["G1"];
-            //InternalBoard.EastOne(InternalBoard.WhiteKnights);
-            //VisualizeBitboard(InternalBoard.WhiteKnights);
         }
 
-        private void InitializeBitBoards(int pieceType, int pieceColor, int currentPosition)
+
+        private static void InitializeBitboardsByType(int pieceType, int currentPosition, ref ulong Pawns, ref ulong Knights, ref ulong Bishops, ref ulong Rooks, ref ulong Queens, ref ulong King)
         {
             switch (pieceType)
             {
                 case Piece.Pawn:
-
-                    if (pieceColor == Piece.White)
-                    {
-                        InternalBoard.WhitePawns |= 1UL << currentPosition;
-                    }
-                    else
-                    {
-                        InternalBoard.BlackPawns |= 1UL << currentPosition;
-                    }
+                    Pawns |= 1UL << currentPosition;
                     break;
                 case Piece.Knight:
-                    if (pieceColor == Piece.White)
-                    {
-                        InternalBoard.WhiteKnights |= 1UL << currentPosition;
-                    }
-                    else
-                    {
-                        InternalBoard.BlackKnights |= 1UL << currentPosition;
-                    }
-                    break;
-                case Piece.Rook:
-                    if (pieceColor == Piece.White)
-                    {
-                        InternalBoard.WhiteRooks |= 1UL << currentPosition;
-                    }
-                    else
-                    {
-                        InternalBoard.BlackRooks |= 1UL << currentPosition;
-                    }
+                    Knights |= 1UL << currentPosition;
                     break;
                 case Piece.Bishop:
-                    if (pieceColor == Piece.White)
-                    {
-                        InternalBoard.WhiteBishops |= 1UL << currentPosition;
-                    }
-                    else
-                    {
-                        InternalBoard.BlackBishops |= 1UL << currentPosition;
-                    }
+                    Bishops |= 1UL << currentPosition;
+                    break;
+                case Piece.Rook:
+                    Rooks |= 1UL << currentPosition;
                     break;
                 case Piece.Queen:
-                    if (pieceColor == Piece.White)
-                    {
-                        InternalBoard.WhiteQueens |= 1UL << currentPosition;
-                    }
-                    else
-                    {
-                        InternalBoard.BlackQueens |= 1UL << currentPosition;
-                    }
+                    Queens |= 1UL << currentPosition;
                     break;
                 case Piece.King:
-                    if (pieceColor == Piece.White)
-                    {
-                        InternalBoard.WhiteKing |= 1UL << currentPosition;
-                    }
-                    else
-                    {
-                        InternalBoard.BlackKing |= 1UL << currentPosition;
-                    }
+                    King |= 1UL << currentPosition;
                     break;
             }
+
         }
 
-
-        void CalculateDistanceToEdge()
+        private void InitializeBitBoards(int pieceType, int pieceColor, int currentPosition)
         {
-
-            // calculates from bottom left across each file, then up each rank
-            for (int rank = 0; rank < 8; rank++)
+            if (pieceColor == Piece.White)
             {
-                for (int file = 0; file < 8; file++)
-                {
-                    int currentSquareIndex = rank * 8 + file;
-
-                    Squares[currentSquareIndex].DistanceNorth = 7 - rank;
-                    Squares[currentSquareIndex].DistanceSouth = rank;
-                    Squares[currentSquareIndex].DistanceWest = file;
-                    Squares[currentSquareIndex].DistanceEast = 7 - file;
-
-                    Squares[currentSquareIndex].DistanceNorthWest = Math.Min(Squares[currentSquareIndex].DistanceNorth, Squares[currentSquareIndex].DistanceWest);
-                    Squares[currentSquareIndex].DistanceNorthEast = Math.Min(Squares[currentSquareIndex].DistanceNorth, Squares[currentSquareIndex].DistanceEast);
-                    Squares[currentSquareIndex].DistanceSouthWest = Math.Min(Squares[currentSquareIndex].DistanceSouth, Squares[currentSquareIndex].DistanceWest);
-                    Squares[currentSquareIndex].DistanceSouthEast = Math.Min(Squares[currentSquareIndex].DistanceSouth, Squares[currentSquareIndex].DistanceEast);
-
-                }
+                InitializeBitboardsByType(pieceType, currentPosition, ref InternalBoard.WhitePawns, ref InternalBoard.WhiteKnights,
+                ref InternalBoard.WhiteBishops, ref InternalBoard.WhiteRooks, ref InternalBoard.WhiteQueens, ref InternalBoard.WhiteKing);
             }
-
+            else
+            {
+                InitializeBitboardsByType(pieceType, currentPosition, ref InternalBoard.BlackPawns, ref InternalBoard.BlackKnights,
+                ref InternalBoard.BlackBishops, ref InternalBoard.BlackRooks, ref InternalBoard.BlackQueens, ref InternalBoard.BlackKing);
+            }
         }
 
         public void ClearExistingPieces()
@@ -304,34 +241,6 @@ namespace Chess
             foreach (var piece in pieces)
             {
                 Destroy(piece);
-            }
-        }
-
-        // render sprites onto board
-        public void RenderPiecesOnBoard()
-        {
-            for (int rank = 0; rank < 8; rank++)
-            {
-                for (int file = 0; file < 8; file++)
-                {
-                    int encodedPiece = Squares[rank * 8 + file].encodedPiece;
-
-                    int decodedPieceColor = encodedPiece & 24;
-                    int decodedPiece = encodedPiece & 7;
-
-                    if (decodedPiece != Piece.Empty)
-                    {
-                        GameObject piece = Instantiate(chessPiecePrefab, new Vector3(file, rank, -1), Quaternion.identity);
-                        PieceRender renderScript = piece.GetComponent<PieceRender>();
-                        Sprite pieceSprite = GetSpriteForPiece(decodedPiece, decodedPieceColor, renderScript);
-                        piece.GetComponent<SpriteRenderer>().sprite = pieceSprite;
-                        renderScript.isWhitePiece = decodedPieceColor == Piece.White;
-
-                        // this may be removed for a better alternative for sizing the pieces
-                        piece.transform.localScale = new Vector3(0.125f, 0.125f, 1f);
-
-                    }
-                }
             }
         }
 
@@ -370,30 +279,6 @@ namespace Chess
                 }
             }
 
-        }
-
-        public static void VisualizeBitboard(ulong bitboard)
-        {
-            string boardRepresentation = "";
-            for (int rank = 7; rank >= 0; rank--)
-            {
-                for (int file = 0; file < 8; file++)
-                {
-                    int squareIndex = rank * 8 + file;
-                    ulong squareBit = 1UL << squareIndex;
-
-                    if ((bitboard & squareBit) != 0)
-                    {
-                        boardRepresentation += "1 ";
-                    }
-                    else
-                    {
-                        boardRepresentation += ". ";
-                    }
-                }
-                boardRepresentation += "\n"; // New line for each rank
-            }
-            Debug.Log(boardRepresentation);
         }
 
         public static Sprite GetSpriteForPiece(int pieceType, int decodedPieceColor, PieceRender renderScript)

@@ -7,32 +7,11 @@ using System.Timers;
 using UnityEditor.Hardware;
 using Unity.VisualScripting;
 using UnityEngine.UIElements;
+using UnityEngine.Animations;
 namespace Chess
 {
     public static class Board
     {
-        public struct InternalSquare
-        {
-            // this encoded value contains information about the piece itself (type, color, if it has moved)
-            public int encodedPiece;
-
-            // distances to edge of board from whichever tile the piece resides on
-            public int DistanceNorth;
-            public int DistanceSouth;
-            public int DistanceEast;
-            public int DistanceWest;
-
-            public int DistanceNorthWest;
-            public int DistanceNorthEast;
-            public int DistanceSouthWest;
-            public int DistanceSouthEast;
-        }
-
-        // values for decoding the encoded piece from binary (MCCTTT) M = Move Status flag bit, CC = Color bits, TTT = Piece Type bits
-        public const int PieceTypeMask = 7;
-        public const int PieceColorMask = 24;
-        public const int PieceMoveStatusFlag = 32;
-        //
 
         public struct ChessBoard
         {
@@ -78,6 +57,8 @@ namespace Chess
 
         public static ChessBoard InternalBoard = new();
 
+        public const int BoardSize = 64;
+
         // masks to prevent A file and H file wrapping for legal move calculations
         public const ulong AFileMask = 0x7f7f7f7f7f7f7f7f;
         public const ulong HFileMask = 0xfefefefefefefefe;
@@ -88,15 +69,12 @@ namespace Chess
 
         public static int CastlingRights = 0xF;
 
-        public const int BoardSize = 64;
-        public static InternalSquare[] Squares = new InternalSquare[BoardSize];
-
         // this structure will hold a move that can be executed
         public struct LegalMove
         {
             // 'startSquare' and 'endSquare' holds the internal board start square and end square 
-            public int startSquare;
-            public int endSquare;
+            public ulong startSquare;
+            public ulong endSquare;
 
             public int movedPiece;
 
@@ -109,18 +87,6 @@ namespace Chess
         }
 
         public static List<LegalMove> legalMoves = new List<LegalMove>();
-
-        private enum Direction { North, South, East, West, NorthWest, NorthEast, SouthWest, SouthEast };
-
-        // west, north, east, south
-        private static readonly int[] cardinalOffsets = { -1, 8, 1, -8 };
-
-        // northwest, northeast, southeast, southwest
-        private static readonly int[] interCardinalOffsets = { 7, 9, -7, -9 };
-
-        private static readonly int[] pawnOffsets = { 7, 8, 9 };
-
-        private static int lastPawnDoubleMoveSquare = -1;
 
         private static ulong lastPawnDoubleMoveBitboard = 0;
 
@@ -215,26 +181,26 @@ namespace Chess
 
             ///
             // Example: Moving the white king from e1 (square 4) or black king from e8 (square 60)
-            if (move.startSquare == 4) CastlingRights &= 0b1100; // White moves, clear white's rights
-            if (move.startSquare == 60) CastlingRights &= 0b0011; // Black moves, clear black's rights
+            if ((move.startSquare & (1UL << 4)) != 0) CastlingRights &= 0b1100; // White moves, clear white's rights
+            if ((move.startSquare & (1UL << 60)) != 0) CastlingRights &= 0b0011; // Black moves, clear black's rights
 
             // white queenside rook 
-            if (move.startSquare == 0) CastlingRights &= 0b1101;
+            if ((move.startSquare & 1UL) != 0) CastlingRights &= 0b1101;
 
             // white kingside rook
-            if (move.startSquare == 7) CastlingRights &= 0b1110;
+            if ((move.startSquare & (1UL << 7)) != 0) CastlingRights &= 0b1110;
 
             // black queenside rook
-            if (move.startSquare == 56) CastlingRights &= 0b0111;
+            if ((move.startSquare & (1UL << 56)) != 0) CastlingRights &= 0b0111;
 
             // black kingside rook
-            if (move.startSquare == 63) CastlingRights &= 0b1011;
+            if ((move.startSquare & (1UL << 63)) != 0) CastlingRights &= 0b1011;
 
             // if any piece moves to any of these individual squares it is safe to assume the rook is either captured or not there anymore, either way removing castling rights
-            if (move.endSquare == 0) CastlingRights &= 0b1110; // White queenside rook captured
-            if (move.endSquare == 7) CastlingRights &= 0b1101; // White kingside rook captured
-            if (move.endSquare == 56) CastlingRights &= 0b1011; // Black queenside rook captured
-            if (move.endSquare == 63) CastlingRights &= 0b0111; // Black kingside rook captured
+            if ((move.endSquare & 1UL) != 0) CastlingRights &= 0b1110; // White queenside rook captured
+            if ((move.endSquare & (1UL << 7)) != 0) CastlingRights &= 0b1101; // White kingside rook captured
+            if ((move.endSquare & (1UL << 56)) != 0) CastlingRights &= 0b1011; // Black queenside rook captured
+            if ((move.endSquare & (1UL << 63)) != 0) CastlingRights &= 0b0111; // Black kingside rook captured
             ///
         }
 
@@ -311,13 +277,10 @@ namespace Chess
 
         public static void UpdateBitboards(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
         {
-            int oldPiecePosition = originalYPosition * 8 + originalXPosition;
-            int newPiecePosition = newYPosition * 8 + newXPosition;
+            ulong fromSquare = 1UL << originalYPosition * 8 + originalXPosition;
+            ulong toSquare = 1UL << newYPosition * 8 + newXPosition;
 
-            LegalMove move = legalMoves.Single(move => move.startSquare == oldPiecePosition && move.endSquare == newPiecePosition);
-
-            ulong fromSquare = 1UL << move.startSquare;
-            ulong toSquare = 1UL << move.endSquare;
+            LegalMove move = legalMoves.Single(move => move.startSquare == fromSquare && move.endSquare == toSquare);
 
             UpdateCastlingRights(move);
 
@@ -363,38 +326,38 @@ namespace Chess
             InternalBoard.AllPieces = InternalBoard.AllBlackPieces | InternalBoard.AllWhitePieces;
         }
 
-        public static void UpdateInternalState(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
-        {
-            int newPieceMove = newYPosition * 8 + newXPosition;
-            // grab current piece and store it
-            int currentPiece = Squares[originalYPosition * 8 + originalXPosition].encodedPiece;
+        // public static void UpdateInternalState(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
+        // {
+        //     int newPieceMove = newYPosition * 8 + newXPosition;
+        //     // grab current piece and store it
+        //     int currentPiece = Squares[originalYPosition * 8 + originalXPosition].encodedPiece;
 
-            // before the piece is changed this rule needs to be verified (50 moves without a piece capture or pawn advance)
-            Verify50MoveRule(currentPiece, newPieceMove);
+        //     // before the piece is changed this rule needs to be verified (50 moves without a piece capture or pawn advance)
+        //     Verify50MoveRule(currentPiece, newPieceMove);
 
-            // when the piece has moved, set the 6th bit to 1
-            currentPiece = currentPiece | PieceMoveStatusFlag;
+        //     // when the piece has moved, set the 6th bit to 1
+        //     currentPiece = currentPiece | PieceMoveStatusFlag;
 
-            // removing the piece from its old position
-            Squares[originalYPosition * 8 + originalXPosition].encodedPiece = Piece.Empty;
+        //     // removing the piece from its old position
+        //     Squares[originalYPosition * 8 + originalXPosition].encodedPiece = Piece.Empty;
 
-            // placing the piece in its new position
-            Squares[newPieceMove].encodedPiece = currentPiece;
+        //     // placing the piece in its new position
+        //     Squares[newPieceMove].encodedPiece = currentPiece;
 
-            // check for special move flags
+        //     // check for special move flags
 
-            // checks for pawn promotions and handles them appropriately
-            //HandlePawnPromotionInternal(newPieceMove, currentPiece, newYPosition);
+        //     // checks for pawn promotions and handles them appropriately
+        //     //HandlePawnPromotionInternal(newPieceMove, currentPiece, newYPosition);
 
-            // checks for a potential en passant capture
-            HandleEnPassantInternal(currentPiece, originalXPosition, originalYPosition, newXPosition, newYPosition, newPieceMove);
+        //     // checks for a potential en passant capture
+        //     HandleEnPassantInternal(currentPiece, originalXPosition, originalYPosition, newXPosition, newYPosition, newPieceMove);
 
-            // checks for moves with the kingSideCastling flag 
-            HandleKingSideCastleInternal(newPieceMove, newXPosition, newYPosition);
+        //     // checks for moves with the kingSideCastling flag 
+        //     HandleKingSideCastleInternal(newPieceMove, newXPosition, newYPosition);
 
-            // checks for moves with queenSideCastling flag
-            HandleQueenSideCastleInternal(newPieceMove, newXPosition, newYPosition);
-        }
+        //     // checks for moves with queenSideCastling flag
+        //     HandleQueenSideCastleInternal(newPieceMove, newXPosition, newYPosition);
+        // }
 
         // private static void HandlePawnPromotionInternal(int newPieceMove, int currentPiece, int newYPosition)
         // {
@@ -506,72 +469,8 @@ namespace Chess
             return false;
         }
 
-        private static void HandleEnPassantInternal(int currentPiece, int originalXPosition, int originalYPosition, int newXPosition, int newYPosition, int newPieceMove)
-        {
-            if ((currentPiece & PieceTypeMask) == Piece.Pawn && Math.Abs(originalYPosition * 8 + originalXPosition - newPieceMove) == 16)
-            {
-                lastPawnDoubleMoveSquare = newPieceMove;
-            }
-            else
-            {
-                lastPawnDoubleMoveSquare = -1;
-            }
 
-            if (legalMoves.Any(move => move.endSquare == newPieceMove && move.enPassant == true))
-            {
-                if ((currentPiece & PieceColorMask) == Piece.White)
-                {
-                    Squares[newPieceMove - 8].encodedPiece = Piece.Empty;
-                    //blackPieces.Remove(newPieceMove - 8);
-                    //PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition, newYPosition - 1, false, false, true);
-                }
-                else if ((currentPiece & PieceColorMask) == Piece.Black)
-                {
-                    Squares[newPieceMove + 8].encodedPiece = Piece.Empty;
-                    //whitePieces.Remove(newPieceMove + 8);
-                    //PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition, newYPosition + 1, false, false, true);
-                }
-
-            }
-        }
-
-        private static void HandleKingSideCastleInternal(int newPieceMove, int newXPosition, int newYPosition)
-        {
-            if (legalMoves.Any(move => move.endSquare == newPieceMove && move.kingSideCastling == true))
-            {
-
-                // grab rook in the corner on kingside
-                int cornerRook = Squares[newPieceMove + 1].encodedPiece;
-
-                Squares[newPieceMove + 1].encodedPiece = Piece.Empty;
-
-                // update move and piece move status
-                Squares[newPieceMove - 1].encodedPiece = cornerRook | PieceMoveStatusFlag;
-
-                // updates front end board representation, moves king to new position and moves kingside rook to the square left of new king position
-                //PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition + 1, newYPosition, true, false, false);
-            }
-        }
-
-        private static void HandleQueenSideCastleInternal(int newPieceMove, int newXPosition, int newYPosition)
-        {
-            if (legalMoves.Any(move => move.endSquare == newPieceMove && move.queenSideCastling == true))
-            {
-                // grab rook in the corner on queenside
-                int cornerRook = Squares[newPieceMove - 2].encodedPiece;
-
-                Squares[newPieceMove - 2].encodedPiece = Piece.Empty;
-
-                // update move and piece move status
-                Squares[newPieceMove + 1].encodedPiece = cornerRook | PieceMoveStatusFlag;
-
-                // updates front end board representation, moves king to new position and moves queenside rook to the square right of new king position
-                //PieceMovementManager.UpdateFrontEndSpecialMove(newXPosition - 2, newYPosition, false, true, false);
-            }
-
-        }
-
-        private static LegalMove AddLegalMove(int startSquare, int endSquare, bool? kingSideCastling, bool? queenSideCastling, bool? enPassant, int movedPiece)
+        private static LegalMove AddLegalMove(ulong startSquare, ulong endSquare, bool? kingSideCastling, bool? queenSideCastling, bool? enPassant, int movedPiece)
         {
             return
                 new LegalMove
@@ -584,417 +483,17 @@ namespace Chess
                     movedPiece = movedPiece
                 };
         }
-
-        private static List<LegalMove> CheckWhitePawnCaptures(int startSquare)
-        {
-            List<LegalMove> pawnCaptureMoves = new List<LegalMove>();
-            int northWestSquare = startSquare + pawnOffsets[0];
-            int northEastSquare = startSquare + pawnOffsets[2];
-
-            // square one square northWest, checking if an enemy piece is there available for capture
-            if (Squares[startSquare].DistanceNorthWest >= 1)
-            {
-                if (IsOpponentPiece(northWestSquare, Piece.Black))
-                {
-                    pawnCaptureMoves.Add(AddLegalMove(startSquare, northWestSquare, false, false, false, Piece.Pawn));
-                }
-            }
-
-            // square one square northEast, checking if an enemy piece is there available for capture
-
-            if (Squares[startSquare].DistanceNorthEast >= 1)
-            {
-                if (IsOpponentPiece(northEastSquare, Piece.Black))
-                {
-                    pawnCaptureMoves.Add(AddLegalMove(startSquare, northEastSquare, false, false, false, Piece.Pawn));
-                }
-            }
-
-            // for en passant
-            if (lastPawnDoubleMoveSquare != -1)
-            {
-                if ((lastPawnDoubleMoveSquare + 8 - startSquare) == pawnOffsets[2] && Squares[startSquare].DistanceEast >= 1)
-                {
-                    // one square above the black pawn that just moved
-                    pawnCaptureMoves.Add(AddLegalMove(startSquare, lastPawnDoubleMoveSquare + 8, false, false, true, Piece.Pawn));
-                }
-
-                if ((lastPawnDoubleMoveSquare + 8 - startSquare) == pawnOffsets[0] && Squares[startSquare].DistanceWest >= 1)
-                {
-                    // one square above the black pawn that just moved
-                    pawnCaptureMoves.Add(AddLegalMove(startSquare, lastPawnDoubleMoveSquare + 8, false, false, true, Piece.Pawn));
-                }
-            }
-
-            return pawnCaptureMoves;
-        }
-
-        private static List<LegalMove> CheckBlackPawnCaptures(int startSquare)
-        {
-            List<LegalMove> pawnCaptureMoves = new List<LegalMove>();
-            int southEastSquare = startSquare - pawnOffsets[0];
-            int southWestSquare = startSquare - pawnOffsets[2];
-
-            // square one square southEast, checking if an enemy piece is there available for capture
-            if (Squares[startSquare].DistanceSouthEast >= 1)
-            {
-                if (IsOpponentPiece(southEastSquare, Piece.White))
-                {
-                    pawnCaptureMoves.Add(AddLegalMove(startSquare, southEastSquare, false, false, false, Piece.Pawn));
-                }
-            }
-            // square one square southWest, checking if an enemy piece is there available for capture
-
-            if (Squares[startSquare].DistanceSouthWest >= 1)
-            {
-                if (IsOpponentPiece(southWestSquare, Piece.White))
-                {
-                    pawnCaptureMoves.Add(AddLegalMove(startSquare, southWestSquare, false, false, false, Piece.Pawn));
-                }
-            }
-
-            // for en passant
-            if (lastPawnDoubleMoveSquare != -1)
-            {
-                if (startSquare - (lastPawnDoubleMoveSquare - 8) == pawnOffsets[2] && Squares[startSquare].DistanceWest >= 1)
-                {
-                    // one square below the white pawn that just moved
-                    pawnCaptureMoves.Add(AddLegalMove(startSquare, lastPawnDoubleMoveSquare - 8, false, false, true, Piece.Pawn));
-                }
-
-                if (startSquare - (lastPawnDoubleMoveSquare - 8) == pawnOffsets[0] && Squares[startSquare].DistanceEast >= 1)
-                {
-                    // one square below the white pawn that just moved
-                    pawnCaptureMoves.Add(AddLegalMove(startSquare, lastPawnDoubleMoveSquare - 8, false, false, true, Piece.Pawn));
-                }
-            }
-
-            return pawnCaptureMoves;
-        }
-
-        private static bool IsOpponentPiece(int square, int opponentColor)
-        {
-            return Squares[square].encodedPiece != Piece.Empty && (Squares[square].encodedPiece & PieceColorMask) == opponentColor;
-        }
-
-        private static List<LegalMove> CalculatePawnMoves(int startSquare, int decodedColor, int decodedPieceStatus)
-        {
-            List<LegalMove> pawnMoves = new List<LegalMove>();
-
-            // if white pawn
-            if (decodedColor == Piece.White)
-            {
-                if (decodedPieceStatus == PieceMoveStatusFlag)
-                {
-                    // if pawn has moved, legal moves is only a one square advance
-                    // checks if the square in front of the pawn is empty
-                    if (Squares[startSquare + pawnOffsets[1]].encodedPiece == Piece.Empty)
-                    {
-                        pawnMoves.Add(AddLegalMove(startSquare, startSquare + pawnOffsets[1], false, false, false, Piece.Pawn));
-                    }
-
-                    pawnMoves.AddRange(CheckWhitePawnCaptures(startSquare));
-
-                }
-                else
-                {
-                    // if pawn has not moved, legal moves is a two square advance
-                    if (Squares[startSquare + pawnOffsets[1]].encodedPiece == Piece.Empty)
-                    {
-                        pawnMoves.Add(AddLegalMove(startSquare, startSquare + pawnOffsets[1], false, false, false, Piece.Pawn));
-
-                        if (Squares[startSquare + (2 * pawnOffsets[1])].encodedPiece == Piece.Empty)
-                        {
-                            pawnMoves.Add(AddLegalMove(startSquare, startSquare + (2 * pawnOffsets[1]), false, false, false, Piece.Pawn));
-                        }
-                    }
-
-                    pawnMoves.AddRange(CheckWhitePawnCaptures(startSquare));
-                }
-            }
-            else
-            {
-                // if black pawn
-                if (decodedPieceStatus == PieceMoveStatusFlag)
-                {
-                    // if pawn has moved, legal moves is only a one square advance
-                    if (Squares[startSquare - pawnOffsets[1]].encodedPiece == Piece.Empty)
-                    {
-                        pawnMoves.Add(AddLegalMove(startSquare, startSquare - pawnOffsets[1], false, false, false, Piece.Pawn));
-                    }
-
-                    pawnMoves.AddRange(CheckBlackPawnCaptures(startSquare));
-
-                }
-                else
-                {
-                    // if pawn has not moved, legal moves is a two square advance
-                    if (Squares[startSquare - pawnOffsets[1]].encodedPiece == Piece.Empty)
-                    {
-                        pawnMoves.Add(AddLegalMove(startSquare, startSquare - pawnOffsets[1], false, false, false, Piece.Pawn));
-
-                        if (Squares[startSquare - (2 * pawnOffsets[1])].encodedPiece == Piece.Empty)
-                        {
-                            pawnMoves.Add(AddLegalMove(startSquare, startSquare - (2 * pawnOffsets[1]), false, false, false, Piece.Pawn));
-                        }
-                    }
-
-                    pawnMoves.AddRange(CheckBlackPawnCaptures(startSquare));
-                }
-            }
-
-            return pawnMoves;
-        }
-
-
-        private static List<LegalMove> CalculateKnightMovesHelper(int[] xOffsets, int[] yOffsets, int knightOffsetIndex, int startSquare, int decodedColor)
-        {
-            List<LegalMove> knightJumps = new List<LegalMove>();
-            for (int i = 0; i < 2; i++) // Loop for x
-            {
-                int xOffset = xOffsets[i];
-                if (xOffset <= Squares[startSquare].DistanceEast && xOffset >= -Squares[startSquare].DistanceWest)
-                {
-                    for (int j = 0; j < 2; j++) // Loop for y
-                    {
-                        int yOffset = yOffsets[j];
-                        if (yOffset <= Squares[startSquare].DistanceNorth && yOffset >= -Squares[startSquare].DistanceSouth)
-                        {
-
-                            int offsetIndex = (i * 2 + j); // Calculate the offset index based on i and j
-
-                            if (Squares[startSquare + knightOffsets[knightOffsetIndex, offsetIndex]].encodedPiece != Piece.Empty)
-                            {
-                                if (decodedColor == (Squares[startSquare + knightOffsets[knightOffsetIndex, offsetIndex]].encodedPiece & PieceColorMask))
-                                {
-                                    // same color piece
-                                    continue;
-                                }
-                            }
-
-                            knightJumps.Add(AddLegalMove(startSquare, startSquare + knightOffsets[knightOffsetIndex, offsetIndex], false, false, false, Piece.Knight));
-                        }
-                    }
-                }
-            }
-            return knightJumps;
-        }
-        private static List<LegalMove> CalculateKnightMoves(int startSquare, int decodedColor)
-        {
-            List<LegalMove> knightMoves = new List<LegalMove>();
-
-            // {(𝑥±1,𝑦±2}∪{𝑥±2,y±1} represents available knight moves
-
-            int[] xOffsets = { 1, -1 };
-            int[] yOffsets = { 2, -2 };
-
-            knightMoves.AddRange(CalculateKnightMovesHelper(xOffsets, yOffsets, 0, startSquare, decodedColor));
-            knightMoves.AddRange(CalculateKnightMovesHelper(yOffsets, xOffsets, 1, startSquare, decodedColor));
-
-            return knightMoves;
-        }
-
-        private static List<LegalMove> CalculateSlidingPiecesMoves(int piece, Direction direction, int startSquare, int decodedColor)
-        {
-            List<LegalMove> slidingPiecesMoves = new();
-
-            // direction offset
-            int dOffset = 0, distance = 0;
-
-            // limits search algorithm to one square if the sliding piece is the king
-            int kingLimits = piece == Piece.King ? 1 : int.MaxValue;
-
-            switch (direction)
-            {
-                case Direction.North:
-                    dOffset = cardinalOffsets[1];
-                    distance = Squares[startSquare].DistanceNorth;
-                    break;
-                case Direction.South:
-                    dOffset = cardinalOffsets[3];
-                    distance = Squares[startSquare].DistanceSouth;
-                    break;
-                case Direction.East:
-                    dOffset = cardinalOffsets[2];
-                    distance = Squares[startSquare].DistanceEast;
-                    break;
-                case Direction.West:
-                    dOffset = cardinalOffsets[0];
-                    distance = Squares[startSquare].DistanceWest;
-                    break;
-                case Direction.NorthWest:
-                    dOffset = interCardinalOffsets[0];
-                    distance = Squares[startSquare].DistanceNorthWest;
-                    break;
-                case Direction.NorthEast:
-                    dOffset = interCardinalOffsets[1];
-                    distance = Squares[startSquare].DistanceNorthEast;
-                    break;
-                case Direction.SouthWest:
-                    dOffset = interCardinalOffsets[3];
-                    distance = Squares[startSquare].DistanceSouthWest;
-                    break;
-                case Direction.SouthEast:
-                    dOffset = interCardinalOffsets[2];
-                    distance = Squares[startSquare].DistanceSouthEast;
-                    break;
-            }
-
-            for (int i = 1, offset = dOffset; i <= distance && i <= kingLimits; i++, offset += dOffset)
-            {
-                //if a square is occupied by a piece of the same color, stop the loop
-                //by a different color, add the move and stop the loop(capturing the piece)
-                if (Squares[startSquare + offset].encodedPiece != Piece.Empty)
-                {
-                    if (decodedColor == (Squares[startSquare + offset].encodedPiece & PieceColorMask))
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        slidingPiecesMoves.Add(AddLegalMove(startSquare, startSquare + offset, false, false, false, Squares[startSquare].encodedPiece));
-                        break;
-                    }
-                }
-                slidingPiecesMoves.Add(AddLegalMove(startSquare, startSquare + offset, false, false, false, Squares[startSquare].encodedPiece));
-            }
-
-            return slidingPiecesMoves;
-        }
-
-        private static List<LegalMove> CalculateRookMoves(int startSquare, int decodedColor)
-        {
-            List<LegalMove> rookMoves = new List<LegalMove>();
-            rookMoves.AddRange(CalculateSlidingPiecesMoves(Piece.Rook, Direction.North, startSquare, decodedColor));
-            rookMoves.AddRange(CalculateSlidingPiecesMoves(Piece.Rook, Direction.South, startSquare, decodedColor));
-            rookMoves.AddRange(CalculateSlidingPiecesMoves(Piece.Rook, Direction.East, startSquare, decodedColor));
-            rookMoves.AddRange(CalculateSlidingPiecesMoves(Piece.Rook, Direction.West, startSquare, decodedColor));
-
-            return rookMoves;
-
-        }
-
-        private static List<LegalMove> CalculateBishopMoves(int startSquare, int decodedColor)
-        {
-            List<LegalMove> bishopMoves = new List<LegalMove>();
-            bishopMoves.AddRange(CalculateSlidingPiecesMoves(Piece.Bishop, Direction.NorthWest, startSquare, decodedColor));
-            bishopMoves.AddRange(CalculateSlidingPiecesMoves(Piece.Bishop, Direction.NorthEast, startSquare, decodedColor));
-            bishopMoves.AddRange(CalculateSlidingPiecesMoves(Piece.Bishop, Direction.SouthWest, startSquare, decodedColor));
-            bishopMoves.AddRange(CalculateSlidingPiecesMoves(Piece.Bishop, Direction.SouthEast, startSquare, decodedColor));
-
-            return bishopMoves;
-        }
-
-        private static List<LegalMove> CalculateKingMoves(int startSquare, int decodedColor)
-        {
-            List<LegalMove> kingMoves = new();
-            foreach (Direction direction in Enum.GetValues(typeof(Direction)))
-            {
-                kingMoves.AddRange(CalculateSlidingPiecesMoves(Piece.King, direction, startSquare, decodedColor));
-            }
-            return kingMoves;
-        }
-
-        /// <summary>
-        ///  This method checks if king-side castling is even possible in the current position.
-        ///  Castling requires a rook and king that have both not moved to have no pieces in between them in order to castle
-        ///  At this point the opponent responses are not necessarily available (for the final rule: king cannot leave a square, 
-        ///  traverse across a square, or land on a square that is under attack) so this function essentially adds a potential castling move.
-        ///  The move added here will always be pseudo-legal.
-        /// </summary>
-        /// <param name="startSquare"></param>
-        /// <returns></returns>
-        private static LegalMove? CheckKingSideCastle(int startSquare)
-        {
-            // first checks if a rook piece is present in the corner and a king is on the e file
-            // (this can be useful in non-standard FEN string positions)
-            if ((Squares[startSquare].encodedPiece & PieceTypeMask) != Piece.King || ((Squares[startSquare + 3].encodedPiece & PieceTypeMask) != Piece.Rook))
-            {
-                return null;
-            }
-            // decodes piece move status; if king or rook on kingside has moved, castling not allowed
-            if ((Squares[startSquare].encodedPiece & PieceMoveStatusFlag) == PieceMoveStatusFlag || ((Squares[startSquare + 3].encodedPiece & PieceMoveStatusFlag) == PieceMoveStatusFlag))
-            {
-                return null;
-            }
-
-            // check for empty squares between rook and king
-            for (int i = startSquare + 1; i < (startSquare + 3); i++)
-            {
-                if (Squares[i].encodedPiece != Piece.Empty)
-                {
-                    return null;
-                }
-
-            }
-
-            /* final rule (king cannot leave a square, traverse across a square, or land on a square that is under attack) is verified
-            in the GenerateLegalMoves method.
-            */
-
-
-            // this adds a legal move with the kingSideCastling flag set to true
-            return AddLegalMove(startSquare, startSquare + 2, true, false, false, Piece.King);
-
-        }
-
-        /// <summary>
-        ///  This method checks if queen-side castling is even possible in the current position.
-        ///  Refer to 'CheckKingSideCastle' in order to read more about what these methods do.
-        /// </summary>
-        /// <param name="startSquare"></param>
-        /// <returns></returns>
-        private static LegalMove? CheckQueenSideCastle(int startSquare)
-        {
-            // first checks if a rook piece is present in the corner and a king is on the e file
-            // (this can be useful in non-standard FEN string positions)
-            if ((Squares[startSquare].encodedPiece & PieceTypeMask) != Piece.King || ((Squares[startSquare - 4].encodedPiece & PieceTypeMask) != Piece.Rook))
-            {
-                return null;
-            }
-            // decodes piece move status; if king or rook on queenside has moved, castling not allowed
-            if ((Squares[startSquare].encodedPiece & PieceMoveStatusFlag) == PieceMoveStatusFlag || ((Squares[startSquare - 4].encodedPiece & PieceMoveStatusFlag) == PieceMoveStatusFlag))
-            {
-                return null;
-            }
-
-            // check for empty squares between rook and king
-            for (int i = startSquare - 1; i > (startSquare - 4); i--)
-            {
-                if (Squares[i].encodedPiece != Piece.Empty)
-                {
-                    return null;
-                }
-
-            }
-
-            // this adds a legal move with the queenSideCastling flag set to true
-            return AddLegalMove(startSquare, startSquare - 2, false, true, false, Piece.King);
-
-        }
         private static int FindKingPosition(bool whiteToMove)
         {
-            int color;
+
             if (whiteToMove)
             {
-                color = Piece.White;
+                return (int)Math.Log(InternalBoard.WhiteKing, 2);
             }
             else
             {
-                color = Piece.Black;
+                return (int)Math.Log(InternalBoard.BlackKing, 2);
             }
-
-            for (int i = 0; i < BoardSize; i++)
-            {
-                if ((Squares[i].encodedPiece & PieceTypeMask) == Piece.King)
-                {
-                    if ((Squares[i].encodedPiece & PieceColorMask) == color)
-                    {
-                        return i;
-                    }
-                }
-            }
-            return -1;
         }
 
         public static void ClearListMoves()
@@ -1002,37 +501,12 @@ namespace Chess
             legalMoves.Clear();
         }
 
-        private static List<int> FindAllPieceSquares(bool whiteToMove)
-        {
-            List<int> squareList = new();
-            int color;
-            if (whiteToMove)
-            {
-                color = Piece.White;
-            }
-            else
-            {
-                color = Piece.Black;
-            }
-
-            for (int i = 0; i < BoardSize; i++)
-            {
-                if ((Squares[i].encodedPiece & PieceColorMask) == color)
-                {
-                    squareList.Add(i);
-                }
-            }
-            return squareList;
-
-        }
-
-
         public static List<LegalMove> AfterMove()
         {
             //Stopwatch timer = Stopwatch.StartNew();
 
             // calculates all legal moves in a given position
-            legalMoves = GenerateLegalMovesBitboard();
+            legalMoves = GenerateLegalMovesBitboard(BoardManager.whiteToMove);
 
 
             // timer.Stop();
@@ -1049,17 +523,17 @@ namespace Chess
 
         private static void Verify50MoveRule(int currentPiece, int newPieceMove)
         {
-            // if the current piece being moved is a pawn, reset the 50 move accumulator
-            // if the newpiecemove was a capture, reset the 50 move accumulator
-            if ((Squares[currentPiece].encodedPiece & PieceTypeMask) == Piece.Pawn || (Squares[newPieceMove].encodedPiece & PieceTypeMask) != Piece.Empty)
-            {
-                // this move captured a piece, reset the fifty move rule
-                fiftyMoveAccumulator = 0;
-            }
-            else
-            {
-                fiftyMoveAccumulator++;
-            }
+            // // if the current piece being moved is a pawn, reset the 50 move accumulator
+            // // if the newpiecemove was a capture, reset the 50 move accumulator
+            // if ((Squares[currentPiece].encodedPiece & PieceTypeMask) == Piece.Pawn || (Squares[newPieceMove].encodedPiece & PieceTypeMask) != Piece.Empty)
+            // {
+            //     // this move captured a piece, reset the fifty move rule
+            //     fiftyMoveAccumulator = 0;
+            // }
+            // else
+            // {
+            //     fiftyMoveAccumulator++;
+            // }
         }
 
         private static void CheckForGameOverRules()
@@ -1096,23 +570,6 @@ namespace Chess
                                     ? BoardManager.Sides.Black
                                     : BoardManager.Sides.White;
         }
-
-        private static bool IsKingSideCastleLegal(int startSquare, List<LegalMove> opponentMoves)
-        {
-            int kingFinalSquare = startSquare + 2; // For kingside castling, king ends two squares to the right
-            int kingPathSquare = startSquare + 1; // The square king passes through
-
-            return !opponentMoves.Any(move => move.endSquare == kingFinalSquare || move.endSquare == kingPathSquare || move.endSquare == startSquare);
-        }
-
-        private static bool IsQueenSideCastleLegal(int startSquare, List<LegalMove> opponentMoves)
-        {
-            int kingPathSquare = startSquare - 2;
-            int kingPathSquare2 = startSquare - 1; // The square king passes through
-
-            return !opponentMoves.Any(move => move.endSquare == kingPathSquare || move.endSquare == kingPathSquare2 || move.endSquare == startSquare);
-        }
-
 
         /* these functions came from "https://www.chessprogramming.org/Pawn_Pushes_(Bitboards)"
         * the pawn is able to push if no impeding piece (friendly or foe) is blocking the path, these functions traverse
@@ -1156,9 +613,8 @@ namespace Chess
             {
                 // and with twos complement to isolate each rook
                 ulong isolatedRooklsb = rooks & (~rooks + 1);
-                int currentRookPos = (int)Math.Log(isolatedRooklsb, 2);
 
-                ulong validRookMoves = GetRookAttacks(InternalBoard.AllPieces, currentRookPos);
+                ulong validRookMoves = GetRookAttacks(InternalBoard.AllPieces, (int)Math.Log(isolatedRooklsb, 2));
 
                 // remove friendly piece blockers from potential captures 
                 validRookMoves &= ~friendlyPieces;
@@ -1166,10 +622,9 @@ namespace Chess
                 while (validRookMoves != 0)
                 {
                     ulong movelsb = validRookMoves & (~validRookMoves + 1);
-                    int validRookMove = (int)Math.Log(movelsb, 2);
 
                     validRookMoves &= validRookMoves - 1;
-                    rookMoves.Add(AddLegalMove(currentRookPos, validRookMove, false, false, false, Piece.Rook));
+                    rookMoves.Add(AddLegalMove(isolatedRooklsb, movelsb, false, false, false, Piece.Rook));
                 }
                 rooks &= rooks - 1;
             }
@@ -1187,9 +642,8 @@ namespace Chess
             {
                 // and with twos complement to isolate each bishop
                 ulong isolatedBishoplsb = bishops & (~bishops + 1);
-                int currentBishopPos = (int)Math.Log(isolatedBishoplsb, 2);
 
-                ulong validBishopMoves = GetBishopAttacks(InternalBoard.AllPieces, currentBishopPos);
+                ulong validBishopMoves = GetBishopAttacks(InternalBoard.AllPieces, (int)Math.Log(isolatedBishoplsb, 2));
 
                 // remove friendly piece blockers from potential captures 
                 validBishopMoves &= ~friendlyPieces;
@@ -1197,10 +651,9 @@ namespace Chess
                 while (validBishopMoves != 0)
                 {
                     ulong movelsb = validBishopMoves & (~validBishopMoves + 1);
-                    int validBishopMove = (int)Math.Log(movelsb, 2);
 
                     validBishopMoves &= validBishopMoves - 1;
-                    bishopMoves.Add(AddLegalMove(currentBishopPos, validBishopMove, false, false, false, Piece.Bishop));
+                    bishopMoves.Add(AddLegalMove(isolatedBishoplsb, movelsb, false, false, false, Piece.Bishop));
                 }
                 bishops &= bishops - 1;
             }
@@ -1218,8 +671,8 @@ namespace Chess
             {
                 // and with twos complement to isolate each queen
                 ulong isolatedQueenlsb = queens & (~queens + 1);
-                int currentQueenPos = (int)Math.Log(isolatedQueenlsb, 2);
 
+                int currentQueenPos = (int)Math.Log(isolatedQueenlsb, 2);
                 ulong validQueenMoves = GetBishopAttacks(InternalBoard.AllPieces, currentQueenPos);
                 validQueenMoves |= GetRookAttacks(InternalBoard.AllPieces, currentQueenPos);
 
@@ -1229,10 +682,9 @@ namespace Chess
                 while (validQueenMoves != 0)
                 {
                     ulong movelsb = validQueenMoves & (~validQueenMoves + 1);
-                    int validQueenMove = (int)Math.Log(movelsb, 2);
 
                     validQueenMoves &= validQueenMoves - 1;
-                    queenMoves.Add(AddLegalMove(currentQueenPos, validQueenMove, false, false, false, Piece.Queen));
+                    queenMoves.Add(AddLegalMove(isolatedQueenlsb, movelsb, false, false, false, Piece.Queen));
                 }
                 queens &= queens - 1;
             }
@@ -1273,8 +725,6 @@ namespace Chess
                 ulong validPawnCaptures = MoveTables.PrecomputedWhitePawnCaptures[currentPawnPos] & InternalBoard.AllBlackPieces;
                 validPawnMoves |= validPawnCaptures;
 
-                // TODO: add en passant here?
-
                 if (lastPawnDoubleMoveBitboard != 0)
                 {
 
@@ -1283,7 +733,7 @@ namespace Chess
                     {
                         if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
                         {
-                            whitePawnMoves.Add(AddLegalMove(currentPawnPos, (int)Math.Log(lastPawnDoubleMoveBitboard, 2), false, false, true, Piece.Pawn));
+                            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, false, false, true, Piece.Pawn));
                         }
                     }
 
@@ -1292,7 +742,7 @@ namespace Chess
                     {
                         if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
                         {
-                            whitePawnMoves.Add(AddLegalMove(currentPawnPos, (int)Math.Log(lastPawnDoubleMoveBitboard, 2), false, false, true, Piece.Pawn));
+                            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, false, false, true, Piece.Pawn));
                         }
                     }
                 }
@@ -1300,10 +750,9 @@ namespace Chess
                 while (validPawnMoves != 0)
                 {
                     ulong movelsb = validPawnMoves & (~validPawnMoves + 1);
-                    int validPawnMove = (int)Math.Log(movelsb, 2);
 
                     validPawnMoves &= validPawnMoves - 1;
-                    whitePawnMoves.Add(AddLegalMove(currentPawnPos, validPawnMove, false, false, false, Piece.Pawn));
+                    whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, false, false, false, Piece.Pawn));
                 }
 
                 // move to the next pawn
@@ -1353,7 +802,7 @@ namespace Chess
                     {
                         if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
                         {
-                            blackPawnMoves.Add(AddLegalMove(currentPawnPos, (int)Math.Log(lastPawnDoubleMoveBitboard, 2), false, false, true, Piece.Pawn));
+                            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, false, false, true, Piece.Pawn));
                         }
                     }
 
@@ -1362,7 +811,7 @@ namespace Chess
                     {
                         if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
                         {
-                            blackPawnMoves.Add(AddLegalMove(currentPawnPos, (int)Math.Log(lastPawnDoubleMoveBitboard, 2), false, false, true, Piece.Pawn));
+                            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, false, false, true, Piece.Pawn));
                         }
                     }
                 }
@@ -1370,10 +819,9 @@ namespace Chess
                 while (validPawnMoves != 0)
                 {
                     ulong movelsb = validPawnMoves & (~validPawnMoves + 1);
-                    int validPawnMove = (int)Math.Log(movelsb, 2);
 
                     validPawnMoves &= validPawnMoves - 1;
-                    blackPawnMoves.Add(AddLegalMove(currentPawnPos, validPawnMove, false, false, false, Piece.Pawn));
+                    blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, false, false, false, Piece.Pawn));
                 }
 
                 blackPawns &= blackPawns - 1;
@@ -1399,10 +847,9 @@ namespace Chess
                 while (validKnightMoves != 0)
                 {
                     ulong movelsb = validKnightMoves & (~validKnightMoves + 1);
-                    int validKnightMove = (int)Math.Log(movelsb, 2);
 
                     validKnightMoves &= validKnightMoves - 1;
-                    knightMoves.Add(AddLegalMove(currentKnightPos, validKnightMove, false, false, false, Piece.Knight));
+                    knightMoves.Add(AddLegalMove(isolatedKnightlsb, movelsb, false, false, false, Piece.Knight));
                 }
 
                 // move to next knight
@@ -1738,12 +1185,12 @@ namespace Chess
             {
                 if (CanCastleKingsideWhite())
                 {
-                    kingMoves.Add(AddLegalMove(kingIndex, 6, true, false, false, Piece.King));
+                    kingMoves.Add(AddLegalMove(king, 1UL << 6, true, false, false, Piece.King));
                 }
 
                 if (CanCastleQueensideWhite())
                 {
-                    kingMoves.Add(AddLegalMove(kingIndex, 2, false, true, false, Piece.King));
+                    kingMoves.Add(AddLegalMove(king, 1UL << 2, false, true, false, Piece.King));
                 }
 
             }
@@ -1751,38 +1198,66 @@ namespace Chess
             {
                 if (CanCastleKingsideBlack())
                 {
-                    kingMoves.Add(AddLegalMove(kingIndex, 62, true, false, false, Piece.King));
+                    kingMoves.Add(AddLegalMove(king, 1UL << 62, true, false, false, Piece.King));
                 }
 
                 if (CanCastleQueensideBlack())
                 {
-                    kingMoves.Add(AddLegalMove(kingIndex, 58, false, true, false, Piece.King));
+                    kingMoves.Add(AddLegalMove(king, 1UL << 58, false, true, false, Piece.King));
                 }
             }
 
             while (validKingMoves != 0)
             {
                 // gets the least significant bit while validmoves are being parsed in order to find new square position
-                ulong lsb = validKingMoves & (~validKingMoves + 1);
-
-                int validKingMove = (int)Math.Log(lsb, 2);
+                ulong movelsb = validKingMoves & (~validKingMoves + 1);
 
                 validKingMoves &= validKingMoves - 1;
 
-                kingMoves.Add(AddLegalMove(kingIndex, validKingMove, false, false, false, Piece.King));
+                kingMoves.Add(AddLegalMove(king, movelsb, false, false, false, Piece.King));
             }
 
             return kingMoves;
         }
 
-        public static List<LegalMove> GenerateLegalMovesBitboard()
+
+        // public static List<LegalMove> GenerateAllLegalMoves()
+        // {
+
+        //     List<LegalMove> pseudoLegalMoves = GenerateLegalMovesBitboard(BoardManager.whiteToMove);
+
+        //     List<LegalMove> legalMoves = new();
+
+        //     foreach (LegalMove move in pseudoLegalMoves)
+        //     {
+        //         int rememberedPiece = ExecuteMove(move);
+
+        //         // replace this with current king square
+        //         int currentKingSquare = FindKingPosition(BoardManager.whiteToMove);
+
+        //         List<LegalMove> opponentResponses = GenerateLegalMovesBitboard(!BoardManager.whiteToMove);
+
+        //         if (!opponentResponses.Any(response => response.endSquare == currentKingSquare))
+        //         {
+        //             // if the king is not under attack after the move, add it to legal moves
+        //             legalMoves.Add(move);
+        //         }
+
+        //         // Undo the move for the next iteration
+        //         UndoMove(move, rememberedPiece);
+
+        //     }
+        //     return legalMoves;
+        // }
+
+        public static List<LegalMove> GenerateLegalMovesBitboard(bool whiteToMove)
         {
             // create list to store legal moves
             List<LegalMove> moves = new();
 
             // TODO edit genbishop, queen, and rook movesets to pass in reference to friendly piece bitboard
 
-            if (BoardManager.whiteToMove)
+            if (whiteToMove)
             {
                 moves.AddRange(GenerateBishopMoves(ref InternalBoard.WhiteBishops, ref InternalBoard.AllWhitePieces));
                 moves.AddRange(GenerateRookMoves(ref InternalBoard.WhiteRooks, ref InternalBoard.AllWhitePieces));
@@ -1893,155 +1368,155 @@ namespace Chess
 
 
 
-        public static List<LegalMove> GenerateLegalMoves()
-        {
-            // calculate all pseudo legal moves for the friendly side (whoevers turn it is)
-            List<LegalMove> pseudoLegalMoves = CalculateAllMoves(BoardManager.whiteToMove);
+        // public static List<LegalMove> GenerateLegalMoves()
+        // {
+        //     // calculate all pseudo legal moves for the friendly side (whoevers turn it is)
+        //     List<LegalMove> pseudoLegalMoves = CalculateAllMoves(BoardManager.whiteToMove);
 
-            List<LegalMove> legalMoves = new List<LegalMove>();
+        //     List<LegalMove> legalMoves = new List<LegalMove>();
 
-            int originalkingSquare = FindKingPosition(BoardManager.whiteToMove);
+        //     int originalkingSquare = FindKingPosition(BoardManager.whiteToMove);
 
-            kingInCheck = false;
+        //     kingInCheck = false;
 
-            foreach (LegalMove move in pseudoLegalMoves)
-            {
-                int rememberedPiece = ExecuteMove(move);
+        //     foreach (LegalMove move in pseudoLegalMoves)
+        //     {
+        //         int rememberedPiece = ExecuteMove(move);
 
-                // replace this with current king square
-                int currentKingSquare = FindKingPosition(BoardManager.whiteToMove);
+        //         // replace this with current king square
+        //         int currentKingSquare = FindKingPosition(BoardManager.whiteToMove);
 
-                List<LegalMove> opponentResponses = CalculateAllMoves(!BoardManager.whiteToMove);
+        //         List<LegalMove> opponentResponses = CalculateAllMoves(!BoardManager.whiteToMove);
 
-                // Special handling for castling moves
-                if (move.kingSideCastling == true)
-                {
-                    if (IsKingSideCastleLegal(originalkingSquare, opponentResponses))
-                    {
-                        legalMoves.Add(move);
-                    }
-                }
-                else if (move.queenSideCastling == true)
-                {
-                    if (IsQueenSideCastleLegal(originalkingSquare, opponentResponses))
-                    {
-                        legalMoves.Add(move);
-                    }
-                }
-                // handle other moves
-                else if (!opponentResponses.Any(response => response.endSquare == currentKingSquare))
-                {
-                    // if the king is not under attack after the move, add it to legal moves
-                    legalMoves.Add(move);
-                }
-                else
-                {
-                    kingInCheck = true;
-                }
-                // Undo the move for the next iteration
-                UndoMove(move, rememberedPiece);
-            }
-            return legalMoves;
-        }
+        //         // Special handling for castling moves
+        //         if (move.kingSideCastling == true)
+        //         {
+        //             if (IsKingSideCastleLegal(originalkingSquare, opponentResponses))
+        //             {
+        //                 legalMoves.Add(move);
+        //             }
+        //         }
+        //         else if (move.queenSideCastling == true)
+        //         {
+        //             if (IsQueenSideCastleLegal(originalkingSquare, opponentResponses))
+        //             {
+        //                 legalMoves.Add(move);
+        //             }
+        //         }
+        //         // handle other moves
+        //         else if (!opponentResponses.Any(response => response.endSquare == currentKingSquare))
+        //         {
+        //             // if the king is not under attack after the move, add it to legal moves
+        //             legalMoves.Add(move);
+        //         }
+        //         else
+        //         {
+        //             kingInCheck = true;
+        //         }
+        //         // Undo the move for the next iteration
+        //         UndoMove(move, rememberedPiece);
+        //     }
+        //     return legalMoves;
+        // }
 
-        private static int ExecuteMove(LegalMove move)
-        {
-            int startSquareIndex = move.startSquare;
-            int endSquareIndex = move.endSquare;
-            int movingPiece = Squares[startSquareIndex].encodedPiece;
+        // private static int ExecuteMove(LegalMove move)
+        // {
+        //     int startSquareIndex = move.startSquare;
+        //     int endSquareIndex = move.endSquare;
+        //     int movingPiece = Squares[startSquareIndex].encodedPiece;
 
-            // remember potential captured piece (this is needed when the move is un-done and the position returns to its previous state)
-            int rememberedPiece = Squares[endSquareIndex].encodedPiece;
+        //     // remember potential captured piece (this is needed when the move is un-done and the position returns to its previous state)
+        //     int rememberedPiece = Squares[endSquareIndex].encodedPiece;
 
-            // Move the piece
-            Squares[endSquareIndex].encodedPiece = movingPiece;
-            Squares[startSquareIndex].encodedPiece = Piece.Empty;
-            return rememberedPiece;
-        }
+        //     // Move the piece
+        //     Squares[endSquareIndex].encodedPiece = movingPiece;
+        //     Squares[startSquareIndex].encodedPiece = Piece.Empty;
+        //     return rememberedPiece;
+        // }
 
-        private static void UndoMove(LegalMove move, int rememberedPiece)
-        {
-            int startSquareIndex = move.startSquare;
-            int endSquareIndex = move.endSquare;
-            int movingPiece = Squares[endSquareIndex].encodedPiece;
-            int capturedPiece = rememberedPiece;
+        // private static void UndoMove(LegalMove move, int rememberedPiece)
+        // {
+        //     int startSquareIndex = move.startSquare;
+        //     int endSquareIndex = move.endSquare;
+        //     int movingPiece = Squares[endSquareIndex].encodedPiece;
+        //     int capturedPiece = rememberedPiece;
 
-            // Revert the move
-            Squares[startSquareIndex].encodedPiece = movingPiece;
-            Squares[endSquareIndex].encodedPiece = capturedPiece;
-        }
+        //     // Revert the move
+        //     Squares[startSquareIndex].encodedPiece = movingPiece;
+        //     Squares[endSquareIndex].encodedPiece = capturedPiece;
+        // }
 
-        public static List<LegalMove> CalculateAllMoves(bool friendlyMove)
-        {
-            List<int> whichPieces = FindAllPieceSquares(friendlyMove);
-            List<LegalMove> moveList = new List<LegalMove>();
+        // public static List<LegalMove> CalculateAllMoves(bool friendlyMove)
+        // {
+        //     List<int> whichPieces = FindAllPieceSquares(friendlyMove);
+        //     List<LegalMove> moveList = new List<LegalMove>();
 
-            foreach (int square in whichPieces)
-            {
-                moveList.AddRange(CalculateLegalMoves(square, Squares[square].encodedPiece));
-            }
-            return moveList;
-        }
+        //     foreach (int square in whichPieces)
+        //     {
+        //         moveList.AddRange(CalculateLegalMoves(square, Squares[square].encodedPiece));
+        //     }
+        //     return moveList;
+        // }
 
-        public static List<LegalMove> CalculateLegalMoves(int startSquare, int internalGamePiece)
-        {
-            int decodedPiece = internalGamePiece & PieceTypeMask;
-            int decodedColor = internalGamePiece & PieceColorMask;
+        // public static List<LegalMove> CalculateLegalMoves(int startSquare, int internalGamePiece)
+        // {
+        //     int decodedPiece = internalGamePiece & PieceTypeMask;
+        //     int decodedColor = internalGamePiece & PieceColorMask;
 
-            // if = PieceMoveStatusFlag (32), piece has moved, if 0, piece has not moved
-            int decodedPieceStatus = internalGamePiece & PieceMoveStatusFlag;
-            switch (decodedPiece)
-            {
-                case Piece.Pawn:
-                    // a pawn can never have more than 4 moves in any given position
-                    List<LegalMove> pawnMoves = new List<LegalMove>(4);
-                    pawnMoves.AddRange(CalculatePawnMoves(startSquare, decodedColor, decodedPieceStatus));
-                    return pawnMoves;
-                case Piece.Knight:
-                    List<LegalMove> knightMoves = new List<LegalMove>(8);
-                    knightMoves.AddRange(CalculateKnightMoves(startSquare, decodedColor));
-                    return knightMoves;
-                case Piece.Rook:
-                    List<LegalMove> rookMoves = new List<LegalMove>(14);
-                    rookMoves.AddRange(CalculateRookMoves(startSquare, decodedColor));
-                    return rookMoves;
-                case Piece.Bishop:
-                    List<LegalMove> bishopMoves = new List<LegalMove>(13);
-                    bishopMoves.AddRange(CalculateBishopMoves(startSquare, decodedColor));
-                    return bishopMoves;
-                case Piece.Queen:
-                    // queen contains both movesets of a bishop and a rook
-                    List<LegalMove> queenMoves = new List<LegalMove>(27);
-                    queenMoves.AddRange(CalculateRookMoves(startSquare, decodedColor));
-                    queenMoves.AddRange(CalculateBishopMoves(startSquare, decodedColor));
-                    return queenMoves;
-                case Piece.King:
-                    List<LegalMove> kingMoves = new List<LegalMove>(8);
-                    kingMoves.AddRange(CalculateKingMoves(startSquare, decodedColor));
+        //     // if = PieceMoveStatusFlag (32), piece has moved, if 0, piece has not moved
+        //     int decodedPieceStatus = internalGamePiece & PieceMoveStatusFlag;
+        //     switch (decodedPiece)
+        //     {
+        //         case Piece.Pawn:
+        //             // a pawn can never have more than 4 moves in any given position
+        //             List<LegalMove> pawnMoves = new List<LegalMove>(4);
+        //             pawnMoves.AddRange(CalculatePawnMoves(startSquare, decodedColor, decodedPieceStatus));
+        //             return pawnMoves;
+        //         case Piece.Knight:
+        //             List<LegalMove> knightMoves = new List<LegalMove>(8);
+        //             knightMoves.AddRange(CalculateKnightMoves(startSquare, decodedColor));
+        //             return knightMoves;
+        //         case Piece.Rook:
+        //             List<LegalMove> rookMoves = new List<LegalMove>(14);
+        //             rookMoves.AddRange(CalculateRookMoves(startSquare, decodedColor));
+        //             return rookMoves;
+        //         case Piece.Bishop:
+        //             List<LegalMove> bishopMoves = new List<LegalMove>(13);
+        //             bishopMoves.AddRange(CalculateBishopMoves(startSquare, decodedColor));
+        //             return bishopMoves;
+        //         case Piece.Queen:
+        //             // queen contains both movesets of a bishop and a rook
+        //             List<LegalMove> queenMoves = new List<LegalMove>(27);
+        //             queenMoves.AddRange(CalculateRookMoves(startSquare, decodedColor));
+        //             queenMoves.AddRange(CalculateBishopMoves(startSquare, decodedColor));
+        //             return queenMoves;
+        //         case Piece.King:
+        //             List<LegalMove> kingMoves = new List<LegalMove>(8);
+        //             kingMoves.AddRange(CalculateKingMoves(startSquare, decodedColor));
 
-                    // check for castling ability
-                    // makes sure king is on e file
-                    if (startSquare == 4 || startSquare == 60)
-                    {
-                        var kingSideCastleMove = CheckKingSideCastle(startSquare);
+        //             // check for castling ability
+        //             // makes sure king is on e file
+        //             if (startSquare == 4 || startSquare == 60)
+        //             {
+        //                 var kingSideCastleMove = CheckKingSideCastle(startSquare);
 
-                        if (kingSideCastleMove != null)
-                        {
+        //                 if (kingSideCastleMove != null)
+        //                 {
 
-                            kingMoves.Add(kingSideCastleMove.Value);
-                        }
+        //                     kingMoves.Add(kingSideCastleMove.Value);
+        //                 }
 
-                        var queenSideCastleMove = CheckQueenSideCastle(startSquare);
+        //                 var queenSideCastleMove = CheckQueenSideCastle(startSquare);
 
-                        if (queenSideCastleMove != null)
-                        {
-                            kingMoves.Add(queenSideCastleMove.Value);
-                        }
-                    }
-                    return kingMoves;
-                default:
-                    return null;
-            }
-        }
+        //                 if (queenSideCastleMove != null)
+        //                 {
+        //                     kingMoves.Add(queenSideCastleMove.Value);
+        //                 }
+        //             }
+        //             return kingMoves;
+        //         default:
+        //             return null;
+        //     }
+        // }
     }
 }
