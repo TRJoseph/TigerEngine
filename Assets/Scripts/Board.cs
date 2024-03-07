@@ -107,9 +107,9 @@ namespace Chess
 
         public static GameState currentState = GameState.Normal;
 
-        private static void RemoveAndAddPieceBitboards(LegalMove move, ulong fromSquareMask, ulong toSquareMask, ref ulong friendlyPieces, ref ulong king, ref ulong knights, ref ulong bishops, ref ulong rooks, ref ulong queens, ref ulong pawns)
+        private static void RemoveAndAddPieceBitboards(int movedPiece, ulong fromSquareMask, ulong toSquareMask, ref ulong king, ref ulong knights, ref ulong bishops, ref ulong rooks, ref ulong queens, ref ulong pawns)
         {
-            switch (move.movedPiece)
+            switch (movedPiece)
             {
                 case Piece.King:
                     king &= ~fromSquareMask;
@@ -303,7 +303,7 @@ namespace Chess
                 InternalBoard.AllBlackPieces &= isolatedCapturedPieceBitmask;
 
                 // remove appropriate white piece from old square and move it to new square, update bitboards correspondingly 
-                RemoveAndAddPieceBitboards(move, fromSquare, toSquare, ref InternalBoard.AllWhitePieces, ref InternalBoard.WhiteKing, ref InternalBoard.WhiteKnights,
+                RemoveAndAddPieceBitboards(move.movedPiece, fromSquare, toSquare, ref InternalBoard.WhiteKing, ref InternalBoard.WhiteKnights,
                     ref InternalBoard.WhiteBishops, ref InternalBoard.WhiteRooks, ref InternalBoard.WhiteQueens, ref InternalBoard.WhitePawns);
             }
             else
@@ -315,7 +315,7 @@ namespace Chess
                 InternalBoard.WhiteQueens &= isolatedCapturedPieceBitmask;
                 InternalBoard.AllWhitePieces &= isolatedCapturedPieceBitmask;
 
-                RemoveAndAddPieceBitboards(move, fromSquare, toSquare, ref InternalBoard.AllBlackPieces, ref InternalBoard.BlackKing, ref InternalBoard.BlackKnights,
+                RemoveAndAddPieceBitboards(move.movedPiece, fromSquare, toSquare, ref InternalBoard.BlackKing, ref InternalBoard.BlackKnights,
                     ref InternalBoard.BlackBishops, ref InternalBoard.BlackRooks, ref InternalBoard.BlackQueens, ref InternalBoard.BlackPawns);
             }
             InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
@@ -506,7 +506,7 @@ namespace Chess
             //Stopwatch timer = Stopwatch.StartNew();
 
             // calculates all legal moves in a given position
-            legalMoves = GenerateLegalMovesBitboard(BoardManager.whiteToMove);
+            legalMoves = GenerateAllLegalMoves();
 
 
             // timer.Stop();
@@ -1221,34 +1221,172 @@ namespace Chess
         }
 
 
-        // public static List<LegalMove> GenerateAllLegalMoves()
-        // {
+        public static List<LegalMove> GenerateAllLegalMoves()
+        {
 
-        //     List<LegalMove> pseudoLegalMoves = GenerateLegalMovesBitboard(BoardManager.whiteToMove);
+            List<LegalMove> pseudoLegalMoves = GenerateLegalMovesBitboard(BoardManager.whiteToMove);
 
-        //     List<LegalMove> legalMoves = new();
+            List<LegalMove> legalMoves = new();
 
-        //     foreach (LegalMove move in pseudoLegalMoves)
-        //     {
-        //         int rememberedPiece = ExecuteMove(move);
+            foreach (LegalMove move in pseudoLegalMoves)
+            {
+                int rememberedPiece = ExecuteMove(BoardManager.whiteToMove, move.movedPiece, move.startSquare, move.endSquare);
 
-        //         // replace this with current king square
-        //         int currentKingSquare = FindKingPosition(BoardManager.whiteToMove);
+                // replace this with current king square
+                ulong currentKingSquare = BoardManager.whiteToMove ? InternalBoard.WhiteKing : InternalBoard.BlackKing;
 
-        //         List<LegalMove> opponentResponses = GenerateLegalMovesBitboard(!BoardManager.whiteToMove);
+                List<LegalMove> opponentResponses = GenerateLegalMovesBitboard(!BoardManager.whiteToMove);
 
-        //         if (!opponentResponses.Any(response => response.endSquare == currentKingSquare))
-        //         {
-        //             // if the king is not under attack after the move, add it to legal moves
-        //             legalMoves.Add(move);
-        //         }
+                if (!opponentResponses.Any(response => response.endSquare == currentKingSquare))
+                {
+                    // if the king is not under attack after the move, add it to legal moves
+                    legalMoves.Add(move);
+                }
 
-        //         // Undo the move for the next iteration
-        //         UndoMove(move, rememberedPiece);
+                // Undo the move for the next iteration
+                UndoMove(BoardManager.whiteToMove, move, rememberedPiece, move.startSquare, move.endSquare);
 
-        //     }
-        //     return legalMoves;
-        // }
+            }
+            return legalMoves;
+        }
+
+        // Executes a move on the board and returns the captured piece, if any
+        public static int ExecuteMove(bool whiteToMove, int movedPiece, ulong fromSquare, ulong toSquare)
+        {
+            if (whiteToMove)
+            {
+                RemoveAndAddPieceBitboards(movedPiece, fromSquare, toSquare, ref InternalBoard.WhiteKing, ref InternalBoard.WhiteKnights,
+            ref InternalBoard.WhiteBishops, ref InternalBoard.WhiteRooks, ref InternalBoard.WhiteQueens, ref InternalBoard.WhitePawns);
+            }
+            else
+            {
+                RemoveAndAddPieceBitboards(movedPiece, fromSquare, toSquare, ref InternalBoard.BlackKing, ref InternalBoard.BlackKnights,
+            ref InternalBoard.BlackBishops, ref InternalBoard.BlackRooks, ref InternalBoard.BlackQueens, ref InternalBoard.BlackPawns);
+            }
+
+            // Determine if a piece is captured and update the bitboards accordingly
+
+            int capturedPiece = CheckAndRemoveCapturedPiece(toSquare, whiteToMove);
+
+            // Handle special moves (castling, en passant, etc.) here
+            return capturedPiece;
+
+        }
+
+        private static int CheckAndRemoveCapturedPiece(ulong toSquare, bool whiteToMove)
+        {
+            // Assuming a simplified piece identification system
+            ulong[] enemyPieces = whiteToMove ?
+                new[] { InternalBoard.BlackKing, InternalBoard.BlackKnights, InternalBoard.BlackBishops, InternalBoard.BlackRooks, InternalBoard.BlackQueens, InternalBoard.BlackPawns } :
+                new[] { InternalBoard.WhiteKing, InternalBoard.WhiteKnights, InternalBoard.WhiteBishops, InternalBoard.WhiteRooks, InternalBoard.WhiteQueens, InternalBoard.WhitePawns };
+
+            int[] enemyPieceType = { Piece.King, Piece.Knight, Piece.Bishop, Piece.Rook, Piece.Queen, Piece.Pawn };
+            for (int i = 0; i < enemyPieces.Length; i++)
+            {
+                if ((enemyPieces[i] & toSquare) != 0)
+                {
+                    // Found the captured piece
+                    // Clear the bit representing the captured piece
+
+                    enemyPieces[i] &= ~toSquare;
+                    return enemyPieceType[i]; // Return the index/type of the captured piece
+                }
+            }
+
+            return -1; // No piece was captured
+        }
+
+        public static void UndoMove(bool whiteToMove, LegalMove move, int capturedPieceType, ulong fromSquare, ulong toSquare)
+        {
+            // Move the piece back
+            if (whiteToMove)
+            {
+                // Move white piece back
+                RemoveAndAddPieceBitboards(move.movedPiece, toSquare, fromSquare, ref InternalBoard.WhiteKing, ref InternalBoard.WhiteKnights,
+                ref InternalBoard.WhiteBishops, ref InternalBoard.WhiteRooks, ref InternalBoard.WhiteQueens, ref InternalBoard.WhitePawns);
+            }
+            else
+            {
+                // Move black piece back
+                RemoveAndAddPieceBitboards(move.movedPiece, toSquare, fromSquare, ref InternalBoard.BlackKing, ref InternalBoard.BlackKnights,
+                ref InternalBoard.BlackBishops, ref InternalBoard.BlackRooks, ref InternalBoard.BlackQueens, ref InternalBoard.BlackPawns);
+            }
+
+            // Restore the captured piece, if any
+            if (capturedPieceType != -1)
+            {
+                ulong capturedPieceSquare = toSquare; // The square from which the piece was captured
+                if (whiteToMove)
+                {
+                    // Restore black piece
+                    AddPieceBitboard(capturedPieceType, capturedPieceSquare, false);
+                }
+                else
+                {
+                    // Restore white piece
+                    AddPieceBitboard(capturedPieceType, capturedPieceSquare, true);
+                }
+            }
+
+            // Reverse any special moves (castling, en passant, etc.) here
+            // This part of the implementation depends on how you've handled these moves in ExecuteMove
+        }
+
+        private static void AddPieceBitboard(int pieceType, ulong square, bool isWhite)
+        {
+            // This function should add a piece of the given type and color back to the board at the specified square.
+            // The exact implementation will depend on how you've structured your InternalBoard and piece representations.
+            if (isWhite)
+            {
+                switch (pieceType)
+                {
+                    case Piece.King:
+                        InternalBoard.WhiteKing |= square;
+                        break;
+                    case Piece.Knight:
+                        InternalBoard.WhiteKnights |= square;
+                        break;
+                    case Piece.Bishop:
+                        InternalBoard.WhiteBishops |= square;
+                        break;
+                    case Piece.Rook:
+                        InternalBoard.WhiteRooks |= square;
+                        break;
+                    case Piece.Queen:
+                        InternalBoard.WhiteQueens |= square;
+                        break;
+                    case Piece.Pawn:
+                        InternalBoard.WhitePawns |= square;
+                        break;
+                }
+            }
+            else
+            {
+                switch (pieceType)
+                {
+                    case Piece.King:
+                        InternalBoard.BlackKing |= square;
+                        break;
+                    case Piece.Knight:
+                        InternalBoard.BlackKnights |= square;
+                        break;
+                    case Piece.Bishop:
+                        InternalBoard.BlackBishops |= square;
+                        break;
+                    case Piece.Rook:
+                        InternalBoard.BlackRooks |= square;
+                        break;
+                    case Piece.Queen:
+                        InternalBoard.BlackQueens |= square;
+                        break;
+                    case Piece.Pawn:
+                        InternalBoard.BlackPawns |= square;
+                        break;
+                }
+            }
+        }
+
+
 
         public static List<LegalMove> GenerateLegalMovesBitboard(bool whiteToMove)
         {

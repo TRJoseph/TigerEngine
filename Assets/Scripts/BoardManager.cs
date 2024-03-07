@@ -77,7 +77,7 @@ namespace Chess
             InitBishopLookup();
             InitRookLookup();
 
-            legalMoves = GenerateLegalMovesBitboard(BoardManager.whiteToMove);
+            legalMoves = GenerateAllLegalMoves();
 
             /* ChooseSide controls what side the player will play 
             For example, if Sides.White is passed in, the player will be able to control the white pieces
