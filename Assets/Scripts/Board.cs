@@ -15,6 +15,38 @@ namespace Chess
 
         public struct ChessBoard
         {
+            // https://www.chessprogramming.org/Bitboard_Board-Definition
+            public const int Pawn = 0;
+            public const int Bishop = 1;
+            public const int Knight = 2;
+            public const int Rook = 3;
+            public const int Queen = 4;
+            public const int King = 5;
+
+            public const int White = 0;
+            public const int Black = 0;
+
+            public ulong[,] Pieces;
+            public static ChessBoard Create()
+            {
+                var board = new ChessBoard
+                {
+                    Pieces = new ulong[2, 6]
+                };
+                return board;
+            }
+
+            public void UpdateCompositeBitboards()
+            {
+                AllWhitePieces = 0;
+                AllBlackPieces = 0;
+                for (int pieceType = Pawn; pieceType <= King; pieceType++)
+                {
+                    AllWhitePieces |= Pieces[White, pieceType];
+                    AllBlackPieces |= Pieces[Black, pieceType];
+                }
+                AllPieces = AllWhitePieces | AllBlackPieces;
+            }
             public ulong WhitePawns;
             public ulong WhiteRooks;
             public ulong WhiteKnights;
@@ -313,7 +345,7 @@ namespace Chess
             }
             InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
 
-            if(move.movedPiece == Piece.Pawn)
+            if (move.movedPiece == Piece.Pawn)
             {
                 // for extra special pawn moves
                 // double square move keeps track of a double pawn move for potential en passant captures
@@ -1209,7 +1241,7 @@ namespace Chess
 
         public static void UndoMove(bool whiteToMove, LegalMove move, int capturedPieceType, ulong fromSquare, ulong toSquare)
         {
-            
+
         }
 
         public static List<LegalMove> GenerateLegalMovesBitboard(bool whiteToMove)
