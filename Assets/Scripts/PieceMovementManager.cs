@@ -5,6 +5,7 @@ using System.Diagnostics.Tracing;
 using System.Runtime.CompilerServices;
 using Unity.VisualScripting;
 using UnityEngine;
+using static Chess.Board;
 
 namespace Chess
 {
@@ -216,7 +217,7 @@ namespace Chess
 
             PieceRender renderScript = FindChessPieceGameObject(xPos, yPos);
 
-            Sprite pieceSprite = BoardManager.GetSpriteForPiece(pieceType, BoardManager.whiteToMove ? Piece.White : Piece.Black, renderScript);
+            Sprite pieceSprite = BoardManager.GetSpriteForPiece(pieceType, BoardManager.whiteToMove ? ChessBoard.White : ChessBoard.Black, renderScript);
 
             renderScript.GetComponent<SpriteRenderer>().sprite = pieceSprite;
         }

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Threading;
+using static Chess.Board;
 using System.Diagnostics.Tracing;
 using UnityEditor.Experimental.GraphView;
 
@@ -43,7 +44,7 @@ namespace Chess
         public static int EvaluateBestPromotionPiece()
         {
             // Later, add more sophisticated logic
-            return Piece.Queen;
+            return ChessBoard.Queen;
         }
 
         private static Board.LegalMove SimpleEval()

@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using System;
 using System.Net.Security;
+using static Chess.Board;
 
 namespace Chess
 {
@@ -39,19 +40,19 @@ namespace Chess
             switch (button)
             {
                 case "Queen":
-                    promotionSelection = Piece.Queen;
+                    promotionSelection = ChessBoard.Queen;
                     break;
                 case "Rook":
-                    promotionSelection = Piece.Rook;
+                    promotionSelection = ChessBoard.Rook;
                     break;
                 case "Bishop":
-                    promotionSelection = Piece.Bishop;
+                    promotionSelection = ChessBoard.Bishop;
                     break;
                 case "Knight":
-                    promotionSelection = Piece.Knight;
+                    promotionSelection = ChessBoard.Knight;
                     break;
                 default:
-                    promotionSelection = Piece.Empty;
+                    promotionSelection = -1;
                     break;
             }
             selectionMade = true;

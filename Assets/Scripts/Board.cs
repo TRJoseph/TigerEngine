@@ -24,7 +24,7 @@ namespace Chess
             public const int King = 5;
 
             public const int White = 0;
-            public const int Black = 0;
+            public const int Black = 1;
 
             public ulong[,] Pieces;
             public static ChessBoard Create()
@@ -47,20 +47,6 @@ namespace Chess
                 }
                 AllPieces = AllWhitePieces | AllBlackPieces;
             }
-            public ulong WhitePawns;
-            public ulong WhiteRooks;
-            public ulong WhiteKnights;
-            public ulong WhiteBishops;
-            public ulong WhiteQueens;
-            public ulong WhiteKing;
-
-            public ulong BlackPawns;
-            public ulong BlackRooks;
-            public ulong BlackKnights;
-            public ulong BlackBishops;
-            public ulong BlackQueens;
-            public ulong BlackKing;
-
             public ulong AllWhitePieces;
             public ulong AllBlackPieces;
             public ulong AllPieces;
@@ -87,7 +73,7 @@ namespace Chess
 
         }
 
-        public static ChessBoard InternalBoard = new();
+        public static ChessBoard InternalBoard = ChessBoard.Create();
 
         public const int BoardSize = 64;
 
@@ -101,21 +87,27 @@ namespace Chess
 
         public static int CastlingRights = 0xF;
 
+        public enum SpecialMove
+        {
+            None = 0,
+            KingSideCastleMove = 1,
+            QueenSideCastleMove = 2,
+            EnPassant = 3
+        }
+
         // this structure will hold a move that can be executed
         public struct LegalMove
         {
             // 'startSquare' and 'endSquare' holds the internal board start square and end square 
             public ulong startSquare;
+
             public ulong endSquare;
 
             public int movedPiece;
 
             // special move flags
-            public bool? kingSideCastling;
+            public SpecialMove specialMove;
 
-            public bool? queenSideCastling;
-
-            public bool? enPassant;
         }
 
         public static List<LegalMove> legalMoves = new List<LegalMove>();
@@ -139,37 +131,10 @@ namespace Chess
 
         public static GameState currentState = GameState.Normal;
 
-        private static void RemoveAndAddPieceBitboards(int movedPiece, ulong fromSquareMask, ulong toSquareMask, ref ulong king, ref ulong knights, ref ulong bishops, ref ulong rooks, ref ulong queens, ref ulong pawns)
+        private static void RemoveAndAddPieceBitboards(int movedPiece, int pieceColor, ulong fromSquareMask, ulong toSquareMask)
         {
-            switch (movedPiece)
-            {
-                case Piece.King:
-                    king &= ~fromSquareMask;
-                    king |= toSquareMask;
-                    break;
-                case Piece.Queen:
-                    queens &= ~fromSquareMask;
-                    queens |= toSquareMask;
-                    break;
-                case Piece.Knight:
-                    knights &= ~fromSquareMask;
-                    knights |= toSquareMask;
-                    break;
-                case Piece.Bishop:
-                    bishops &= ~fromSquareMask;
-                    bishops |= toSquareMask;
-                    break;
-                case Piece.Rook:
-                    rooks &= ~fromSquareMask;
-                    rooks |= toSquareMask;
-                    break;
-                case Piece.Pawn:
-                    pawns &= ~fromSquareMask;
-                    pawns |= toSquareMask;
-                    return;
-            }
-            // if not pawn move, remove last pawn double move for en passant
-            lastPawnDoubleMoveBitboard = 0;
+            InternalBoard.Pieces[pieceColor, movedPiece] &= ~fromSquareMask;
+            InternalBoard.Pieces[pieceColor, movedPiece] |= toSquareMask;
             return;
         }
 
@@ -232,53 +197,42 @@ namespace Chess
 
         private static void HandleSpecialMoveInternal(LegalMove move, ulong toSquare, ulong fromSquare)
         {
-            if (move.enPassant == true)
+
+            if (BoardManager.whiteToMove)
             {
-                if (BoardManager.whiteToMove)
+                switch (move.specialMove)
                 {
-                    // shift down 8 squares to remove pawn captured via en passant a rank "below" the capturing pawn
-                    InternalBoard.BlackPawns &= ~(toSquare >> 8);
+                    case SpecialMove.EnPassant:
+                        // shift down 8 squares to remove pawn captured via en passant a rank "below" the capturing pawn
+                        InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn] &= ~(toSquare >> 8);
+                        break;
+                    case SpecialMove.KingSideCastleMove:
+                        InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook] &= ~(1UL << 7);
+                        InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook] |= 1UL << 5;
+                        break;
+                    case SpecialMove.QueenSideCastleMove:
+                        InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook] &= ~1UL;
+                        InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook] |= 1UL << 3;
+                        break;
                 }
-                else
-                {
-                    InternalBoard.WhitePawns &= ~(toSquare << 8);
-                }
-                return;
             }
-
-            if (move.kingSideCastling == true)
+            else
             {
-                if (BoardManager.whiteToMove)
+                switch (move.specialMove)
                 {
-                    InternalBoard.WhiteRooks &= ~(1UL << 7);
-                    InternalBoard.WhiteRooks |= 1UL << 5;
+                    case SpecialMove.EnPassant:
+                        InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn] &= ~(toSquare << 8);
+                        break;
+                    case SpecialMove.KingSideCastleMove:
+                        InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook] &= ~(1UL << 63);
+                        InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook] |= 1UL << 61;
+                        break;
+                    case SpecialMove.QueenSideCastleMove:
+                        InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook] &= ~(1UL << 56);
+                        InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook] |= 1UL << 59;
+                        break;
                 }
-                else
-                {
-                    InternalBoard.BlackRooks &= ~(1UL << 63);
-                    InternalBoard.BlackRooks |= 1UL << 61;
-                }
-
-                return;
             }
-
-            if (move.queenSideCastling == true)
-            {
-
-                if (BoardManager.whiteToMove)
-                {
-                    InternalBoard.WhiteRooks &= ~1UL;
-                    InternalBoard.WhiteRooks |= 1UL << 3;
-                }
-                else
-                {
-                    InternalBoard.BlackRooks &= ~(1UL << 56);
-                    InternalBoard.BlackRooks |= 1UL << 59;
-                }
-
-                return;
-            }
-
         }
 
         private static void HandlePawnPromotionInternal(ulong toSquare)
@@ -293,7 +247,6 @@ namespace Chess
                 {
                     UIController.Instance.ShowPromotionDropdown(toSquare);
                 }
-
             }
             else
             {
@@ -312,7 +265,6 @@ namespace Chess
 
             HandleSpecialMoveInternal(move, toSquare, fromSquare);
 
-
             // for a captured piece, AND the InternalBoard bitboards with the NOT of the isolated captured piece bitboard (endsquare)
 
             // remove any captured piece from bitboards
@@ -320,32 +272,30 @@ namespace Chess
             if (BoardManager.whiteToMove)
             {
                 // update potential captured piece 
-                InternalBoard.BlackBishops &= isolatedCapturedPieceBitmask;
-                InternalBoard.BlackKnights &= isolatedCapturedPieceBitmask;
-                InternalBoard.BlackRooks &= isolatedCapturedPieceBitmask;
-                InternalBoard.BlackPawns &= isolatedCapturedPieceBitmask;
-                InternalBoard.BlackQueens &= isolatedCapturedPieceBitmask;
+                InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop] &= isolatedCapturedPieceBitmask;
+                InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight] &= isolatedCapturedPieceBitmask;
+                InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook] &= isolatedCapturedPieceBitmask;
+                InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn] &= isolatedCapturedPieceBitmask;
+                InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Queen] &= isolatedCapturedPieceBitmask;
                 InternalBoard.AllBlackPieces &= isolatedCapturedPieceBitmask;
 
                 // remove appropriate white piece from old square and move it to new square, update bitboards correspondingly 
-                RemoveAndAddPieceBitboards(move.movedPiece, fromSquare, toSquare, ref InternalBoard.WhiteKing, ref InternalBoard.WhiteKnights,
-                    ref InternalBoard.WhiteBishops, ref InternalBoard.WhiteRooks, ref InternalBoard.WhiteQueens, ref InternalBoard.WhitePawns);
+                RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.White, fromSquare, toSquare);
             }
             else
             {
-                InternalBoard.WhiteBishops &= isolatedCapturedPieceBitmask;
-                InternalBoard.WhiteKnights &= isolatedCapturedPieceBitmask;
-                InternalBoard.WhiteRooks &= isolatedCapturedPieceBitmask;
-                InternalBoard.WhitePawns &= isolatedCapturedPieceBitmask;
-                InternalBoard.WhiteQueens &= isolatedCapturedPieceBitmask;
+                InternalBoard.Pieces[ChessBoard.White, ChessBoard.Bishop] &= isolatedCapturedPieceBitmask;
+                InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight] &= isolatedCapturedPieceBitmask;
+                InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook] &= isolatedCapturedPieceBitmask;
+                InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn] &= isolatedCapturedPieceBitmask;
+                InternalBoard.Pieces[ChessBoard.White, ChessBoard.Queen] &= isolatedCapturedPieceBitmask;
                 InternalBoard.AllWhitePieces &= isolatedCapturedPieceBitmask;
 
-                RemoveAndAddPieceBitboards(move.movedPiece, fromSquare, toSquare, ref InternalBoard.BlackKing, ref InternalBoard.BlackKnights,
-                    ref InternalBoard.BlackBishops, ref InternalBoard.BlackRooks, ref InternalBoard.BlackQueens, ref InternalBoard.BlackPawns);
+                RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.Black, fromSquare, toSquare);
             }
             InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
 
-            if (move.movedPiece == Piece.Pawn)
+            if (move.movedPiece == ChessBoard.Pawn)
             {
                 // for extra special pawn moves
                 // double square move keeps track of a double pawn move for potential en passant captures
@@ -353,70 +303,30 @@ namespace Chess
                 // if the pawn makes it to the opposing sides last rank, initiate promotion
                 HandlePawnPromotionInternal(toSquare);
             }
+            else
+            {
+                // if not pawn move, remove last pawn double move for en passant
+                lastPawnDoubleMoveBitboard = 0;
+            }
 
             // update composite bitboards
-            InternalBoard.AllWhitePieces = InternalBoard.WhitePawns | InternalBoard.WhiteKnights | InternalBoard.WhiteBishops | InternalBoard.WhiteRooks | InternalBoard.WhiteQueens | InternalBoard.WhiteKing;
-            InternalBoard.AllBlackPieces = InternalBoard.BlackPawns | InternalBoard.BlackKnights | InternalBoard.BlackBishops | InternalBoard.BlackRooks | InternalBoard.BlackQueens | InternalBoard.BlackKing;
-            InternalBoard.AllPieces = InternalBoard.AllBlackPieces | InternalBoard.AllWhitePieces;
+            InternalBoard.UpdateCompositeBitboards();
         }
 
         private static void UpdatePromotionPiece(int selectedPromotionPiece, ulong toSquare)
         {
-
             if (BoardManager.whiteToMove)
             {
-                switch (selectedPromotionPiece)
-                {
-                    case Piece.Queen:
-                        InternalBoard.WhiteQueens |= toSquare;
-                        break;
-
-                    case Piece.Rook:
-                        InternalBoard.WhiteRooks |= toSquare;
-                        break;
-
-                    case Piece.Bishop:
-                        InternalBoard.WhiteBishops |= toSquare;
-                        break;
-
-                    case Piece.Knight:
-                        InternalBoard.WhiteKnights |= toSquare;
-                        break;
-
-                    default:
-
-                        // this should not happen
-                        throw new Exception();
-                }
-                InternalBoard.WhitePawns &= ~toSquare;
+                InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn] &= ~toSquare;
+                InternalBoard.Pieces[ChessBoard.White, selectedPromotionPiece] |= toSquare;
             }
             else
             {
-                switch (selectedPromotionPiece)
-                {
-                    case Piece.Queen:
-                        InternalBoard.BlackQueens |= toSquare;
-                        break;
-
-                    case Piece.Rook:
-                        InternalBoard.BlackRooks |= toSquare;
-                        break;
-
-                    case Piece.Bishop:
-                        InternalBoard.BlackBishops |= toSquare;
-                        break;
-
-                    case Piece.Knight:
-                        InternalBoard.BlackKnights |= toSquare;
-                        break;
-
-                    default:
-
-                        // this should not happen
-                        throw new Exception();
-                }
-                InternalBoard.BlackPawns &= ~toSquare;
+                InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Black] &= ~toSquare;
+                InternalBoard.Pieces[ChessBoard.Black, selectedPromotionPiece] |= toSquare;
             }
+
+            InternalBoard.UpdateCompositeBitboards();
         }
         public static void UpdatePromotedPawnEngine(ulong toSquare)
         {
@@ -454,17 +364,15 @@ namespace Chess
         }
 
 
-        private static LegalMove AddLegalMove(ulong startSquare, ulong endSquare, bool? kingSideCastling, bool? queenSideCastling, bool? enPassant, int movedPiece)
+        private static LegalMove AddLegalMove(ulong startSquare, ulong endSquare, int movedPiece, SpecialMove specialMove)
         {
             return
                 new LegalMove
                 {
                     startSquare = startSquare,
                     endSquare = endSquare,
-                    kingSideCastling = kingSideCastling,
-                    queenSideCastling = queenSideCastling,
-                    enPassant = enPassant,
-                    movedPiece = movedPiece
+                    movedPiece = movedPiece,
+                    specialMove = specialMove
                 };
         }
         private static int FindKingPosition(bool whiteToMove)
@@ -472,11 +380,11 @@ namespace Chess
 
             if (whiteToMove)
             {
-                return (int)Math.Log(InternalBoard.WhiteKing, 2);
+                return (int)Math.Log(InternalBoard.Pieces[ChessBoard.White, ChessBoard.King], 2);
             }
             else
             {
-                return (int)Math.Log(InternalBoard.BlackKing, 2);
+                return (int)Math.Log(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King], 2);
             }
         }
 
@@ -608,7 +516,7 @@ namespace Chess
                     ulong movelsb = validRookMoves & (~validRookMoves + 1);
 
                     validRookMoves &= validRookMoves - 1;
-                    rookMoves.Add(AddLegalMove(isolatedRooklsb, movelsb, false, false, false, Piece.Rook));
+                    rookMoves.Add(AddLegalMove(isolatedRooklsb, movelsb, ChessBoard.Rook, SpecialMove.None));
                 }
                 rooks &= rooks - 1;
             }
@@ -637,7 +545,7 @@ namespace Chess
                     ulong movelsb = validBishopMoves & (~validBishopMoves + 1);
 
                     validBishopMoves &= validBishopMoves - 1;
-                    bishopMoves.Add(AddLegalMove(isolatedBishoplsb, movelsb, false, false, false, Piece.Bishop));
+                    bishopMoves.Add(AddLegalMove(isolatedBishoplsb, movelsb, ChessBoard.Bishop, SpecialMove.None));
                 }
                 bishops &= bishops - 1;
             }
@@ -668,7 +576,7 @@ namespace Chess
                     ulong movelsb = validQueenMoves & (~validQueenMoves + 1);
 
                     validQueenMoves &= validQueenMoves - 1;
-                    queenMoves.Add(AddLegalMove(isolatedQueenlsb, movelsb, false, false, false, Piece.Queen));
+                    queenMoves.Add(AddLegalMove(isolatedQueenlsb, movelsb, ChessBoard.Queen, SpecialMove.None));
                 }
                 queens &= queens - 1;
             }
@@ -717,7 +625,7 @@ namespace Chess
                     {
                         if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
                         {
-                            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, false, false, true, Piece.Pawn));
+                            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant));
                         }
                     }
 
@@ -726,7 +634,7 @@ namespace Chess
                     {
                         if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
                         {
-                            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, false, false, true, Piece.Pawn));
+                            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant));
                         }
                     }
                 }
@@ -736,7 +644,7 @@ namespace Chess
                     ulong movelsb = validPawnMoves & (~validPawnMoves + 1);
 
                     validPawnMoves &= validPawnMoves - 1;
-                    whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, false, false, false, Piece.Pawn));
+                    whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None));
                 }
 
                 // move to the next pawn
@@ -786,7 +694,7 @@ namespace Chess
                     {
                         if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
                         {
-                            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, false, false, true, Piece.Pawn));
+                            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant));
                         }
                     }
 
@@ -795,7 +703,7 @@ namespace Chess
                     {
                         if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
                         {
-                            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, false, false, true, Piece.Pawn));
+                            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant));
                         }
                     }
                 }
@@ -805,7 +713,7 @@ namespace Chess
                     ulong movelsb = validPawnMoves & (~validPawnMoves + 1);
 
                     validPawnMoves &= validPawnMoves - 1;
-                    blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, false, false, false, Piece.Pawn));
+                    blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None));
                 }
 
                 blackPawns &= blackPawns - 1;
@@ -833,7 +741,7 @@ namespace Chess
                     ulong movelsb = validKnightMoves & (~validKnightMoves + 1);
 
                     validKnightMoves &= validKnightMoves - 1;
-                    knightMoves.Add(AddLegalMove(isolatedKnightlsb, movelsb, false, false, false, Piece.Knight));
+                    knightMoves.Add(AddLegalMove(isolatedKnightlsb, movelsb, ChessBoard.Knight, SpecialMove.None));
                 }
 
                 // move to next knight
@@ -1169,12 +1077,12 @@ namespace Chess
             {
                 if (CanCastleKingsideWhite())
                 {
-                    kingMoves.Add(AddLegalMove(king, 1UL << 6, true, false, false, Piece.King));
+                    kingMoves.Add(AddLegalMove(king, 1UL << 6, ChessBoard.King, SpecialMove.KingSideCastleMove));
                 }
 
                 if (CanCastleQueensideWhite())
                 {
-                    kingMoves.Add(AddLegalMove(king, 1UL << 2, false, true, false, Piece.King));
+                    kingMoves.Add(AddLegalMove(king, 1UL << 2, ChessBoard.King, SpecialMove.QueenSideCastleMove));
                 }
 
             }
@@ -1182,12 +1090,12 @@ namespace Chess
             {
                 if (CanCastleKingsideBlack())
                 {
-                    kingMoves.Add(AddLegalMove(king, 1UL << 62, true, false, false, Piece.King));
+                    kingMoves.Add(AddLegalMove(king, 1UL << 62, ChessBoard.King, SpecialMove.KingSideCastleMove));
                 }
 
                 if (CanCastleQueensideBlack())
                 {
-                    kingMoves.Add(AddLegalMove(king, 1UL << 58, false, true, false, Piece.King));
+                    kingMoves.Add(AddLegalMove(king, 1UL << 58, ChessBoard.King, SpecialMove.QueenSideCastleMove));
                 }
             }
 
@@ -1198,7 +1106,7 @@ namespace Chess
 
                 validKingMoves &= validKingMoves - 1;
 
-                kingMoves.Add(AddLegalMove(king, movelsb, false, false, false, Piece.King));
+                kingMoves.Add(AddLegalMove(king, movelsb, ChessBoard.King, SpecialMove.None));
             }
 
             return kingMoves;
@@ -1217,7 +1125,7 @@ namespace Chess
                 int rememberedPiece = ExecuteMove(BoardManager.whiteToMove, move.movedPiece, move.startSquare, move.endSquare);
 
                 // replace this with current king square
-                ulong currentKingSquare = BoardManager.whiteToMove ? InternalBoard.WhiteKing : InternalBoard.BlackKing;
+                ulong currentKingSquare = BoardManager.whiteToMove ? InternalBoard.Pieces[ChessBoard.White, ChessBoard.King] : InternalBoard.Pieces[ChessBoard.White, ChessBoard.King];
 
                 List<LegalMove> opponentResponses = GenerateLegalMovesBitboard(!BoardManager.whiteToMove);
 
@@ -1228,7 +1136,7 @@ namespace Chess
                 }
 
                 // Undo the move for the next iteration
-                UndoMove(BoardManager.whiteToMove, move, rememberedPiece, move.startSquare, move.endSquare);
+                UndoMove(BoardManager.whiteToMove, move.movedPiece, rememberedPiece, move.startSquare, move.endSquare);
 
             }
             return legalMoves;
@@ -1236,13 +1144,51 @@ namespace Chess
 
         public static int ExecuteMove(bool whiteToMove, int movedPiece, ulong fromSquare, ulong toSquare)
         {
-            return -1;
+            int color = whiteToMove ? ChessBoard.White : ChessBoard.Black;
+            int opponentColor = whiteToMove ? ChessBoard.Black : ChessBoard.White;
+            int capturedPieceType = -1; // -1 signifies no piece was captured
+
+            // Clear fromSquare bit
+            InternalBoard.Pieces[color, movedPiece] &= ~fromSquare;
+
+            // Check if a piece is captured
+            for (int pieceType = ChessBoard.Pawn; pieceType <= ChessBoard.King; pieceType++)
+            {
+                if ((InternalBoard.Pieces[opponentColor, pieceType] & toSquare) != 0)
+                {
+                    // Capture the piece
+                    InternalBoard.Pieces[opponentColor, pieceType] &= ~toSquare;
+                    capturedPieceType = pieceType;
+                    break;
+                }
+            }
+
+            // Set toSquare bit
+            InternalBoard.Pieces[color, movedPiece] |= toSquare;
+
+            InternalBoard.UpdateCompositeBitboards();
+
+            return capturedPieceType;
         }
 
-        public static void UndoMove(bool whiteToMove, LegalMove move, int capturedPieceType, ulong fromSquare, ulong toSquare)
+        public static void UndoMove(bool whiteToMove, int movedPiece, int capturedPieceType, ulong fromSquare, ulong toSquare)
         {
+            int pieceColor = whiteToMove ? ChessBoard.White : ChessBoard.Black;
+            int opponentPieceColor = whiteToMove ? ChessBoard.Black : ChessBoard.White;
 
+            // Move the piece back
+            InternalBoard.Pieces[pieceColor, movedPiece] &= ~toSquare;
+            InternalBoard.Pieces[pieceColor, movedPiece] |= fromSquare;
+
+            // Restore the captured piece, if any
+            if (capturedPieceType != -1)
+            {
+                InternalBoard.Pieces[opponentPieceColor, capturedPieceType] |= toSquare;
+            }
+
+            InternalBoard.UpdateCompositeBitboards();
         }
+
 
         public static List<LegalMove> GenerateLegalMovesBitboard(bool whiteToMove)
         {
@@ -1253,21 +1199,21 @@ namespace Chess
 
             if (whiteToMove)
             {
-                moves.AddRange(GenerateBishopMoves(ref InternalBoard.WhiteBishops, ref InternalBoard.AllWhitePieces));
-                moves.AddRange(GenerateRookMoves(ref InternalBoard.WhiteRooks, ref InternalBoard.AllWhitePieces));
-                moves.AddRange(GenerateQueenMoves(ref InternalBoard.WhiteQueens, ref InternalBoard.AllWhitePieces));
-                moves.AddRange(GenerateWhitePawnMoves(ref InternalBoard.WhitePawns));
-                moves.AddRange(GenerateKnightMoves(ref InternalBoard.WhiteKnights, ref InternalBoard.AllWhitePieces));
-                moves.AddRange(GenerateKingMoves(ref InternalBoard.WhiteKing, ref InternalBoard.AllWhitePieces));
+                moves.AddRange(GenerateBishopMoves(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Bishop], ref InternalBoard.AllWhitePieces));
+                moves.AddRange(GenerateRookMoves(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook], ref InternalBoard.AllWhitePieces));
+                moves.AddRange(GenerateQueenMoves(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Queen], ref InternalBoard.AllWhitePieces));
+                moves.AddRange(GenerateWhitePawnMoves(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn]));
+                moves.AddRange(GenerateKnightMoves(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight], ref InternalBoard.AllWhitePieces));
+                moves.AddRange(GenerateKingMoves(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King], ref InternalBoard.AllWhitePieces));
             }
             else
             {
-                moves.AddRange(GenerateBishopMoves(ref InternalBoard.BlackBishops, ref InternalBoard.AllBlackPieces));
-                moves.AddRange(GenerateRookMoves(ref InternalBoard.BlackRooks, ref InternalBoard.AllBlackPieces));
-                moves.AddRange(GenerateQueenMoves(ref InternalBoard.BlackQueens, ref InternalBoard.AllBlackPieces));
-                moves.AddRange(GenerateBlackPawnMoves(ref InternalBoard.BlackPawns));
-                moves.AddRange(GenerateKnightMoves(ref InternalBoard.BlackKnights, ref InternalBoard.AllBlackPieces));
-                moves.AddRange(GenerateKingMoves(ref InternalBoard.BlackKing, ref InternalBoard.AllBlackPieces));
+                moves.AddRange(GenerateBishopMoves(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop], ref InternalBoard.AllBlackPieces));
+                moves.AddRange(GenerateRookMoves(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook], ref InternalBoard.AllBlackPieces));
+                moves.AddRange(GenerateQueenMoves(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Queen], ref InternalBoard.AllBlackPieces));
+                moves.AddRange(GenerateBlackPawnMoves(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn]));
+                moves.AddRange(GenerateKnightMoves(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight], ref InternalBoard.AllBlackPieces));
+                moves.AddRange(GenerateKingMoves(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King], ref InternalBoard.AllBlackPieces));
             }
 
             return moves;
@@ -1287,14 +1233,14 @@ namespace Chess
 
             if (BoardManager.whiteToMove)
             {
-                if ((MoveTables.PrecomputedWhitePawnCaptures[square] & InternalBoard.BlackPawns) != 0) return true;
+                if ((MoveTables.PrecomputedWhitePawnCaptures[square] & InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn]) != 0) return true;
 
-                if ((MoveTables.PrecomputedKnightMoves[square] & InternalBoard.BlackKnights) != 0) return true;
+                if ((MoveTables.PrecomputedKnightMoves[square] & InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight]) != 0) return true;
 
-                if ((MoveTables.PrecomputedKingMoves[square] & InternalBoard.BlackKing) != 0) return true;
+                if ((MoveTables.PrecomputedKingMoves[square] & InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]) != 0) return true;
 
-                ulong bishopsAndQueens = InternalBoard.BlackQueens | InternalBoard.BlackBishops;
-                ulong rooksAndQueens = InternalBoard.BlackQueens | InternalBoard.BlackRooks;
+                ulong bishopsAndQueens = InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Queen] | InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop];
+                ulong rooksAndQueens = InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Queen] | InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook];
 
                 if ((GetBishopAttacks(InternalBoard.AllPieces, square) & bishopsAndQueens) != 0) return true;
 
@@ -1304,14 +1250,14 @@ namespace Chess
             else
             {
 
-                if ((MoveTables.PrecomputedBlackPawnCaptures[square] & InternalBoard.WhitePawns) != 0) return true;
+                if ((MoveTables.PrecomputedBlackPawnCaptures[square] & InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn]) != 0) return true;
 
-                if ((MoveTables.PrecomputedKnightMoves[square] & InternalBoard.WhiteKnights) != 0) return true;
+                if ((MoveTables.PrecomputedKnightMoves[square] & InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight]) != 0) return true;
 
-                if ((MoveTables.PrecomputedKingMoves[square] & InternalBoard.WhiteKing) != 0) return true;
+                if ((MoveTables.PrecomputedKingMoves[square] & InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]) != 0) return true;
 
-                ulong bishopsAndQueens = InternalBoard.WhiteQueens | InternalBoard.WhiteBishops;
-                ulong rooksAndQueens = InternalBoard.WhiteQueens | InternalBoard.WhiteRooks;
+                ulong bishopsAndQueens = InternalBoard.Pieces[ChessBoard.White, ChessBoard.Queen] | InternalBoard.Pieces[ChessBoard.White, ChessBoard.Bishop];
+                ulong rooksAndQueens = InternalBoard.Pieces[ChessBoard.White, ChessBoard.Queen] | InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook];
 
                 if ((GetBishopAttacks(InternalBoard.AllPieces, square) & bishopsAndQueens) != 0) return true;
 

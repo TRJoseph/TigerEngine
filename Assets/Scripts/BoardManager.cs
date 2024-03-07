@@ -34,10 +34,10 @@ namespace Chess
         [SerializeField] public GameObject chessPiecePrefab;
 
         // Forsyth-Edwards Notation representing positions in a chess game
-        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
+        //private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
 
         // FEN string for testing pawn promotions
-        //private readonly string FENString = "8/8/8/6P1/6p1/8/8/8";
+        private readonly string FENString = "8/8/8/6P1/6p1/8/8/8";
 
         // second FEN string for testings king interactivity
         //private readonly string FENString = "4k3/8/8/8/8/8/8/4K3";
@@ -68,7 +68,6 @@ namespace Chess
         void Start()
         {
             GenerateGrid();
-            //InitializeChessBoard();
             LoadFENString();
             RenderPiecesOnBoardBitBoard();
 
@@ -148,12 +147,12 @@ namespace Chess
             // dictionary to hold the piece types
             var pieceType = new Dictionary<char, int>()
             {
-                ['k'] = Piece.King,
-                ['q'] = Piece.Queen,
-                ['r'] = Piece.Rook,
-                ['b'] = Piece.Bishop,
-                ['n'] = Piece.Knight,
-                ['p'] = Piece.Pawn
+                ['k'] = ChessBoard.King,
+                ['q'] = ChessBoard.Queen,
+                ['r'] = ChessBoard.Rook,
+                ['b'] = ChessBoard.Bishop,
+                ['n'] = ChessBoard.Knight,
+                ['p'] = ChessBoard.Pawn
             };
 
             // loop through the FEN string
@@ -179,7 +178,7 @@ namespace Chess
                     // get the piece type
                     int piece = pieceType[char.ToLower(FENString[i])];
                     // get the piece color
-                    int pieceColor = char.IsUpper(FENString[i]) ? Piece.White : Piece.Black;
+                    int pieceColor = char.IsUpper(FENString[i]) ? ChessBoard.White : ChessBoard.Black;
 
                     // places all pieces in appropriate bitboard locations
                     InitializeBitBoards(piece, pieceColor, rank * 8 + file);
@@ -189,50 +188,12 @@ namespace Chess
             }
 
             // Initializes the initial physical locations of all the white pieces, black pieces, and every piece on the board
-            InternalBoard.AllWhitePieces = InternalBoard.WhitePawns | InternalBoard.WhiteKnights | InternalBoard.WhiteBishops | InternalBoard.WhiteRooks | InternalBoard.WhiteQueens | InternalBoard.WhiteKing;
-            InternalBoard.AllBlackPieces = InternalBoard.BlackPawns | InternalBoard.BlackKnights | InternalBoard.BlackBishops | InternalBoard.BlackRooks | InternalBoard.BlackQueens | InternalBoard.BlackKing;
-            InternalBoard.AllPieces = InternalBoard.AllBlackPieces | InternalBoard.AllWhitePieces;
-        }
-
-
-        private static void InitializeBitboardsByType(int pieceType, int currentPosition, ref ulong Pawns, ref ulong Knights, ref ulong Bishops, ref ulong Rooks, ref ulong Queens, ref ulong King)
-        {
-            switch (pieceType)
-            {
-                case Piece.Pawn:
-                    Pawns |= 1UL << currentPosition;
-                    break;
-                case Piece.Knight:
-                    Knights |= 1UL << currentPosition;
-                    break;
-                case Piece.Bishop:
-                    Bishops |= 1UL << currentPosition;
-                    break;
-                case Piece.Rook:
-                    Rooks |= 1UL << currentPosition;
-                    break;
-                case Piece.Queen:
-                    Queens |= 1UL << currentPosition;
-                    break;
-                case Piece.King:
-                    King |= 1UL << currentPosition;
-                    break;
-            }
-
+            InternalBoard.UpdateCompositeBitboards();
         }
 
         private void InitializeBitBoards(int pieceType, int pieceColor, int currentPosition)
         {
-            if (pieceColor == Piece.White)
-            {
-                InitializeBitboardsByType(pieceType, currentPosition, ref InternalBoard.WhitePawns, ref InternalBoard.WhiteKnights,
-                ref InternalBoard.WhiteBishops, ref InternalBoard.WhiteRooks, ref InternalBoard.WhiteQueens, ref InternalBoard.WhiteKing);
-            }
-            else
-            {
-                InitializeBitboardsByType(pieceType, currentPosition, ref InternalBoard.BlackPawns, ref InternalBoard.BlackKnights,
-                ref InternalBoard.BlackBishops, ref InternalBoard.BlackRooks, ref InternalBoard.BlackQueens, ref InternalBoard.BlackKing);
-            }
+            InternalBoard.Pieces[pieceColor, pieceType] |= 1UL << currentPosition;
         }
 
         public void ClearExistingPieces()
@@ -246,57 +207,74 @@ namespace Chess
 
         public void RenderPiecesOnBoardBitBoard()
         {
-            PlacePieces(InternalBoard.WhitePawns, Piece.Pawn, Piece.White);
-            PlacePieces(InternalBoard.WhiteKnights, Piece.Knight, Piece.White);
-            PlacePieces(InternalBoard.WhiteBishops, Piece.Bishop, Piece.White);
-            PlacePieces(InternalBoard.WhiteRooks, Piece.Rook, Piece.White);
-            PlacePieces(InternalBoard.WhiteQueens, Piece.Queen, Piece.White);
-            PlacePieces(InternalBoard.WhiteKing, Piece.King, Piece.White);
+            PlacePieces(ChessBoard.Pawn, ChessBoard.White);
+            PlacePieces(ChessBoard.Knight, ChessBoard.White);
+            PlacePieces(ChessBoard.Bishop, ChessBoard.White);
+            PlacePieces(ChessBoard.Rook, ChessBoard.White);
+            PlacePieces(ChessBoard.Queen, ChessBoard.White);
+            PlacePieces(ChessBoard.King, ChessBoard.White);
 
-            PlacePieces(InternalBoard.BlackPawns, Piece.Pawn, Piece.Black);
-            PlacePieces(InternalBoard.BlackKnights, Piece.Knight, Piece.Black);
-            PlacePieces(InternalBoard.BlackBishops, Piece.Bishop, Piece.Black);
-            PlacePieces(InternalBoard.BlackRooks, Piece.Rook, Piece.Black);
-            PlacePieces(InternalBoard.BlackQueens, Piece.Queen, Piece.Black);
-            PlacePieces(InternalBoard.BlackKing, Piece.King, Piece.Black);
+            PlacePieces(ChessBoard.Pawn, ChessBoard.Black);
+            PlacePieces(ChessBoard.Knight, ChessBoard.Black);
+            PlacePieces(ChessBoard.Bishop, ChessBoard.Black);
+            PlacePieces(ChessBoard.Rook, ChessBoard.Black);
+            PlacePieces(ChessBoard.Queen, ChessBoard.Black);
+            PlacePieces(ChessBoard.King, ChessBoard.Black);
 
         }
 
-        private void PlacePieces(ulong bitboard, int pieceType, int pieceColor)
+        // private void PlacePieces(ulong bitboard, int pieceType, int pieceColor)
+        // {
+        //     for (int i = 0; i < BoardSize; i++)
+        //     {
+        //         if ((bitboard & (1UL << i)) != 0)
+        //         {
+        //             GameObject piece = Instantiate(chessPiecePrefab, new Vector3(i % 8, i / 8, -1), Quaternion.identity);
+        //             PieceRender renderScript = piece.GetComponent<PieceRender>();
+        //             Sprite pieceSprite = GetSpriteForPiece(pieceType, pieceColor, renderScript);
+        //             piece.GetComponent<SpriteRenderer>().sprite = pieceSprite;
+        //             renderScript.isWhitePiece = pieceColor == Piece.White;
+
+        //             // this may be removed for a better alternative for sizing the pieces
+        //             piece.transform.localScale = new Vector3(0.125f, 0.125f, 1f);
+        //         }
+        //     }
+        // }
+
+        private void PlacePieces(int pieceType, int pieceColor)
         {
             for (int i = 0; i < BoardSize; i++)
             {
-                if ((bitboard & (1UL << i)) != 0)
+                if ((InternalBoard.Pieces[pieceColor, pieceType] & (1UL << i)) != 0)
                 {
                     GameObject piece = Instantiate(chessPiecePrefab, new Vector3(i % 8, i / 8, -1), Quaternion.identity);
                     PieceRender renderScript = piece.GetComponent<PieceRender>();
                     Sprite pieceSprite = GetSpriteForPiece(pieceType, pieceColor, renderScript);
                     piece.GetComponent<SpriteRenderer>().sprite = pieceSprite;
-                    renderScript.isWhitePiece = pieceColor == Piece.White;
+                    renderScript.isWhitePiece = pieceColor == ChessBoard.White;
 
                     // this may be removed for a better alternative for sizing the pieces
                     piece.transform.localScale = new Vector3(0.125f, 0.125f, 1f);
                 }
             }
-
         }
 
-        public static Sprite GetSpriteForPiece(int pieceType, int decodedPieceColor, PieceRender renderScript)
+        public static Sprite GetSpriteForPiece(int pieceType, int pieceColor, PieceRender renderScript)
         {
             switch (pieceType)
             {
-                case Piece.Pawn:
-                    return (decodedPieceColor == Piece.White) ? renderScript.whitePawn : renderScript.blackPawn;
-                case Piece.Knight:
-                    return (decodedPieceColor == Piece.White) ? renderScript.whiteKnight : renderScript.blackKnight;
-                case Piece.Bishop:
-                    return (decodedPieceColor == Piece.White) ? renderScript.whiteBishop : renderScript.blackBishop;
-                case Piece.Rook:
-                    return (decodedPieceColor == Piece.White) ? renderScript.whiteRook : renderScript.blackRook;
-                case Piece.Queen:
-                    return (decodedPieceColor == Piece.White) ? renderScript.whiteQueen : renderScript.blackQueen;
-                case Piece.King:
-                    return (decodedPieceColor == Piece.White) ? renderScript.whiteKing : renderScript.blackKing;
+                case ChessBoard.Pawn:
+                    return (pieceColor == ChessBoard.White) ? renderScript.whitePawn : renderScript.blackPawn;
+                case ChessBoard.Knight:
+                    return (pieceColor == ChessBoard.White) ? renderScript.whiteKnight : renderScript.blackKnight;
+                case ChessBoard.Bishop:
+                    return (pieceColor == ChessBoard.White) ? renderScript.whiteBishop : renderScript.blackBishop;
+                case ChessBoard.Rook:
+                    return (pieceColor == ChessBoard.White) ? renderScript.whiteRook : renderScript.blackRook;
+                case ChessBoard.Queen:
+                    return (pieceColor == ChessBoard.White) ? renderScript.whiteQueen : renderScript.blackQueen;
+                case ChessBoard.King:
+                    return (pieceColor == ChessBoard.White) ? renderScript.whiteKing : renderScript.blackKing;
                 default:
                     return null;  // For the 'Empty' piece or any unexpected value
             }
