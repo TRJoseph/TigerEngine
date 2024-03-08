@@ -162,7 +162,6 @@ namespace Chess
 
             */
             // update the internal board state when a move is made
-            //Board.UpdateInternalState((int)originalPosition.x, (int)originalPosition.y, (int)selectedPiece.transform.position.x, (int)selectedPiece.transform.position.y);
             Board.UpdateBitboards((int)originalPosition.x, (int)originalPosition.y, (int)selectedPiece.transform.position.x, (int)selectedPiece.transform.position.y);
 
             boardManager.ClearExistingPieces();

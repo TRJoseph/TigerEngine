@@ -1,13 +1,8 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Diagnostics;
-using UnityEngine;
-using System.Timers;
-using UnityEditor.Hardware;
-using Unity.VisualScripting;
-using UnityEngine.UIElements;
-using UnityEngine.Animations;
+
+
 namespace Chess
 {
     public static class Board
@@ -114,13 +109,14 @@ namespace Chess
 
         private static ulong lastPawnDoubleMoveBitboard = 0;
 
-        private static readonly int[,] knightOffsets = { { 17, -15, 15, -17 }, { 10, -6, 6, -10 } };
-
         // These flags are for game-ending conditions
         private static bool kingInCheck;
 
         private static int fiftyMoveAccumulator;
 
+        private static int threeFoldAccumulator = 0;
+
+        public static HashSet<ulong> MoveHistory = new HashSet<ulong>();
 
         public enum GameState
         {
@@ -281,6 +277,17 @@ namespace Chess
 
                 // remove appropriate white piece from old square and move it to new square, update bitboards correspondingly 
                 RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.White, fromSquare, toSquare);
+
+                // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence why this variable only gets accumulated on white's turn, who goes first
+                fiftyMoveAccumulator++;
+
+                // if the move was a capture, reset fifty move accumulator
+                Verify50MoveRule(ChessBoard.Black, toSquare, move.specialMove, move.movedPiece);
+                InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
+
+                // update composite bitboards
+                InternalBoard.UpdateCompositeBitboards();
+                VerifyThreeFold();
             }
             else
             {
@@ -292,8 +299,13 @@ namespace Chess
                 InternalBoard.AllWhitePieces &= isolatedCapturedPieceBitmask;
 
                 RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.Black, fromSquare, toSquare);
+
+                Verify50MoveRule(ChessBoard.White, toSquare, move.specialMove, move.movedPiece);
+                InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
+
+                // update composite bitboards
+                InternalBoard.UpdateCompositeBitboards();
             }
-            InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
 
             if (move.movedPiece == ChessBoard.Pawn)
             {
@@ -309,9 +321,8 @@ namespace Chess
                 lastPawnDoubleMoveBitboard = 0;
             }
 
-            // update composite bitboards
-            InternalBoard.UpdateCompositeBitboards();
         }
+
 
         private static void UpdatePromotionPiece(int selectedPromotionPiece, ulong toSquare)
         {
@@ -363,7 +374,6 @@ namespace Chess
             return false;
         }
 
-
         private static LegalMove AddLegalMove(ulong startSquare, ulong endSquare, int movedPiece, SpecialMove specialMove)
         {
             return
@@ -375,18 +385,6 @@ namespace Chess
                     specialMove = specialMove
                 };
         }
-        private static int FindKingPosition(bool whiteToMove)
-        {
-
-            if (whiteToMove)
-            {
-                return (int)Math.Log(InternalBoard.Pieces[ChessBoard.White, ChessBoard.King], 2);
-            }
-            else
-            {
-                return (int)Math.Log(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King], 2);
-            }
-        }
 
         public static void ClearListMoves()
         {
@@ -395,38 +393,45 @@ namespace Chess
 
         public static List<LegalMove> AfterMove()
         {
-            //Stopwatch timer = Stopwatch.StartNew();
-
             // calculates all legal moves in a given position
             legalMoves = GenerateAllLegalMoves();
-
-
-            // timer.Stop();
-            // TimeSpan timespan = timer.Elapsed;
-            // UnityEngine.Debug.Log(String.Format("{0:00}:{1:00}:{2:00}", timespan.Minutes, timespan.Seconds, timespan.Milliseconds));
 
             // TODO this might need to be done inside of GenerateLegalMoves();
             CheckForGameOverRules();
 
-            //SwapTurn();
+            SwapTurn();
 
             return legalMoves;
         }
 
-        private static void Verify50MoveRule(int currentPiece, int newPieceMove)
+        private static bool PieceWasCaptured(int opponentColor, ulong toSquare)
         {
-            // // if the current piece being moved is a pawn, reset the 50 move accumulator
-            // // if the newpiecemove was a capture, reset the 50 move accumulator
-            // if ((Squares[currentPiece].encodedPiece & PieceTypeMask) == Piece.Pawn || (Squares[newPieceMove].encodedPiece & PieceTypeMask) != Piece.Empty)
-            // {
-            //     // this move captured a piece, reset the fifty move rule
-            //     fiftyMoveAccumulator = 0;
-            // }
-            // else
-            // {
-            //     fiftyMoveAccumulator++;
-            // }
+            // Check if a piece is captured
+            for (int pieceType = ChessBoard.Pawn; pieceType <= ChessBoard.King; pieceType++)
+            {
+                if ((InternalBoard.Pieces[opponentColor, pieceType] & toSquare) != 0)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
+
+        private static void Verify50MoveRule(int opponentColor, ulong toSquare, SpecialMove move, int movedPiece)
+        {
+            // if pawn moved or a piece was captured, reset the accumulator
+            // en passant is counted as a capture
+            if (PieceWasCaptured(opponentColor, toSquare) || move == SpecialMove.EnPassant || movedPiece == ChessBoard.Pawn)
+            {
+                // this move captured a piece, reset the fifty move rule
+                fiftyMoveAccumulator = 0;
+            }
+        }
+        private static void VerifyThreeFold()
+        {
+
+        }
+
 
         private static void CheckForGameOverRules()
         {
@@ -443,14 +448,18 @@ namespace Chess
             }
 
             // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence
-            // why this is checking for 100, not 50. 
-            if (fiftyMoveAccumulator == 100)
+            if (fiftyMoveAccumulator == 50)
             {
                 UnityEngine.Debug.Log("Draw by 50 move rule!");
                 currentState = GameState.Ended;
             }
 
             // threefold repetition rule (position repeats three times is a draw)
+            if(threeFoldAccumulator == 6)
+            {
+                UnityEngine.Debug.Log("Draw by Threefold Repitition!");
+                currentState = GameState.Ended;
+            }
 
             // draw by insufficient material rule, for example: knight and king cannot deliver checkmate
 
@@ -1120,6 +1129,8 @@ namespace Chess
 
             List<LegalMove> legalMoves = new();
 
+            kingInCheck = false;
+
             foreach (LegalMove move in pseudoLegalMoves)
             {
                 int rememberedPiece = ExecuteMove(BoardManager.whiteToMove, move.movedPiece, move.startSquare, move.endSquare);
@@ -1133,6 +1144,9 @@ namespace Chess
                 {
                     // if the king is not under attack after the move, add it to legal moves
                     legalMoves.Add(move);
+                } else
+                {
+                    kingInCheck = true;
                 }
 
                 // Undo the move for the next iteration

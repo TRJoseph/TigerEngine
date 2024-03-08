@@ -34,7 +34,7 @@ namespace Chess
         [SerializeField] public GameObject chessPiecePrefab;
 
         // Forsyth-Edwards Notation representing positions in a chess game
-        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
+        private readonly string FENString = "8/7k/5ppp/7r/2Q3bq/1p2P3/5PP1/6K1"; // starting position in chess
 
         // FEN string for testing pawn promotions
         //private readonly string FENString = "5k2/2P5/8/8/8/8/2p5/5K2";
@@ -70,9 +70,6 @@ namespace Chess
             GenerateGrid();
             LoadFENString();
             RenderPiecesOnBoardBitBoard();
-
-            //legalMoves = GenerateLegalMoves();
-
             InitBishopLookup();
             InitRookLookup();
 
