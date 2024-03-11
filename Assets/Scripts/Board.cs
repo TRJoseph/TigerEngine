@@ -109,6 +109,8 @@ namespace Chess
 
         private static ulong lastPawnDoubleMoveBitboard = 0;
 
+        public static int potentialEnPassantCaptureSquare = 0;
+
         // These flags are for game-ending conditions
         private static bool kingInCheck;
 
@@ -116,7 +118,7 @@ namespace Chess
 
         private static int threeFoldAccumulator = 0;
 
-        public static HashSet<ulong> MoveHistory = new HashSet<ulong>();
+        public static Stack<ulong> MoveHistory = new();
 
         public enum GameState
         {
@@ -399,7 +401,7 @@ namespace Chess
             // TODO this might need to be done inside of GenerateLegalMoves();
             CheckForGameOverRules();
 
-            SwapTurn();
+            //SwapTurn();
 
             return legalMoves;
         }
@@ -455,7 +457,7 @@ namespace Chess
             }
 
             // threefold repetition rule (position repeats three times is a draw)
-            if(threeFoldAccumulator == 6)
+            if (threeFoldAccumulator == 6)
             {
                 UnityEngine.Debug.Log("Draw by Threefold Repitition!");
                 currentState = GameState.Ended;
@@ -628,9 +630,9 @@ namespace Chess
 
                 if (lastPawnDoubleMoveBitboard != 0)
                 {
-
                     // northwest potential en passant capture square
-                    if ((int)Math.Log(lastPawnDoubleMoveBitboard, 2) - currentPawnPos == 7)
+                    int pawnCaptureOffset = (int)Math.Log(lastPawnDoubleMoveBitboard, 2) - currentPawnPos;
+                    if (pawnCaptureOffset == 7 && ((isolatedPawnlsb >> 1) & InternalBoard.AllBlackPieces) != 0)
                     {
                         if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
                         {
@@ -639,7 +641,7 @@ namespace Chess
                     }
 
                     // northeast potential en passant capture square 
-                    if ((int)Math.Log(lastPawnDoubleMoveBitboard, 2) - currentPawnPos == 9)
+                    if (pawnCaptureOffset == 9 && ((isolatedPawnlsb << 1) & InternalBoard.AllBlackPieces) != 0)
                     {
                         if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
                         {
@@ -699,7 +701,8 @@ namespace Chess
                 {
 
                     // southwest potential en passant capture square
-                    if (currentPawnPos - (int)Math.Log(lastPawnDoubleMoveBitboard, 2) == 9)
+                    int pawnCaptureOffset = currentPawnPos - (int)Math.Log(lastPawnDoubleMoveBitboard, 2);
+                    if (pawnCaptureOffset == 9 && ((isolatedPawnlsb >> 1) & InternalBoard.AllWhitePieces) != 0)
                     {
                         if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
                         {
@@ -708,7 +711,7 @@ namespace Chess
                     }
 
                     // southeast potential en passant capture square 
-                    if (currentPawnPos - (int)Math.Log(lastPawnDoubleMoveBitboard, 2) == 7)
+                    if (pawnCaptureOffset == 7 && ((isolatedPawnlsb >> 1) & InternalBoard.AllWhitePieces) != 0)
                     {
                         if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
                         {
@@ -1144,7 +1147,8 @@ namespace Chess
                 {
                     // if the king is not under attack after the move, add it to legal moves
                     legalMoves.Add(move);
-                } else
+                }
+                else
                 {
                     kingInCheck = true;
                 }

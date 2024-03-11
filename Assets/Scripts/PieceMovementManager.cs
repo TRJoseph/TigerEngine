@@ -197,13 +197,13 @@ namespace Chess
             boardManager.ClearExistingPieces();
             boardManager.RenderPiecesOnBoardBitBoard();
 
-            // update who's move it is
-            BoardManager.whiteToMove = !BoardManager.whiteToMove;
-
             if (Board.currentState == Board.GameState.Normal)
             {
                 // wipe the available moves once a move is executed
                 Board.ClearListMoves();
+
+                // update who's move it is
+                BoardManager.whiteToMove = !BoardManager.whiteToMove;
 
                 Board.legalMoves = Board.AfterMove();
 

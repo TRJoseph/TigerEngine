@@ -7,6 +7,7 @@ using TMPro;
 using System.Linq;
 using UnityEditor.PackageManager;
 using static Chess.Board;
+using static Chess.ZobristHashing;
 using Unity.VisualScripting;
 using System.Reflection;
 using UnityEngine.UIElements;
@@ -34,19 +35,7 @@ namespace Chess
         [SerializeField] public GameObject chessPiecePrefab;
 
         // Forsyth-Edwards Notation representing positions in a chess game
-        private readonly string FENString = "8/7k/5ppp/7r/2Q3bq/1p2P3/5PP1/6K1"; // starting position in chess
-
-        // FEN string for testing pawn promotions
-        //private readonly string FENString = "5k2/2P5/8/8/8/8/2p5/5K2";
-
-        // second FEN string for testings king interactivity
-        //private readonly string FENString = "4k3/8/8/8/8/8/8/4K3";
-
-        // another FEN string for testing king castling
-        //private readonly string FENString = "4k3/8/8/8/8/4b3/8/R3K2R";
-
-        // another FEN string for testing checkmate 
-        //private readonly string FENString = "rnbqkbnr/p1pp1ppp/1p6/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR";
+        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
 
         // this will control the turn based movement, white moves first
         public static bool whiteToMove = true;
@@ -67,13 +56,28 @@ namespace Chess
         // Start is called before the first frame update
         void Start()
         {
-            GenerateGrid();
-            LoadFENString();
-            RenderPiecesOnBoardBitBoard();
+
             InitBishopLookup();
             InitRookLookup();
 
+            // loads position
+            LoadPosition();
+
             legalMoves = GenerateAllLegalMoves();
+        }
+
+        public void LoadPosition()
+        {
+            GenerateGrid();
+            LoadFENString();
+            RenderPiecesOnBoardBitBoard();
+
+            // generates zobrist hash key
+            GenerateZobristHashes();
+            ulong ZobristHashKey = InitializeHashKey();
+
+            // loads first position into position history
+            MoveHistory.Push(ZobristHashKey);
 
             /* ChooseSide controls what side the player will play 
             For example, if Sides.White is passed in, the player will be able to control the white pieces
@@ -136,6 +140,12 @@ namespace Chess
         }
         void LoadFENString()
         {
+
+
+            // TODO: use proper FEN string format with castling rights at the end of the string
+
+
+
             // start at 7th rank and 0th file (top left of board)
             // (7th rank is actually 8th rank on board, 0th file is the a file)
             int file = 0;
@@ -219,24 +229,6 @@ namespace Chess
             PlacePieces(ChessBoard.King, ChessBoard.Black);
 
         }
-
-        // private void PlacePieces(ulong bitboard, int pieceType, int pieceColor)
-        // {
-        //     for (int i = 0; i < BoardSize; i++)
-        //     {
-        //         if ((bitboard & (1UL << i)) != 0)
-        //         {
-        //             GameObject piece = Instantiate(chessPiecePrefab, new Vector3(i % 8, i / 8, -1), Quaternion.identity);
-        //             PieceRender renderScript = piece.GetComponent<PieceRender>();
-        //             Sprite pieceSprite = GetSpriteForPiece(pieceType, pieceColor, renderScript);
-        //             piece.GetComponent<SpriteRenderer>().sprite = pieceSprite;
-        //             renderScript.isWhitePiece = pieceColor == Piece.White;
-
-        //             // this may be removed for a better alternative for sizing the pieces
-        //             piece.transform.localScale = new Vector3(0.125f, 0.125f, 1f);
-        //         }
-        //     }
-        // }
 
         private void PlacePieces(int pieceType, int pieceColor)
         {
