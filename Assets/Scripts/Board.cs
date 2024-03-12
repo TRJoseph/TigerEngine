@@ -433,13 +433,7 @@ namespace Chess
             // update the front end sprite so the new correct piece is visible
             PieceMovementManager.UpdateFrontEndPromotion(UIController.Instance.promotionSelection, (int)Math.Log(toSquare, 2) % 8, (int)Math.Log(toSquare, 2) / 8);
 
-            whiteToMove = !whiteToMove;
-            // once the pawn has been swapped internally
-            ClearListMoves();
-
-            legalMoves = AfterMove();
-
-            UIController.Instance.UpdateMoveStatusUIInformation();
+            HandleGameStateAfterMove();
         }
 
         private static bool IsPawnPromotion(ulong toSquare)
@@ -469,28 +463,37 @@ namespace Chess
             legalMoves.Clear();
         }
 
-        public static List<LegalMove> AfterMove()
+        public static void HandleGameStateAfterMove()
         {
 
-            MoveHistory.Push(ZobristHashKey);
-            if(PositionHashes.ContainsKey(ZobristHashKey))
+            if (currentState == GameState.Normal)
             {
-                PositionHashes[ZobristHashKey] += 1;
-            } else
-            {
-                PositionHashes[ZobristHashKey] = 1;
+                // update who's move it is
+                whiteToMove = !whiteToMove;
+
+                MoveHistory.Push(ZobristHashKey);
+                if (PositionHashes.ContainsKey(ZobristHashKey))
+                {
+                    PositionHashes[ZobristHashKey] += 1;
+                }
+                else
+                {
+                    PositionHashes[ZobristHashKey] = 1;
+                }
+
+                legalMoves = GenerateAllLegalMoves();
+
+                CheckForGameOverRules();
+                //SwapTurn();
+
+                if(currentState == GameState.Ended)
+                {
+                    ClearListMoves();
+                }
+
+                // TODO Reference the UI instance in the top of this file
+                UIController.Instance.UpdateMoveStatusUIInformation();
             }
-
-            // calculates all legal moves in a given position
-            legalMoves = GenerateAllLegalMoves();
-
-
-            // after a move is made check for game over rules
-            CheckForGameOverRules();
-
-            //SwapTurn();
-
-            return legalMoves;
         }
 
         private static (int pieceType, bool pieceWasCaptured) CheckIfPieceWasCaptured(int opponentColor, ulong toSquare)

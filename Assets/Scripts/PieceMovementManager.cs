@@ -163,27 +163,15 @@ namespace Chess
 
             */
             // update the internal board state when a move is made
-            Board.UpdateBitboards((int)originalPosition.x, (int)originalPosition.y, (int)selectedPiece.transform.position.x, (int)selectedPiece.transform.position.y);
+            UpdateBitboards((int)originalPosition.x, (int)originalPosition.y, (int)selectedPiece.transform.position.x, (int)selectedPiece.transform.position.y);
 
             boardManager.ClearExistingPieces();
             boardManager.RenderPiecesOnBoardBitBoard();
 
-
-            if (Board.currentState == Board.GameState.Normal)
-            {
-                // update who's move it is
-                whiteToMove = !whiteToMove;
-                // wipe the available moves once a move is executed
-                Board.ClearListMoves();
-
-                Board.legalMoves = Board.AfterMove();
-
-                // TODO Reference the UI instance in the top of this file
-                UIController.Instance.UpdateMoveStatusUIInformation();
-            }
+            HandleGameStateAfterMove();
         }
 
-        public void HandleEngineMoveExecution(Board.LegalMove legalMove)
+        public void HandleEngineMoveExecution(LegalMove legalMove)
         {
 
             int originalXPosition = (int)Math.Log(legalMove.startSquare, 2) % 8;
@@ -193,23 +181,12 @@ namespace Chess
             int newYPosition = (int)Math.Log(legalMove.endSquare, 2) / 8;
 
             // update the internal board state when a move is made
-            Board.UpdateBitboards(originalXPosition, originalYPosition, newXPosition, newYPosition);
+            UpdateBitboards(originalXPosition, originalYPosition, newXPosition, newYPosition);
 
             boardManager.ClearExistingPieces();
             boardManager.RenderPiecesOnBoardBitBoard();
 
-            if (Board.currentState == Board.GameState.Normal)
-            {
-                // wipe the available moves once a move is executed
-                Board.ClearListMoves();
-
-                // update who's move it is
-                whiteToMove = !whiteToMove;
-
-                Board.legalMoves = Board.AfterMove();
-
-                UIController.Instance.UpdateMoveStatusUIInformation();
-            }
+            HandleGameStateAfterMove();
         }
 
         public static void UpdateFrontEndPromotion(int pieceType, int xPos, int yPos)
@@ -251,7 +228,7 @@ namespace Chess
 
             int selectedPieceSquare = (int)yPos * 8 + (int)xPos;
 
-            foreach (var move in Board.legalMoves)
+            foreach (var move in legalMoves)
             {
                 int legalmoveSquare = (int)Math.Log(move.startSquare, 2);
                 if (selectedPieceSquare == legalmoveSquare)
