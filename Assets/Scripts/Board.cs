@@ -553,10 +553,18 @@ namespace Chess
                     bool blackHasOnlyBishopOrKnight = (blackBishopCount + CountBits(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight]) == totalBlackPieces - 1);
                     bool whiteHasOnlyBishopOrKnight = (whiteBishopCount + CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight]) == totalWhitePieces - 1);
 
-                    // For the Bishop vs. Bishop scenario, check if the bishops are on same color complexes
-                    if(blackBishopCount == 1 && whiteBishopCount == 1)
+                    // If there's exactly one bishop per side, check their square colors
+                    if (blackBishopCount == 1 && whiteBishopCount == 1)
                     {
-                        //if (Math.Log(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop], 2) == 0)
+                        ulong blackBishopSquare = InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop];
+                        ulong whiteBishopSquare = InternalBoard.Pieces[ChessBoard.White, ChessBoard.Bishop];
+
+                        // Check if bishops are on the same color squares by checking their intersection with light/dark squares bitboards
+                        bool blackBishopOnLightSquare = (blackBishopSquare & MoveTables.lightSquares) != 0;
+                        bool whiteBishopOnLightSquare = (whiteBishopSquare & MoveTables.lightSquares) != 0;
+
+                        // If both bishops are on light squares or both are on dark squares, it's a draw due to insufficient material
+                        return blackBishopOnLightSquare == whiteBishopOnLightSquare;
                     }
 
                     return blackHasOnlyBishopOrKnight && whiteHasOnlyBishopOrKnight;
