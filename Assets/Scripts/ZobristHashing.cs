@@ -93,9 +93,16 @@ namespace Chess
                 ZobristHash ^= sideToMove;
             }
 
-            ZobristHash ^= castlingRightsArray[CastlingRights];
+            foreach (CastlingRightsFlags flag in Enum.GetValues(typeof(CastlingRightsFlags)))
+            {
+                if((CastlingRights & (int)flag) != 0)
+                {
+                    ZobristHash ^= castlingRightsArray[(int)flag];
+                }
+            }
 
-            ZobristHash ^= enPassantFile[potentialEnPassantCaptureFile];
+
+            ZobristHash ^= enPassantFile[previousEnPassantFile];
 
             return ZobristHash;
 

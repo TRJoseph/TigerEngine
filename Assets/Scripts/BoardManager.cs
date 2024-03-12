@@ -31,7 +31,10 @@ namespace Chess
         [SerializeField] public GameObject chessPiecePrefab;
 
         // Forsyth-Edwards Notation representing positions in a chess game
-        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq a3 0 1"; // starting position in chess
+        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
+
+        // FEN string for testing three-fold repetition
+        //private readonly string FENString = "8/7k/5ppp/7r/2Q3bq/1p2P3/5PP1/6K1 w - - 0 1"; // starting position in chess
 
         public enum Sides
         {
@@ -69,10 +72,11 @@ namespace Chess
 
             // generates zobrist hash key
             GenerateZobristHashes();
-            ulong ZobristHashKey = InitializeHashKey();
+            ZobristHashKey = InitializeHashKey();
 
             // loads first position into position history
             MoveHistory.Push(ZobristHashKey);
+            PositionHashes[ZobristHashKey] = 1;
 
             /* ChooseSide controls what side the player will play 
             For example, if Sides.White is passed in, the player will be able to control the white pieces
@@ -229,12 +233,13 @@ namespace Chess
             if (enPassantTargetsField[0] == '-')
             {
                 potentialEnPassantCaptureSquare = -1;
-                potentialEnPassantCaptureFile = 0;
+                previousEnPassantFile = 0;
             }
             else
             {
-                potentialEnPassantCaptureFile = enPassantTargetsField[0] - 'a';
-                potentialEnPassantCaptureSquare = potentialEnPassantCaptureFile + ((int.Parse(enPassantTargetsField[1].ToString()) - 1) * 8);
+                enPassantFilePreviouslySet = true;
+                previousEnPassantFile = enPassantTargetsField[0] - 'a';
+                potentialEnPassantCaptureSquare = previousEnPassantFile + ((int.Parse(enPassantTargetsField[1].ToString()) - 1) * 8);
             }
 
             if (halfMoveClockField[0] == '-')

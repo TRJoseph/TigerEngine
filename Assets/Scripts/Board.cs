@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using static Chess.PositionInformation;
-
+using static Chess.ZobristHashing;
 
 namespace Chess
 {
@@ -118,10 +118,13 @@ namespace Chess
 
         public static GameState currentState = GameState.Normal;
 
-        private static void RemoveAndAddPieceBitboards(int movedPiece, int pieceColor, ulong fromSquareMask, ulong toSquareMask)
+        private static void RemoveAndAddPieceBitboards(int movedPiece, int pieceColor, ulong fromSquareMask, ulong toSquareMask, int fromSquareIndex, int toSquareIndex)
         {
             InternalBoard.Pieces[pieceColor, movedPiece] &= ~fromSquareMask;
             InternalBoard.Pieces[pieceColor, movedPiece] |= toSquareMask;
+
+            ZobristHashKey ^= pieceAtEachSquareArray[pieceColor, movedPiece, fromSquareIndex];
+            ZobristHashKey ^= pieceAtEachSquareArray[pieceColor, movedPiece, toSquareIndex];
             return;
         }
 
@@ -141,10 +144,23 @@ namespace Chess
                     lastPawnDoubleMoveBitboard = 1UL << newPiecePosition + 8;
                 }
 
+                if(enPassantFilePreviouslySet)
+                {
+                    ZobristHashKey ^= enPassantFile[previousEnPassantFile];
+                }
+
+                // new en passant file
+                ZobristHashKey ^= enPassantFile[(newPiecePosition / 8) + 1];
+                previousEnPassantFile = (newPiecePosition / 8) + 1;
+
             }
             else
             {
                 lastPawnDoubleMoveBitboard = 0;
+                if (enPassantFilePreviouslySet)
+                {
+                    ZobristHashKey ^= enPassantFile[previousEnPassantFile];
+                }
             }
 
         }
@@ -159,26 +175,84 @@ namespace Chess
 
             ///
             // Example: Moving the white king from e1 (square 4) or black king from e8 (square 60)
-            if ((move.startSquare & (1UL << 4)) != 0) CastlingRights &= 0b1100; // White moves, clear white's rights
-            if ((move.startSquare & (1UL << 60)) != 0) CastlingRights &= 0b0011; // Black moves, clear black's rights
+            if ((move.startSquare & (1UL << 4)) != 0)
+            {
+                // Check if white had kingside/ queenside rights before clearing
+                if ((CastlingRights & (int)CastlingRightsFlags.WhiteKingSide) != 0)
+                    ZobristHashKey ^= castlingRightsArray[(int)CastlingRightsFlags.WhiteKingSide];
+                if ((CastlingRights & (int)CastlingRightsFlags.WhiteQueenSide) != 0)
+                    ZobristHashKey ^= castlingRightsArray[(int)CastlingRightsFlags.WhiteQueenSide];
+
+                CastlingRights &= 0b1100; // White king moves, clear white's rights
+            }
+            if ((move.startSquare & (1UL << 60)) != 0)
+            {
+                // Check if black had kingside/queenside rights before clearing
+                if ((CastlingRights & (int)CastlingRightsFlags.BlackKingSide) != 0)
+                    ZobristHashKey ^= castlingRightsArray[(int)CastlingRightsFlags.BlackKingSide];
+                if ((CastlingRights & (int)CastlingRightsFlags.BlackQueenSide) != 0)
+                    ZobristHashKey ^= castlingRightsArray[(int)CastlingRightsFlags.BlackQueenSide];
+
+                CastlingRights &= 0b0011; // Black king moves, clear black's rights
+            }
 
             // white queenside rook 
-            if ((move.startSquare & 1UL) != 0) CastlingRights &= 0b1101;
+            if ((move.startSquare & 1UL) != 0)
+            {
+                if ((CastlingRights & (int)CastlingRightsFlags.WhiteQueenSide) != 0)
+                    ZobristHashKey ^= castlingRightsArray[(int)CastlingRightsFlags.WhiteQueenSide];
+                CastlingRights &= 0b1101;
+            }
 
             // white kingside rook
-            if ((move.startSquare & (1UL << 7)) != 0) CastlingRights &= 0b1110;
+            if ((move.startSquare & (1UL << 7)) != 0)
+            {
+                if ((CastlingRights & (int)CastlingRightsFlags.WhiteKingSide) != 0)
+                    ZobristHashKey ^= castlingRightsArray[(int)CastlingRightsFlags.WhiteKingSide];
+                CastlingRights &= 0b1110;
+            }
 
             // black queenside rook
-            if ((move.startSquare & (1UL << 56)) != 0) CastlingRights &= 0b0111;
+            if ((move.startSquare & (1UL << 56)) != 0)
+            {
+                if ((CastlingRights & (int)CastlingRightsFlags.BlackQueenSide) != 0)
+                    ZobristHashKey ^= castlingRightsArray[(int)CastlingRightsFlags.BlackQueenSide];
+                CastlingRights &= 0b0111;
+            }
 
             // black kingside rook
-            if ((move.startSquare & (1UL << 63)) != 0) CastlingRights &= 0b1011;
+            if ((move.startSquare & (1UL << 63)) != 0)
+            {
+                if ((CastlingRights & (int)CastlingRightsFlags.BlackKingSide) != 0)
+                    ZobristHashKey ^= castlingRightsArray[(int)CastlingRightsFlags.BlackKingSide];
+                CastlingRights &= 0b1011;
+            }
 
             // if any piece moves to any of these individual squares it is safe to assume the rook is either captured or not there anymore, either way removing castling rights
-            if ((move.endSquare & 1UL) != 0) CastlingRights &= 0b1110; // White queenside rook captured
-            if ((move.endSquare & (1UL << 7)) != 0) CastlingRights &= 0b1101; // White kingside rook captured
-            if ((move.endSquare & (1UL << 56)) != 0) CastlingRights &= 0b1011; // Black queenside rook captured
-            if ((move.endSquare & (1UL << 63)) != 0) CastlingRights &= 0b0111; // Black kingside rook captured
+            if ((move.endSquare & 1UL) != 0)
+            {
+                if ((CastlingRights & (int)CastlingRightsFlags.WhiteQueenSide) != 0)
+                    ZobristHashKey ^= castlingRightsArray[(int)CastlingRightsFlags.WhiteQueenSide];
+                CastlingRights &= 0b1110; // White queenside rook captured
+            }
+            if ((move.endSquare & (1UL << 7)) != 0)
+            {
+                if ((CastlingRights & (int)CastlingRightsFlags.WhiteKingSide) != 0)
+                    ZobristHashKey ^= castlingRightsArray[(int)CastlingRightsFlags.WhiteKingSide];
+                CastlingRights &= 0b1101; // White kingside rook captured
+            }
+            if ((move.endSquare & (1UL << 56)) != 0)
+            {
+                if ((CastlingRights & (int)CastlingRightsFlags.BlackQueenSide) != 0)
+                    ZobristHashKey ^= castlingRightsArray[(int)CastlingRightsFlags.BlackQueenSide];
+                CastlingRights &= 0b1011; // Black queenside rook captured
+            }
+            if ((move.endSquare & (1UL << 63)) != 0)
+            {
+                if ((CastlingRights & (int)CastlingRightsFlags.BlackKingSide) != 0)
+                    ZobristHashKey ^= castlingRightsArray[(int)CastlingRightsFlags.BlackKingSide];
+                CastlingRights &= 0b0111; // Black kingside rook captured
+            }
             ///
         }
 
@@ -243,8 +317,11 @@ namespace Chess
 
         public static void UpdateBitboards(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
         {
-            ulong fromSquare = 1UL << originalYPosition * 8 + originalXPosition;
-            ulong toSquare = 1UL << newYPosition * 8 + newXPosition;
+            int fromSquareIndex = originalYPosition * 8 + originalXPosition;
+            int toSquareIndex = newYPosition * 8 + newXPosition;
+
+            ulong fromSquare = 1UL << fromSquareIndex;
+            ulong toSquare = 1UL << toSquareIndex;
 
             LegalMove move = legalMoves.Single(move => move.startSquare == fromSquare && move.endSquare == toSquare);
 
@@ -258,44 +335,41 @@ namespace Chess
             ulong isolatedCapturedPieceBitmask = ~toSquare;
             if (whiteToMove)
             {
-                // update potential captured piece 
-                InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop] &= isolatedCapturedPieceBitmask;
-                InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight] &= isolatedCapturedPieceBitmask;
-                InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook] &= isolatedCapturedPieceBitmask;
-                InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn] &= isolatedCapturedPieceBitmask;
-                InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Queen] &= isolatedCapturedPieceBitmask;
-                InternalBoard.AllBlackPieces &= isolatedCapturedPieceBitmask;
 
+                var (pieceType, pieceWasCaptured) = CheckIfPieceWasCaptured(ChessBoard.Black, toSquare);
+                if (pieceWasCaptured)
+                {
+                    InternalBoard.Pieces[ChessBoard.Black, pieceType] &= isolatedCapturedPieceBitmask;
+                    ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.Black, pieceType, toSquareIndex];
+                }
+               
                 // remove appropriate white piece from old square and move it to new square, update bitboards correspondingly 
-                RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.White, fromSquare, toSquare);
+                RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.White, fromSquare, toSquare, fromSquareIndex, toSquareIndex);
 
                 halfMoveAccumulator++;
 
                 // if the move was a capture, reset half-move accumulator
-                Verify50MoveRule(ChessBoard.Black, toSquare, move.specialMove, move.movedPiece);
-                InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
+                UpdateHalfMoveAcc(pieceWasCaptured, move.specialMove, move.movedPiece);
 
                 // update composite bitboards
                 InternalBoard.UpdateCompositeBitboards();
-                VerifyThreeFold();
             }
             else
             {
-                InternalBoard.Pieces[ChessBoard.White, ChessBoard.Bishop] &= isolatedCapturedPieceBitmask;
-                InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight] &= isolatedCapturedPieceBitmask;
-                InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook] &= isolatedCapturedPieceBitmask;
-                InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn] &= isolatedCapturedPieceBitmask;
-                InternalBoard.Pieces[ChessBoard.White, ChessBoard.Queen] &= isolatedCapturedPieceBitmask;
-                InternalBoard.AllWhitePieces &= isolatedCapturedPieceBitmask;
+                var (pieceType, pieceWasCaptured) = CheckIfPieceWasCaptured(ChessBoard.White, toSquare);
+                if (pieceWasCaptured)
+                {
+                    InternalBoard.Pieces[ChessBoard.White, pieceType] &= isolatedCapturedPieceBitmask;
+                    ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.White, pieceType, toSquareIndex];
+                }
 
-                RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.Black, fromSquare, toSquare);
+                RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.Black, fromSquare, toSquare, fromSquareIndex, toSquareIndex);
 
                 halfMoveAccumulator++;
                 // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence why this variable only gets accumulated on black's turn
                 fullMoveAccumulator++;
 
-                Verify50MoveRule(ChessBoard.White, toSquare, move.specialMove, move.movedPiece);
-                InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
+                UpdateHalfMoveAcc(pieceWasCaptured, move.specialMove, move.movedPiece);
 
                 // update composite bitboards
                 InternalBoard.UpdateCompositeBitboards();
@@ -313,8 +387,12 @@ namespace Chess
             {
                 // if not pawn move, remove last pawn double move for en passant
                 lastPawnDoubleMoveBitboard = 0;
+                if (enPassantFilePreviouslySet)
+                {
+                    ZobristHashKey ^= enPassantFile[previousEnPassantFile];
+                }
             }
-
+            ZobristHashKey ^= sideToMove;
         }
 
 
@@ -324,11 +402,17 @@ namespace Chess
             {
                 InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn] &= ~toSquare;
                 InternalBoard.Pieces[ChessBoard.White, selectedPromotionPiece] |= toSquare;
+
+                ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.White, ChessBoard.Pawn, (int)Math.Log(toSquare, 2)];
+                ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.White, selectedPromotionPiece, (int)Math.Log(toSquare, 2)];
             }
             else
             {
                 InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn] &= ~toSquare;
                 InternalBoard.Pieces[ChessBoard.Black, selectedPromotionPiece] |= toSquare;
+
+                ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.Black, ChessBoard.Pawn, (int)Math.Log(toSquare, 2)];
+                ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.Black, selectedPromotionPiece, (int)Math.Log(toSquare, 2)];
             }
 
             InternalBoard.UpdateCompositeBitboards();
@@ -387,10 +471,21 @@ namespace Chess
 
         public static List<LegalMove> AfterMove()
         {
+
+            MoveHistory.Push(ZobristHashKey);
+            if(PositionHashes.ContainsKey(ZobristHashKey))
+            {
+                PositionHashes[ZobristHashKey] += 1;
+            } else
+            {
+                PositionHashes[ZobristHashKey] = 1;
+            }
+
             // calculates all legal moves in a given position
             legalMoves = GenerateAllLegalMoves();
 
-            // TODO this might need to be done inside of GenerateLegalMoves();
+
+            // after a move is made check for game over rules
             CheckForGameOverRules();
 
             //SwapTurn();
@@ -398,34 +493,71 @@ namespace Chess
             return legalMoves;
         }
 
-        private static bool PieceWasCaptured(int opponentColor, ulong toSquare)
+        private static (int pieceType, bool pieceWasCaptured) CheckIfPieceWasCaptured(int opponentColor, ulong toSquare)
         {
             // Check if a piece is captured
             for (int pieceType = ChessBoard.Pawn; pieceType <= ChessBoard.King; pieceType++)
             {
                 if ((InternalBoard.Pieces[opponentColor, pieceType] & toSquare) != 0)
                 {
-                    return true;
+                    return (pieceType, true);
                 }
             }
-            return false;
+            return (-1, false);
         }
 
-        private static void Verify50MoveRule(int opponentColor, ulong toSquare, SpecialMove move, int movedPiece)
+        private static void UpdateHalfMoveAcc(bool capturedPiece, SpecialMove move, int movedPiece)
         {
             // if pawn moved or a piece was captured, reset the accumulator
             // en passant is counted as a capture
-            if (PieceWasCaptured(opponentColor, toSquare) || move == SpecialMove.EnPassant || movedPiece == ChessBoard.Pawn)
+            if (capturedPiece || move == SpecialMove.EnPassant || movedPiece == ChessBoard.Pawn)
             {
                 // this move captured a piece, reset the fifty move rule
                 halfMoveAccumulator = 0;
             }
         }
-        private static void VerifyThreeFold()
-        {
 
+        private static int CountBits(ulong bits)
+        {
+            int count = 0;
+            while (bits != 0)
+            {
+                count += 1;
+                bits &= bits - 1; // Remove the lowest set bit
+            }
+            return count;
         }
 
+        private static bool CheckForInsufficientMaterial()
+        {
+            int totalPieces = CountBits(InternalBoard.AllPieces);
+            int totalBlackPieces = CountBits(InternalBoard.AllBlackPieces);
+            int totalWhitePieces = CountBits(InternalBoard.AllWhitePieces);
+
+            // Check for King vs. King
+            if (totalPieces == 2)
+            {
+                return true;
+            }
+
+            // Check for King and Bishop/Knight vs. King, or King and Bishop vs. King and Bishop
+            if (totalPieces == 3 || totalPieces == 4)
+            {
+                // Ensure each side has either 1 or 2 pieces
+                if ((totalBlackPieces == 1 || totalBlackPieces == 2) && (totalWhitePieces == 1 || totalWhitePieces == 2))
+                {
+                    // Check if the pieces are bishops/knights
+                    bool blackHasOnlyBishopOrKnight = (CountBits(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop]) + CountBits(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight]) == totalBlackPieces - 1);
+                    bool whiteHasOnlyBishopOrKnight = (CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Bishop]) + CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight]) == totalWhitePieces - 1);
+
+                    // For the Bishop vs. Bishop scenario, additional logic for square colors
+
+                    return blackHasOnlyBishopOrKnight && whiteHasOnlyBishopOrKnight;
+                }
+            }
+
+            return false;
+        }
 
         private static void CheckForGameOverRules()
         {
@@ -449,14 +581,19 @@ namespace Chess
             }
 
             // threefold repetition rule (position repeats three times is a draw)
-            if (threeFoldAccumulator == 6)
+            if (PositionHashes[ZobristHashKey] >= 3)
             {
-                UnityEngine.Debug.Log("Draw by Threefold Repitition!");
+                UnityEngine.Debug.Log("Draw by Threefold Repetition!");
                 currentState = GameState.Ended;
             }
 
             // draw by insufficient material rule, for example: knight and king cannot deliver checkmate
-
+            
+            if(CheckForInsufficientMaterial())
+            {
+                UnityEngine.Debug.Log("Draw by Insufficient Material!");
+                currentState = GameState.Ended;
+            }
         }
 
         private static void SwapTurn()

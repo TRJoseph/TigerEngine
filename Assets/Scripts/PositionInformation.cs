@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Collections;
 
 namespace Chess
 {
@@ -19,7 +20,10 @@ namespace Chess
 
         public static int potentialEnPassantCaptureSquare;
 
-        public static int potentialEnPassantCaptureFile = 0;
+
+        public static bool enPassantFilePreviouslySet = false;
+
+        public static int previousEnPassantFile = 0;
 
         // These flags are for game-ending conditions
         public static bool kingInCheck;
@@ -29,6 +33,11 @@ namespace Chess
         public static int fullMoveAccumulator;
 
         public static int threeFoldAccumulator = 0;
+
+        public static ulong ZobristHashKey;
+
+        // PositionHashes is for efficient checking of repeated positions 
+        public static Dictionary<ulong, int> PositionHashes = new();
 
         public static Stack<ulong> MoveHistory = new();
 
