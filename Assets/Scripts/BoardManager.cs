@@ -31,7 +31,7 @@ namespace Chess
         [SerializeField] public GameObject chessPiecePrefab;
 
         // Forsyth-Edwards Notation representing positions in a chess game
-        private readonly string FENString = "4k3/8/4P3/p1p1p1p1/P1P3P1/8/8/4K3 w"; // starting position in chess
+        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq a3 0 1"; // starting position in chess
 
         public enum Sides
         {
@@ -64,6 +64,8 @@ namespace Chess
             GenerateGrid();
             LoadFENString();
             RenderPiecesOnBoardBitBoard();
+
+            UIController.Instance.UpdateMoveStatusUIInformation();
 
             // generates zobrist hash key
             GenerateZobristHashes();
@@ -189,66 +191,68 @@ namespace Chess
 
                     file++;
                 }
+            }
 
-                // parse active color
-                if (activeColorField[0] == 'w')
-                {
-                    whiteToMove = true;
-                } else
-                {
-                    whiteToMove = false;
-                }
+            // parse active color
+            if (activeColorField[0] == 'w')
+            {
+                whiteToMove = true;
+            }
+            else
+            {
+                whiteToMove = false;
+            }
 
-                // parse castling rights
-                for(i = 0; i < castlingRightsField.Length; i ++)
+            // parse castling rights
+            for (int i = 0; i < castlingRightsField.Length; i++)
+            {
+                switch (castlingRightsField[i])
                 {
-                    switch (castlingRightsField[i])
-                    {
-                        case 'K':
-                            CastlingRights |= (int)CastlingRightsFlags.WhiteKingSide;
-                            break;
-                        case 'Q':
-                            CastlingRights |= (int)CastlingRightsFlags.WhiteQueenSide;
-                            break;
-                        case 'k':
-                            CastlingRights |= (int)CastlingRightsFlags.BlackKingSide;
-                            break;
-                        case 'q':
-                            CastlingRights |= (int)CastlingRightsFlags.BlackQueenSide;
-                            break;
-                        default:
-                            // case where there are no castling rights ('-')
-                            break;
-                    }
+                    case 'K':
+                        CastlingRights |= (int)CastlingRightsFlags.WhiteKingSide;
+                        break;
+                    case 'Q':
+                        CastlingRights |= (int)CastlingRightsFlags.WhiteQueenSide;
+                        break;
+                    case 'k':
+                        CastlingRights |= (int)CastlingRightsFlags.BlackKingSide;
+                        break;
+                    case 'q':
+                        CastlingRights |= (int)CastlingRightsFlags.BlackQueenSide;
+                        break;
+                    default:
+                        // case where there are no castling rights ('-')
+                        break;
                 }
+            }
 
-                if (enPassantTargetsField[0] == '-')
-                {
-                    potentialEnPassantCaptureSquare = -1;
-                    potentialEnPassantCaptureFile = 0;
-                } else
-                {
-                    potentialEnPassantCaptureFile = enPassantTargetsField[0] - 'a';
-                    potentialEnPassantCaptureSquare = (potentialEnPassantCaptureFile + 1) * int.Parse(enPassantTargetsField[1].ToString());
-                }
+            if (enPassantTargetsField[0] == '-')
+            {
+                potentialEnPassantCaptureSquare = -1;
+                potentialEnPassantCaptureFile = 0;
+            }
+            else
+            {
+                potentialEnPassantCaptureFile = enPassantTargetsField[0] - 'a';
+                potentialEnPassantCaptureSquare = potentialEnPassantCaptureFile + ((int.Parse(enPassantTargetsField[1].ToString()) - 1) * 8);
+            }
 
-                if (halfMoveClockField[0] == '-')
-                {
-                  // do nothing
-                }
-                else
-                {
-                    halfMoveAccumulator = int.Parse(halfMoveClockField[0].ToString());
-                }
+            if (halfMoveClockField[0] == '-')
+            {
+                // do nothing
+            }
+            else
+            {
+                halfMoveAccumulator = int.Parse(halfMoveClockField[0].ToString());
+            }
 
-                if (fullMoveNumberField[0] == '-')
-                {
-                    // do nothing
-                }
-                else
-                {
-                    fullMoveAccumulator = int.Parse(halfMoveClockField[0].ToString());
-                }
+            if (fullMoveNumberField[0] == '-')
+            {
+                // do nothing
+            }
+            else
+            {
+                fullMoveAccumulator = int.Parse(halfMoveClockField[0].ToString());
             }
 
             // Initializes the initial physical locations of all the white pieces, black pieces, and every piece on the board
