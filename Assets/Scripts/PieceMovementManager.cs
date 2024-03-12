@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using Unity.VisualScripting;
 using UnityEngine;
 using static Chess.Board;
+using static Chess.PositionInformation;
 
 namespace Chess
 {
@@ -75,7 +76,7 @@ namespace Chess
             originalPosition = selectedPiece.transform.position;
 
             // Implement your conditions and logic
-            if (BoardManager.whiteToMove)
+            if (whiteToMove)
             {
                 if (!selectedPiece.GetComponent<PieceRender>().isWhitePiece)
                 {
@@ -171,7 +172,7 @@ namespace Chess
             if (Board.currentState == Board.GameState.Normal)
             {
                 // update who's move it is
-                BoardManager.whiteToMove = !BoardManager.whiteToMove;
+                whiteToMove = whiteToMove;
                 // wipe the available moves once a move is executed
                 Board.ClearListMoves();
 
@@ -203,7 +204,7 @@ namespace Chess
                 Board.ClearListMoves();
 
                 // update who's move it is
-                BoardManager.whiteToMove = !BoardManager.whiteToMove;
+                whiteToMove = !whiteToMove;
 
                 Board.legalMoves = Board.AfterMove();
 
@@ -216,7 +217,7 @@ namespace Chess
 
             PieceRender renderScript = FindChessPieceGameObject(xPos, yPos);
 
-            Sprite pieceSprite = BoardManager.GetSpriteForPiece(pieceType, BoardManager.whiteToMove ? ChessBoard.White : ChessBoard.Black, renderScript);
+            Sprite pieceSprite = BoardManager.GetSpriteForPiece(pieceType, whiteToMove ? ChessBoard.White : ChessBoard.Black, renderScript);
 
             renderScript.GetComponent<SpriteRenderer>().sprite = pieceSprite;
         }

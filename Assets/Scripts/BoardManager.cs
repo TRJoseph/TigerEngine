@@ -1,16 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using UnityEngine;
 using TMPro;
-using System.Linq;
-using UnityEditor.PackageManager;
 using static Chess.Board;
 using static Chess.ZobristHashing;
-using Unity.VisualScripting;
-using System.Reflection;
-using UnityEngine.UIElements;
+using static Chess.PositionInformation;
+
 
 namespace Chess
 {
@@ -35,10 +31,7 @@ namespace Chess
         [SerializeField] public GameObject chessPiecePrefab;
 
         // Forsyth-Edwards Notation representing positions in a chess game
-        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"; // starting position in chess
-
-        // this will control the turn based movement, white moves first
-        public static bool whiteToMove = true;
+        private readonly string FENString = "4k3/8/4P3/p1p1p1p1/P1P3P1/8/8/4K3 w"; // starting position in chess
 
         public enum Sides
         {
@@ -141,11 +134,6 @@ namespace Chess
         void LoadFENString()
         {
 
-
-            // TODO: use proper FEN string format with castling rights at the end of the string
-
-
-
             // start at 7th rank and 0th file (top left of board)
             // (7th rank is actually 8th rank on board, 0th file is the a file)
             int file = 0;
@@ -162,35 +150,104 @@ namespace Chess
                 ['p'] = ChessBoard.Pawn
             };
 
-            // loop through the FEN string
-            for (int i = 0; i < FENString.Length; i++)
+            string[] FENFields = FENString.Split(null);
+
+            string pieceLocationField = FENFields[0];
+            string activeColorField = FENFields[1];
+            string castlingRightsField = FENFields[2];
+            string enPassantTargetsField = FENFields[3];
+            string halfMoveClockField = FENFields[4];
+            string fullMoveNumberField = FENFields[5];
+
+            // loop through the FEN string, parse piece location information
+            for (int i = 0; i < pieceLocationField.Length; i++)
             {
 
                 // if the character is a number
-                if (char.IsDigit(FENString[i]))
+                if (char.IsDigit(pieceLocationField[i]))
                 {
                     // skip that many files
-                    file += int.Parse(FENString[i].ToString());
+                    file += int.Parse(pieceLocationField[i].ToString());
                 }
                 // if the character is a slash
-                else if (FENString[i] == '/')
+                else if (pieceLocationField[i] == '/')
                 {
                     // go to the next rank
                     rank--;
                     // reset the file
                     file = 0;
                 }
-                else if (char.IsLetter(FENString[i]))
+                else if (char.IsLetter(pieceLocationField[i]))
                 {
                     // get the piece type
-                    int piece = pieceType[char.ToLower(FENString[i])];
+                    int piece = pieceType[char.ToLower(pieceLocationField[i])];
                     // get the piece color
-                    int pieceColor = char.IsUpper(FENString[i]) ? ChessBoard.White : ChessBoard.Black;
+                    int pieceColor = char.IsUpper(pieceLocationField[i]) ? ChessBoard.White : ChessBoard.Black;
 
                     // places all pieces in appropriate bitboard locations
                     InitializeBitBoards(piece, pieceColor, rank * 8 + file);
 
                     file++;
+                }
+
+                // parse active color
+                if (activeColorField[0] == 'w')
+                {
+                    whiteToMove = true;
+                } else
+                {
+                    whiteToMove = false;
+                }
+
+                // parse castling rights
+                for(i = 0; i < castlingRightsField.Length; i ++)
+                {
+                    switch (castlingRightsField[i])
+                    {
+                        case 'K':
+                            CastlingRights |= (int)CastlingRightsFlags.WhiteKingSide;
+                            break;
+                        case 'Q':
+                            CastlingRights |= (int)CastlingRightsFlags.WhiteQueenSide;
+                            break;
+                        case 'k':
+                            CastlingRights |= (int)CastlingRightsFlags.BlackKingSide;
+                            break;
+                        case 'q':
+                            CastlingRights |= (int)CastlingRightsFlags.BlackQueenSide;
+                            break;
+                        default:
+                            // case where there are no castling rights ('-')
+                            break;
+                    }
+                }
+
+                if (enPassantTargetsField[0] == '-')
+                {
+                    potentialEnPassantCaptureSquare = -1;
+                    potentialEnPassantCaptureFile = 0;
+                } else
+                {
+                    potentialEnPassantCaptureFile = enPassantTargetsField[0] - 'a';
+                    potentialEnPassantCaptureSquare = (potentialEnPassantCaptureFile + 1) * int.Parse(enPassantTargetsField[1].ToString());
+                }
+
+                if (halfMoveClockField[0] == '-')
+                {
+                  // do nothing
+                }
+                else
+                {
+                    halfMoveAccumulator = int.Parse(halfMoveClockField[0].ToString());
+                }
+
+                if (fullMoveNumberField[0] == '-')
+                {
+                    // do nothing
+                }
+                else
+                {
+                    fullMoveAccumulator = int.Parse(halfMoveClockField[0].ToString());
                 }
             }
 

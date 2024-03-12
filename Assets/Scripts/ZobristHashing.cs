@@ -1,7 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using static Chess.Board;
-using System;
+using static Chess.PositionInformation;
 
 
 namespace Chess
@@ -87,14 +88,14 @@ namespace Chess
                 }
             }
 
-            if (BoardManager.whiteToMove == false)
+            if (whiteToMove == false)
             {
                 ZobristHash ^= sideToMove;
             }
 
             ZobristHash ^= castlingRightsArray[CastlingRights];
 
-            ZobristHash ^= enPassantFile[potentialEnPassantCaptureSquare];
+            ZobristHash ^= enPassantFile[potentialEnPassantCaptureFile];
 
             return ZobristHash;
 

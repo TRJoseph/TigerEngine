@@ -6,6 +6,7 @@ using TMPro;
 using System;
 using System.Net.Security;
 using static Chess.Board;
+using static Chess.PositionInformation;
 
 namespace Chess
 {
@@ -65,7 +66,7 @@ namespace Chess
 
             PromotionPanel.gameObject.transform.position = new Vector3(((int)Math.Log(toSquare, 2) % 8) - 1, ((int)Math.Log(toSquare, 2) / 8) - 2, -2);
 
-            List<Sprite> pieceSprites = BoardManager.whiteToMove ? whitePieceSprites : blackPieceSprites;
+            List<Sprite> pieceSprites = whiteToMove ? whitePieceSprites : blackPieceSprites;
             for (int i = 0; i < pieceButtons.Length; i++)
             {
                 pieceButtons[i].sprite = pieceSprites[i];
@@ -114,7 +115,7 @@ namespace Chess
 
         public void UpdateMoveStatusUIInformation()
         {
-            if (BoardManager.whiteToMove)
+            if (whiteToMove)
             {
                 WhichPlayerMoveText.text = "White to move";
             }

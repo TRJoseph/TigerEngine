@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using static Chess.PositionInformation;
 
 
 namespace Chess
@@ -80,8 +81,6 @@ namespace Chess
         public const ulong ABFileMask = 0x3F3F3F3F3F3F3F3F;
         public const ulong GHFileMask = 0xFCFCFCFCFCFCFCFC;
 
-        public static int CastlingRights = 0xF;
-
         public enum SpecialMove
         {
             None = 0,
@@ -109,16 +108,6 @@ namespace Chess
 
         private static ulong lastPawnDoubleMoveBitboard = 0;
 
-        public static int potentialEnPassantCaptureSquare = 0;
-
-        // These flags are for game-ending conditions
-        private static bool kingInCheck;
-
-        private static int fiftyMoveAccumulator;
-
-        private static int threeFoldAccumulator = 0;
-
-        public static Stack<ulong> MoveHistory = new();
 
         public enum GameState
         {
@@ -143,7 +132,7 @@ namespace Chess
             if (Math.Abs(oldPiecePosition - newPiecePosition) == 16)
             {
 
-                if (BoardManager.whiteToMove)
+                if (whiteToMove)
                 {
                     lastPawnDoubleMoveBitboard = 1UL << newPiecePosition - 8;
                 }
@@ -196,7 +185,7 @@ namespace Chess
         private static void HandleSpecialMoveInternal(LegalMove move, ulong toSquare, ulong fromSquare)
         {
 
-            if (BoardManager.whiteToMove)
+            if (whiteToMove)
             {
                 switch (move.specialMove)
                 {
@@ -267,7 +256,7 @@ namespace Chess
 
             // remove any captured piece from bitboards
             ulong isolatedCapturedPieceBitmask = ~toSquare;
-            if (BoardManager.whiteToMove)
+            if (whiteToMove)
             {
                 // update potential captured piece 
                 InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop] &= isolatedCapturedPieceBitmask;
@@ -280,10 +269,9 @@ namespace Chess
                 // remove appropriate white piece from old square and move it to new square, update bitboards correspondingly 
                 RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.White, fromSquare, toSquare);
 
-                // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence why this variable only gets accumulated on white's turn, who goes first
-                fiftyMoveAccumulator++;
+                halfMoveAccumulator++;
 
-                // if the move was a capture, reset fifty move accumulator
+                // if the move was a capture, reset half-move accumulator
                 Verify50MoveRule(ChessBoard.Black, toSquare, move.specialMove, move.movedPiece);
                 InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
 
@@ -301,6 +289,10 @@ namespace Chess
                 InternalBoard.AllWhitePieces &= isolatedCapturedPieceBitmask;
 
                 RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.Black, fromSquare, toSquare);
+
+                halfMoveAccumulator++;
+                // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence why this variable only gets accumulated on black's turn
+                fullMoveAccumulator++;
 
                 Verify50MoveRule(ChessBoard.White, toSquare, move.specialMove, move.movedPiece);
                 InternalBoard.AllPieces &= isolatedCapturedPieceBitmask;
@@ -328,7 +320,7 @@ namespace Chess
 
         private static void UpdatePromotionPiece(int selectedPromotionPiece, ulong toSquare)
         {
-            if (BoardManager.whiteToMove)
+            if (whiteToMove)
             {
                 InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn] &= ~toSquare;
                 InternalBoard.Pieces[ChessBoard.White, selectedPromotionPiece] |= toSquare;
@@ -357,7 +349,7 @@ namespace Chess
             // update the front end sprite so the new correct piece is visible
             PieceMovementManager.UpdateFrontEndPromotion(UIController.Instance.promotionSelection, (int)Math.Log(toSquare, 2) % 8, (int)Math.Log(toSquare, 2) / 8);
 
-            BoardManager.whiteToMove = !BoardManager.whiteToMove;
+            whiteToMove = !whiteToMove;
             // once the pawn has been swapped internally
             ClearListMoves();
 
@@ -426,7 +418,7 @@ namespace Chess
             if (PieceWasCaptured(opponentColor, toSquare) || move == SpecialMove.EnPassant || movedPiece == ChessBoard.Pawn)
             {
                 // this move captured a piece, reset the fifty move rule
-                fiftyMoveAccumulator = 0;
+                halfMoveAccumulator = 0;
             }
         }
         private static void VerifyThreeFold()
@@ -450,7 +442,7 @@ namespace Chess
             }
 
             // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence
-            if (fiftyMoveAccumulator == 50)
+            if (halfMoveAccumulator == 100)
             {
                 UnityEngine.Debug.Log("Draw by 50 move rule!");
                 currentState = GameState.Ended;
@@ -1085,7 +1077,7 @@ namespace Chess
             validKingMoves &= ~friendlyPieces;
 
             // castling
-            if (BoardManager.whiteToMove)
+            if (whiteToMove)
             {
                 if (CanCastleKingsideWhite())
                 {
@@ -1128,7 +1120,7 @@ namespace Chess
         public static List<LegalMove> GenerateAllLegalMoves()
         {
 
-            List<LegalMove> pseudoLegalMoves = GenerateLegalMovesBitboard(BoardManager.whiteToMove);
+            List<LegalMove> pseudoLegalMoves = GenerateLegalMovesBitboard(whiteToMove);
 
             List<LegalMove> legalMoves = new();
 
@@ -1136,12 +1128,12 @@ namespace Chess
 
             foreach (LegalMove move in pseudoLegalMoves)
             {
-                int rememberedPiece = ExecuteMove(BoardManager.whiteToMove, move.movedPiece, move.startSquare, move.endSquare);
+                int rememberedPiece = ExecuteMove(whiteToMove, move.movedPiece, move.startSquare, move.endSquare);
 
                 // replace this with current king square
-                ulong currentKingSquare = BoardManager.whiteToMove ? InternalBoard.Pieces[ChessBoard.White, ChessBoard.King] : InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King];
+                ulong currentKingSquare = whiteToMove ? InternalBoard.Pieces[ChessBoard.White, ChessBoard.King] : InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King];
 
-                List<LegalMove> opponentResponses = GenerateLegalMovesBitboard(!BoardManager.whiteToMove);
+                List<LegalMove> opponentResponses = GenerateLegalMovesBitboard(!whiteToMove);
 
                 if (!opponentResponses.Any(response => response.endSquare == currentKingSquare))
                 {
@@ -1154,7 +1146,7 @@ namespace Chess
                 }
 
                 // Undo the move for the next iteration
-                UndoMove(BoardManager.whiteToMove, move.movedPiece, rememberedPiece, move.startSquare, move.endSquare);
+                UndoMove(whiteToMove, move.movedPiece, rememberedPiece, move.startSquare, move.endSquare);
 
             }
             return legalMoves;
@@ -1249,7 +1241,7 @@ namespace Chess
              * */
 
 
-            if (BoardManager.whiteToMove)
+            if (whiteToMove)
             {
                 if ((MoveTables.PrecomputedWhitePawnCaptures[square] & InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn]) != 0) return true;
 
