@@ -546,11 +546,18 @@ namespace Chess
                 // Ensure each side has either 1 or 2 pieces
                 if ((totalBlackPieces == 1 || totalBlackPieces == 2) && (totalWhitePieces == 1 || totalWhitePieces == 2))
                 {
-                    // Check if the pieces are bishops/knights
-                    bool blackHasOnlyBishopOrKnight = (CountBits(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop]) + CountBits(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight]) == totalBlackPieces - 1);
-                    bool whiteHasOnlyBishopOrKnight = (CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Bishop]) + CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight]) == totalWhitePieces - 1);
 
-                    // For the Bishop vs. Bishop scenario, additional logic for square colors
+                    int blackBishopCount = CountBits(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop]);
+                    int whiteBishopCount = CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Bishop]);
+                    // Check if the pieces are bishops/knights
+                    bool blackHasOnlyBishopOrKnight = (blackBishopCount + CountBits(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight]) == totalBlackPieces - 1);
+                    bool whiteHasOnlyBishopOrKnight = (whiteBishopCount + CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight]) == totalWhitePieces - 1);
+
+                    // For the Bishop vs. Bishop scenario, check if the bishops are on same color complexes
+                    if(blackBishopCount == 1 && whiteBishopCount == 1)
+                    {
+                        //if (Math.Log(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop], 2) == 0)
+                    }
 
                     return blackHasOnlyBishopOrKnight && whiteHasOnlyBishopOrKnight;
                 }
