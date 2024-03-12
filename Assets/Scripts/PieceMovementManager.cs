@@ -172,7 +172,7 @@ namespace Chess
             if (Board.currentState == Board.GameState.Normal)
             {
                 // update who's move it is
-                whiteToMove = whiteToMove;
+                whiteToMove = !whiteToMove;
                 // wipe the available moves once a move is executed
                 Board.ClearListMoves();
 
