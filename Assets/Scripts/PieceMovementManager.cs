@@ -171,14 +171,14 @@ namespace Chess
             HandleGameStateAfterMove();
         }
 
-        public void HandleEngineMoveExecution(LegalMove legalMove)
+        public void HandleEngineMoveExecution(Move legalMove)
         {
 
-            int originalXPosition = (int)Math.Log(legalMove.startSquare, 2) % 8;
-            int originalYPosition = (int)Math.Log(legalMove.startSquare, 2) / 8;
+            int originalXPosition = (int)Math.Log(legalMove.fromSquare, 2) % 8;
+            int originalYPosition = (int)Math.Log(legalMove.fromSquare, 2) / 8;
 
-            int newXPosition = (int)Math.Log(legalMove.endSquare, 2) % 8;
-            int newYPosition = (int)Math.Log(legalMove.endSquare, 2) / 8;
+            int newXPosition = (int)Math.Log(legalMove.toSquare, 2) % 8;
+            int newYPosition = (int)Math.Log(legalMove.toSquare, 2) / 8;
 
             // update the internal board state when a move is made
             UpdateBitboards(originalXPosition, originalYPosition, newXPosition, newYPosition);
@@ -230,10 +230,10 @@ namespace Chess
 
             foreach (var move in legalMoves)
             {
-                int legalmoveSquare = (int)Math.Log(move.startSquare, 2);
+                int legalmoveSquare = (int)Math.Log(move.fromSquare, 2);
                 if (selectedPieceSquare == legalmoveSquare)
                 {
-                    Vector2 newPos2 = new Vector2((int)Math.Log(move.endSquare, 2) % 8, (int)Math.Log(move.endSquare, 2) / 8);
+                    Vector2 newPos2 = new Vector2((int)Math.Log(move.toSquare, 2) % 8, (int)Math.Log(move.toSquare, 2) / 8);
                     Instantiate(highlightOverlayPrefab, newPos2, Quaternion.identity);
                 }
             }

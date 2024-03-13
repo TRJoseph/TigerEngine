@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using static Chess.Board;
-using static Chess.ZobristHashing;
+// using static Chess.ZobristHashing;
 using static Chess.PositionInformation;
 
 
@@ -52,7 +52,7 @@ namespace Chess
         // Start is called before the first frame update
         void Start()
         {
-
+            // initializes bishop and rook move lookup tables (every possible permutation of blocking pieces)
             InitBishopLookup();
             InitRookLookup();
 
@@ -65,18 +65,19 @@ namespace Chess
         public void LoadPosition()
         {
             GenerateGrid();
+            // load in fen string and set position information
             LoadFENString();
             RenderPiecesOnBoardBitBoard();
 
             UIController.Instance.UpdateMoveStatusUIInformation();
 
             // generates zobrist hash key
-            GenerateZobristHashes();
-            ZobristHashKey = InitializeHashKey();
+            ZobristHashing.GenerateZobristHashes();
 
-            // loads first position into position history
-            MoveHistory.Push(ZobristHashKey);
-            PositionHashes[ZobristHashKey] = 1;
+            // Set game state (note: calculating zobrist key relies on current game state)
+            CurrentGameState = new GameState(0, PositionInformation.EnPassantFile, PositionInformation.CastlingRights, PositionInformation.halfMoveAccumulator, 0);
+            ulong zobristHashKey = ZobristHashing.InitializeHashKey();
+            CurrentGameState = new GameState(0, PositionInformation.EnPassantFile, PositionInformation.CastlingRights, PositionInformation.halfMoveAccumulator, zobristHashKey);
 
             /* ChooseSide controls what side the player will play 
             For example, if Sides.White is passed in, the player will be able to control the white pieces
@@ -90,7 +91,7 @@ namespace Chess
             ChooseSide(Sides.White);
 
             // TODO: this will likely get moved to some sort of button trigger on a UI main menu (starting the game)
-            currentState = GameState.Normal;
+            //currentState = GameState.Normal;
 
             // The engine should be analyzing the position constantly whether or not its the engine's turn
             engine.StartThinking();
@@ -229,17 +230,16 @@ namespace Chess
                         break;
                 }
             }
-
             if (enPassantTargetsField[0] == '-')
             {
                 potentialEnPassantCaptureSquare = -1;
-                previousEnPassantFile = 0;
+                EnPassantFile = 0;
             }
             else
             {
                 enPassantFilePreviouslySet = true;
-                previousEnPassantFile = enPassantTargetsField[0] - 'a';
-                potentialEnPassantCaptureSquare = previousEnPassantFile + ((int.Parse(enPassantTargetsField[1].ToString()) - 1) * 8);
+                EnPassantFile = enPassantTargetsField[0] - 'a';
+                potentialEnPassantCaptureSquare = EnPassantFile + ((int.Parse(enPassantTargetsField[1].ToString()) - 1) * 8);
             }
 
             if (halfMoveClockField[0] == '-')

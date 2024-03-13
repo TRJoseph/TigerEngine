@@ -3,8 +3,85 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using static Chess.Board;
+using Unity.VisualScripting;
 namespace Chess
 {
+
+    public static class BoardHelper
+    {
+        public const ulong a1 = 1UL << 0;
+        public const ulong b1 = 1UL << 1;
+        public const ulong c1 = 1UL << 2;
+        public const ulong d1 = 1UL << 3;
+        public const ulong e1 = 1UL << 4;
+        public const ulong f1 = 1UL << 5;
+        public const ulong g1 = 1UL << 6;
+        public const ulong h1 = 1UL << 7;
+
+        public const ulong a2 = 1UL << 8;
+        public const ulong b2 = 1UL << 9;
+        public const ulong c2 = 1UL << 10;
+        public const ulong d2 = 1UL << 11;
+        public const ulong e2 = 1UL << 12;
+        public const ulong f2 = 1UL << 13;
+        public const ulong g2 = 1UL << 14;
+        public const ulong h2 = 1UL << 15;
+
+        public const ulong a3 = 1UL << 16;
+        public const ulong b3 = 1UL << 17;
+        public const ulong c3 = 1UL << 18;
+        public const ulong d3 = 1UL << 19;
+        public const ulong e3 = 1UL << 20;
+        public const ulong f3 = 1UL << 21;
+        public const ulong g3 = 1UL << 22;
+        public const ulong h3 = 1UL << 23;
+
+        public const ulong a4 = 1UL << 24;
+        public const ulong b4 = 1UL << 25;
+        public const ulong c4 = 1UL << 26;
+        public const ulong d4 = 1UL << 27;
+        public const ulong e4 = 1UL << 28;
+        public const ulong f4 = 1UL << 29;
+        public const ulong g4 = 1UL << 30;
+        public const ulong h4 = 1UL << 31;
+
+        public const ulong a5 = 1UL << 32;
+        public const ulong b5 = 1UL << 33;
+        public const ulong c5 = 1UL << 34;
+        public const ulong d5 = 1UL << 35;
+        public const ulong e5 = 1UL << 36;
+        public const ulong f5 = 1UL << 37;
+        public const ulong g5 = 1UL << 38;
+        public const ulong h5 = 1UL << 39;
+
+        public const ulong a6 = 1UL << 40;
+        public const ulong b6 = 1UL << 41;
+        public const ulong c6 = 1UL << 42;
+        public const ulong d6 = 1UL << 43;
+        public const ulong e6 = 1UL << 44;
+        public const ulong f6 = 1UL << 45;
+        public const ulong g6 = 1UL << 46;
+        public const ulong h6 = 1UL << 47;
+
+        public const ulong a7 = 1UL << 48;
+        public const ulong b7 = 1UL << 49;
+        public const ulong c7 = 1UL << 50;
+        public const ulong d7 = 1UL << 51;
+        public const ulong e7 = 1UL << 52;
+        public const ulong f7 = 1UL << 53;
+        public const ulong g7 = 1UL << 54;
+        public const ulong h7 = 1UL << 55;
+
+        public const ulong a8 = 1UL << 56;
+        public const ulong b8 = 1UL << 57;
+        public const ulong c8 = 1UL << 58;
+        public const ulong d8 = 1UL << 59;
+        public const ulong e8 = 1UL << 60;
+        public const ulong f8 = 1UL << 61;
+        public const ulong g8 = 1UL << 62;
+        public const ulong h8 = 1UL << 63;
+    }
+
     public static class MoveTables
     {
         // from index 0 to 63 starting from bottom left to top right of chess board

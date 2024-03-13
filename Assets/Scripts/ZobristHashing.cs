@@ -19,6 +19,7 @@ namespace Chess
         // TODO: this may need to be changed to an array of 4 long
         public static readonly ulong[] castlingRightsArray = new ulong[16];
 
+        // 1 is a file, 8 is h file, 0 is none
         public static readonly ulong[] enPassantFile = new ulong[9];
 
 
@@ -93,16 +94,9 @@ namespace Chess
                 ZobristHash ^= sideToMove;
             }
 
-            foreach (CastlingRightsFlags flag in Enum.GetValues(typeof(CastlingRightsFlags)))
-            {
-                if((CastlingRights & (int)flag) != 0)
-                {
-                    ZobristHash ^= castlingRightsArray[(int)flag];
-                }
-            }
+            ZobristHash ^= castlingRightsArray[CurrentGameState.castlingRights];
 
-
-            ZobristHash ^= enPassantFile[previousEnPassantFile];
+            ZobristHash ^= enPassantFile[CurrentGameState.enPassantFile];
 
             return ZobristHash;
 

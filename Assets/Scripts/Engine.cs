@@ -47,7 +47,7 @@ namespace Chess
             return ChessBoard.Queen;
         }
 
-        private static Board.LegalMove SimpleEval()
+        private static Board.Move SimpleEval()
         {
             // capture piece when available
 

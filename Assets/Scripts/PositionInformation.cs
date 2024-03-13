@@ -23,9 +23,10 @@ namespace Chess
 
         public static bool enPassantFilePreviouslySet = false;
 
-        public static int previousEnPassantFile = 0;
+        public static int EnPassantFile = 0;
 
-        // These flags are for game-ending conditions
+
+        /* Game ending conditions */
         public static bool kingInCheck;
 
         public static int halfMoveAccumulator;
@@ -34,17 +35,27 @@ namespace Chess
 
         public static int threeFoldAccumulator = 0;
 
-        public static ulong ZobristHashKey;
 
-        // PositionHashes is for efficient checking of repeated positions 
+        /* Game State information */
+        public static GameState CurrentGameState;
+
+        public static ulong ZobristHashKey => CurrentGameState.zobristHashKey;
+
+        public static string GameStartFENString;
+
+
+        /* Side to move information */
+        public static bool whiteToMove;
+        public static int MoveColorIndex => whiteToMove ? Board.ChessBoard.White : Board.ChessBoard.Black;
+        public static int OpponentColorIndex => whiteToMove ? Board.ChessBoard.Black : Board.ChessBoard.White;
+
+
+        /* Move history information */
+
+        // PositionHashes is for efficient checking of repeated positions (three fold repetition)
         public static Dictionary<ulong, int> PositionHashes = new();
 
-        public static Stack<ulong> MoveHistory = new();
-
-        // this will control the turn based movement, white moves first
-        public static bool whiteToMove;
-
-
+        public static Stack<GameState> GameStateHistory = new();
     }
 
 }
