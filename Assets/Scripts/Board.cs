@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using static Chess.PositionInformation;
 using static Chess.ZobristHashing;
+using Unity.PlasticSCM.Editor.WebApi;
 
 namespace Chess
 {
@@ -92,10 +93,11 @@ namespace Chess
 
         public enum PromotionFlags
         {
-            PromoteToQueenFlag = 0,
-            PromoteToRookFlag = 1,
-            PromoteToBishopFlag = 2,
-            PromoteToKnightFlag = 3
+            None = 0,
+            PromoteToQueenFlag = 1,
+            PromoteToRookFlag = 2,
+            PromoteToBishopFlag = 3,
+            PromoteToKnightFlag = 4
         }
 
         // this structure will hold a move that can be executed
@@ -120,15 +122,17 @@ namespace Chess
 
         private static ulong lastPawnDoubleMoveBitboard = 0;
 
+        public static PromotionFlags promotionSelection;
 
-        // public enum GameState
-        // {
-        //     Normal,
-        //     AwaitingPromotion,
-        //     Ended
-        // }
 
-        // public static GameState currentState = GameState.Normal;
+        public enum GameStatus
+        {
+            Normal,
+            AwaitingPromotion,
+            Ended
+        }
+
+        public static GameStatus currentStatus = GameStatus.Normal;
 
         private static void RemoveAndAddPieceBitboards(int movedPiece, int pieceColor, ulong fromSquareMask, ulong toSquareMask)
         {
@@ -327,126 +331,124 @@ namespace Chess
             }
         }
 
-        public static void UpdateBitboards(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
-        {
-            int fromSquareIndex = originalYPosition * 8 + originalXPosition;
-            int toSquareIndex = newYPosition * 8 + newXPosition;
+        //public static void UpdateBitboards(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
+        //{
+        //    int fromSquareIndex = originalYPosition * 8 + originalXPosition;
+        //    int toSquareIndex = newYPosition * 8 + newXPosition;
 
-            ulong fromSquare = 1UL << fromSquareIndex;
-            ulong toSquare = 1UL << toSquareIndex;
+        //    ulong fromSquare = 1UL << fromSquareIndex;
+        //    ulong toSquare = 1UL << toSquareIndex;
 
-            Move move = legalMoves.Single(move => move.fromSquare == fromSquare && move.toSquare == toSquare);
+        //    Move move = legalMoves.Single(move => move.fromSquare == fromSquare && move.toSquare == toSquare);
 
-            //UpdateCastlingRights(move);
+        //    //UpdateCastlingRights(move);
 
-            HandleSpecialMoveInternal(move, toSquare, fromSquare);
+        //    HandleSpecialMoveInternal(move, toSquare, fromSquare);
 
-            // for a captured piece, AND the InternalBoard bitboards with the NOT of the isolated captured piece bitboard (endsquare)
+        //    // for a captured piece, AND the InternalBoard bitboards with the NOT of the isolated captured piece bitboard (endsquare)
 
-            // remove any captured piece from bitboards
-            ulong isolatedCapturedPieceBitmask = ~toSquare;
-            if (whiteToMove)
-            {
+        //    // remove any captured piece from bitboards
+        //    ulong isolatedCapturedPieceBitmask = ~toSquare;
+        //    if (whiteToMove)
+        //    {
 
-                var (pieceType, pieceWasCaptured) = CheckIfPieceWasCaptured(ChessBoard.Black, toSquare);
-                if (pieceWasCaptured)
-                {
-                    InternalBoard.Pieces[ChessBoard.Black, pieceType] &= isolatedCapturedPieceBitmask;
-                    ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.Black, pieceType, toSquareIndex];
-                }
+        //        var (pieceType, pieceWasCaptured) = CheckIfPieceWasCaptured(ChessBoard.Black, toSquare);
+        //        if (pieceWasCaptured)
+        //        {
+        //            InternalBoard.Pieces[ChessBoard.Black, pieceType] &= isolatedCapturedPieceBitmask;
+        //            ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.Black, pieceType, toSquareIndex];
+        //        }
 
-                // remove appropriate white piece from old square and move it to new square, update bitboards correspondingly 
-                RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.White, fromSquare, toSquare, fromSquareIndex, toSquareIndex);
+        //        // remove appropriate white piece from old square and move it to new square, update bitboards correspondingly 
+        //        RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.White, fromSquare, toSquare, fromSquareIndex, toSquareIndex);
 
-                halfMoveAccumulator++;
+        //        halfMoveAccumulator++;
 
-                // if the move was a capture, reset half-move accumulator
-                UpdateHalfMoveAcc(pieceWasCaptured, move.specialMove, move.movedPiece);
+        //        // if the move was a capture, reset half-move accumulator
+        //        UpdateHalfMoveAcc(pieceWasCaptured, move.specialMove, move.movedPiece);
 
-                // update composite bitboards
-                InternalBoard.UpdateCompositeBitboards();
-            }
-            else
-            {
-                var (pieceType, pieceWasCaptured) = CheckIfPieceWasCaptured(ChessBoard.White, toSquare);
-                if (pieceWasCaptured)
-                {
-                    InternalBoard.Pieces[ChessBoard.White, pieceType] &= isolatedCapturedPieceBitmask;
-                    ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.White, pieceType, toSquareIndex];
-                }
+        //        // update composite bitboards
+        //        InternalBoard.UpdateCompositeBitboards();
+        //    }
+        //    else
+        //    {
+        //        var (pieceType, pieceWasCaptured) = CheckIfPieceWasCaptured(ChessBoard.White, toSquare);
+        //        if (pieceWasCaptured)
+        //        {
+        //            InternalBoard.Pieces[ChessBoard.White, pieceType] &= isolatedCapturedPieceBitmask;
+        //            ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.White, pieceType, toSquareIndex];
+        //        }
 
-                RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.Black, fromSquare, toSquare, fromSquareIndex, toSquareIndex);
+        //        RemoveAndAddPieceBitboards(move.movedPiece, ChessBoard.Black, fromSquare, toSquare, fromSquareIndex, toSquareIndex);
 
-                halfMoveAccumulator++;
-                // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence why this variable only gets accumulated on black's turn
-                fullMoveAccumulator++;
+        //        halfMoveAccumulator++;
+        //        // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence why this variable only gets accumulated on black's turn
+        //        fullMoveAccumulator++;
 
-                UpdateHalfMoveAcc(pieceWasCaptured, move.specialMove, move.movedPiece);
+        //        UpdateHalfMoveAcc(pieceWasCaptured, move.specialMove, move.movedPiece);
 
-                // update composite bitboards
-                InternalBoard.UpdateCompositeBitboards();
-            }
+        //        // update composite bitboards
+        //        InternalBoard.UpdateCompositeBitboards();
+        //    }
 
-            if (move.movedPiece == ChessBoard.Pawn)
-            {
-                // for extra special pawn moves
-                // double square move keeps track of a double pawn move for potential en passant captures
-                UpdateLastPawnDoubleSquareMove((int)Math.Log(fromSquare, 2), (int)Math.Log(toSquare, 2));
-                // if the pawn makes it to the opposing sides last rank, initiate promotion
-                HandlePawnPromotionInternal(toSquare);
-            }
-            else
-            {
-                // if not pawn move, remove last pawn double move for en passant
-                lastPawnDoubleMoveBitboard = 0;
-                if (enPassantFilePreviouslySet)
-                {
-                    ZobristHashKey ^= enPassantFile[EnPassantFile];
-                }
-            }
-            ZobristHashKey ^= sideToMove;
-        }
+        //    if (move.movedPiece == ChessBoard.Pawn)
+        //    {
+        //        // for extra special pawn moves
+        //        // double square move keeps track of a double pawn move for potential en passant captures
+        //        UpdateLastPawnDoubleSquareMove((int)Math.Log(fromSquare, 2), (int)Math.Log(toSquare, 2));
+        //        // if the pawn makes it to the opposing sides last rank, initiate promotion
+        //        HandlePawnPromotionInternal(toSquare);
+        //    }
+        //    else
+        //    {
+        //        // if not pawn move, remove last pawn double move for en passant
+        //        lastPawnDoubleMoveBitboard = 0;
+        //        if (enPassantFilePreviouslySet)
+        //        {
+        //            ZobristHashKey ^= enPassantFile[EnPassantFile];
+        //        }
+        //    }
+        //    ZobristHashKey ^= sideToMove;
+        //}
 
 
-        private static void UpdatePromotionPiece(int selectedPromotionPiece, ulong toSquare)
-        {
-            if (whiteToMove)
-            {
-                InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn] &= ~toSquare;
-                InternalBoard.Pieces[ChessBoard.White, selectedPromotionPiece] |= toSquare;
+        //private static void UpdatePromotionPiece(int selectedPromotionPiece, ulong toSquare)
+        //{
+        //    if (whiteToMove)
+        //    {
+        //        InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn] &= ~toSquare;
+        //        InternalBoard.Pieces[ChessBoard.White, selectedPromotionPiece] |= toSquare;
 
-                ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.White, ChessBoard.Pawn, (int)Math.Log(toSquare, 2)];
-                ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.White, selectedPromotionPiece, (int)Math.Log(toSquare, 2)];
-            }
-            else
-            {
-                InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn] &= ~toSquare;
-                InternalBoard.Pieces[ChessBoard.Black, selectedPromotionPiece] |= toSquare;
+        //        ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.White, ChessBoard.Pawn, (int)Math.Log(toSquare, 2)];
+        //        ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.White, selectedPromotionPiece, (int)Math.Log(toSquare, 2)];
+        //    }
+        //    else
+        //    {
+        //        InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn] &= ~toSquare;
+        //        InternalBoard.Pieces[ChessBoard.Black, selectedPromotionPiece] |= toSquare;
 
-                ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.Black, ChessBoard.Pawn, (int)Math.Log(toSquare, 2)];
-                ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.Black, selectedPromotionPiece, (int)Math.Log(toSquare, 2)];
-            }
+        //        ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.Black, ChessBoard.Pawn, (int)Math.Log(toSquare, 2)];
+        //        ZobristHashKey ^= pieceAtEachSquareArray[ChessBoard.Black, selectedPromotionPiece, (int)Math.Log(toSquare, 2)];
+        //    }
 
-            InternalBoard.UpdateCompositeBitboards();
-        }
+        //    InternalBoard.UpdateCompositeBitboards();
+        //}
         public static void UpdatePromotedPawnEngine(ulong toSquare)
         {
-            int chosenPiece = Engine.EvaluateBestPromotionPiece();
-            UpdatePromotionPiece(chosenPiece, toSquare);
-
+            promotionSelection = Engine.EvaluateBestPromotionPiece();
             UIController.Instance.UpdateMoveStatusUIInformation();
         }
 
-        public static void UpdatePromotedPawn(ulong toSquare)
-        {
+        //public static void UpdatePromotedPawn(ulong toSquare)
+        //{
 
-            UpdatePromotionPiece(UIController.Instance.promotionSelection, toSquare);
+        //    //UpdatePromotionPiece(UIController.Instance.promotionSelection, toSquare);
 
-            // update the front end sprite so the new correct piece is visible
-            PieceMovementManager.UpdateFrontEndPromotion(UIController.Instance.promotionSelection, (int)Math.Log(toSquare, 2) % 8, (int)Math.Log(toSquare, 2) / 8);
+        //    // update the front end sprite so the new correct piece is visible
+        //    PieceMovementManager.UpdateFrontEndPromotion(UIController.Instance.promotionSelection, (int)Math.Log(toSquare, 2) % 8, (int)Math.Log(toSquare, 2) / 8);
 
-            HandleGameStateAfterMove();
-        }
+        //    HandleGameStateAfterMove();
+        //}
 
         private static bool IsPawnPromotion(ulong toSquare)
         {
@@ -458,7 +460,7 @@ namespace Chess
             return false;
         }
 
-        private static Move AddLegalMove(ulong startSquare, ulong endSquare, int movedPiece, SpecialMove specialMove)
+        private static Move AddLegalMove(ulong startSquare, ulong endSquare, int movedPiece, SpecialMove specialMove, bool isPawnPromotion, PromotionFlags promotionFlag = PromotionFlags.None)
         {
             return
                 new Move
@@ -466,7 +468,8 @@ namespace Chess
                     fromSquare = startSquare,
                     toSquare = endSquare,
                     movedPiece = movedPiece,
-                    specialMove = specialMove
+                    specialMove = specialMove,
+                    IsPawnPromotion = isPawnPromotion,
                 };
         }
 
@@ -475,38 +478,38 @@ namespace Chess
             legalMoves.Clear();
         }
 
-        public static void HandleGameStateAfterMove()
-        {
+        //public static void HandleGameStateAfterMove()
+        //{
 
-            if (currentState == GameState.Normal)
-            {
-                // update who's move it is
-                whiteToMove = !whiteToMove;
+        //    if (currentState == GameState.Normal)
+        //    {
+        //        // update who's move it is
+        //        whiteToMove = !whiteToMove;
 
-                MoveHistory.Push(ZobristHashKey);
-                if (PositionHashes.ContainsKey(ZobristHashKey))
-                {
-                    PositionHashes[ZobristHashKey] += 1;
-                }
-                else
-                {
-                    PositionHashes[ZobristHashKey] = 1;
-                }
+        //        MoveHistory.Push(ZobristHashKey);
+        //        if (PositionHashes.ContainsKey(ZobristHashKey))
+        //        {
+        //            PositionHashes[ZobristHashKey] += 1;
+        //        }
+        //        else
+        //        {
+        //            PositionHashes[ZobristHashKey] = 1;
+        //        }
 
-                legalMoves = GenerateAllLegalMoves();
+        //        legalMoves = GenerateAllLegalMoves();
 
-                //CheckForGameOverRules();
-                //SwapTurn();
+        //        //CheckForGameOverRules();
+        //        //SwapTurn();
 
-                if (currentState == GameState.Ended)
-                {
-                    ClearListMoves();
-                }
+        //        if (currentState == GameState.Ended)
+        //        {
+        //            ClearListMoves();
+        //        }
 
-                // TODO Reference the UI instance in the top of this file
-                UIController.Instance.UpdateMoveStatusUIInformation();
-            }
-        }
+        //        // TODO Reference the UI instance in the top of this file
+        //        UIController.Instance.UpdateMoveStatusUIInformation();
+        //    }
+        //}
 
         private static (int pieceType, bool pieceWasCaptured) CheckIfPieceWasCaptured(int opponentColor, ulong toSquare)
         {
@@ -589,42 +592,42 @@ namespace Chess
             return false;
         }
 
-        private static void CheckForGameOverRules()
-        {
-            if (legalMoves.Count == 0 && kingInCheck)
-            {
-                UnityEngine.Debug.Log("CheckMate!");
-                currentState = GameState.Ended;
-            }
+        //private static void CheckForGameOverRules()
+        //{
+        //    if (legalMoves.Count == 0 && kingInCheck)
+        //    {
+        //        UnityEngine.Debug.Log("CheckMate!");
+        //        currentState = GameState.Ended;
+        //    }
 
-            if (legalMoves.Count == 0 && !kingInCheck)
-            {
-                UnityEngine.Debug.Log("Stalemate!");
-                currentState = GameState.Ended;
-            }
+        //    if (legalMoves.Count == 0 && !kingInCheck)
+        //    {
+        //        UnityEngine.Debug.Log("Stalemate!");
+        //        currentState = GameState.Ended;
+        //    }
 
-            // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence
-            if (halfMoveAccumulator == 100)
-            {
-                UnityEngine.Debug.Log("Draw by 50 move rule!");
-                currentState = GameState.Ended;
-            }
+        //    // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence
+        //    if (halfMoveAccumulator == 100)
+        //    {
+        //        UnityEngine.Debug.Log("Draw by 50 move rule!");
+        //        currentState = GameState.Ended;
+        //    }
 
-            // threefold repetition rule (position repeats three times is a draw)
-            if (PositionHashes[ZobristHashKey] >= 3)
-            {
-                UnityEngine.Debug.Log("Draw by Threefold Repetition!");
-                currentState = GameState.Ended;
-            }
+        //    // threefold repetition rule (position repeats three times is a draw)
+        //    if (PositionHashes[ZobristHashKey] >= 3)
+        //    {
+        //        UnityEngine.Debug.Log("Draw by Threefold Repetition!");
+        //        currentState = GameState.Ended;
+        //    }
 
-            // draw by insufficient material rule, for example: knight and king cannot deliver checkmate
+        //    // draw by insufficient material rule, for example: knight and king cannot deliver checkmate
 
-            if (CheckForInsufficientMaterial())
-            {
-                UnityEngine.Debug.Log("Draw by Insufficient Material!");
-                currentState = GameState.Ended;
-            }
-        }
+        //    if (CheckForInsufficientMaterial())
+        //    {
+        //        UnityEngine.Debug.Log("Draw by Insufficient Material!");
+        //        currentState = GameState.Ended;
+        //    }
+        //}
 
         private static void SwapTurn()
         {
@@ -686,7 +689,7 @@ namespace Chess
                     ulong movelsb = validRookMoves & (~validRookMoves + 1);
 
                     validRookMoves &= validRookMoves - 1;
-                    rookMoves.Add(AddLegalMove(isolatedRooklsb, movelsb, ChessBoard.Rook, SpecialMove.None));
+                    rookMoves.Add(AddLegalMove(isolatedRooklsb, movelsb, ChessBoard.Rook, SpecialMove.None, false));
                 }
                 rooks &= rooks - 1;
             }
@@ -715,7 +718,7 @@ namespace Chess
                     ulong movelsb = validBishopMoves & (~validBishopMoves + 1);
 
                     validBishopMoves &= validBishopMoves - 1;
-                    bishopMoves.Add(AddLegalMove(isolatedBishoplsb, movelsb, ChessBoard.Bishop, SpecialMove.None));
+                    bishopMoves.Add(AddLegalMove(isolatedBishoplsb, movelsb, ChessBoard.Bishop, SpecialMove.None, false));
                 }
                 bishops &= bishops - 1;
             }
@@ -746,7 +749,7 @@ namespace Chess
                     ulong movelsb = validQueenMoves & (~validQueenMoves + 1);
 
                     validQueenMoves &= validQueenMoves - 1;
-                    queenMoves.Add(AddLegalMove(isolatedQueenlsb, movelsb, ChessBoard.Queen, SpecialMove.None));
+                    queenMoves.Add(AddLegalMove(isolatedQueenlsb, movelsb, ChessBoard.Queen, SpecialMove.None, false));
                 }
                 queens &= queens - 1;
             }
@@ -795,7 +798,7 @@ namespace Chess
                     {
                         if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
                         {
-                            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant));
+                            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant, false));
                         }
                     }
 
@@ -804,7 +807,7 @@ namespace Chess
                     {
                         if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
                         {
-                            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant));
+                            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant, false));
                         }
                     }
                 }
@@ -814,7 +817,7 @@ namespace Chess
                     ulong movelsb = validPawnMoves & (~validPawnMoves + 1);
 
                     validPawnMoves &= validPawnMoves - 1;
-                    whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None));
+                    whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, false));
                 }
 
                 // move to the next pawn
@@ -865,7 +868,7 @@ namespace Chess
                     {
                         if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
                         {
-                            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant));
+                            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant, false));
                         }
                     }
 
@@ -874,7 +877,7 @@ namespace Chess
                     {
                         if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
                         {
-                            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant));
+                            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant, false));
                         }
                     }
                 }
@@ -884,7 +887,7 @@ namespace Chess
                     ulong movelsb = validPawnMoves & (~validPawnMoves + 1);
 
                     validPawnMoves &= validPawnMoves - 1;
-                    blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None));
+                    blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, false));
                 }
 
                 blackPawns &= blackPawns - 1;
@@ -912,7 +915,7 @@ namespace Chess
                     ulong movelsb = validKnightMoves & (~validKnightMoves + 1);
 
                     validKnightMoves &= validKnightMoves - 1;
-                    knightMoves.Add(AddLegalMove(isolatedKnightlsb, movelsb, ChessBoard.Knight, SpecialMove.None));
+                    knightMoves.Add(AddLegalMove(isolatedKnightlsb, movelsb, ChessBoard.Knight, SpecialMove.None, false));
                 }
 
                 // move to next knight
@@ -1248,12 +1251,12 @@ namespace Chess
             {
                 if (CanCastleKingsideWhite())
                 {
-                    kingMoves.Add(AddLegalMove(king, 1UL << 6, ChessBoard.King, SpecialMove.KingSideCastleMove));
+                    kingMoves.Add(AddLegalMove(king, 1UL << 6, ChessBoard.King, SpecialMove.KingSideCastleMove, false));
                 }
 
                 if (CanCastleQueensideWhite())
                 {
-                    kingMoves.Add(AddLegalMove(king, 1UL << 2, ChessBoard.King, SpecialMove.QueenSideCastleMove));
+                    kingMoves.Add(AddLegalMove(king, 1UL << 2, ChessBoard.King, SpecialMove.QueenSideCastleMove, false));
                 }
 
             }
@@ -1261,12 +1264,12 @@ namespace Chess
             {
                 if (CanCastleKingsideBlack())
                 {
-                    kingMoves.Add(AddLegalMove(king, 1UL << 62, ChessBoard.King, SpecialMove.KingSideCastleMove));
+                    kingMoves.Add(AddLegalMove(king, 1UL << 62, ChessBoard.King, SpecialMove.KingSideCastleMove, false));
                 }
 
                 if (CanCastleQueensideBlack())
                 {
-                    kingMoves.Add(AddLegalMove(king, 1UL << 58, ChessBoard.King, SpecialMove.QueenSideCastleMove));
+                    kingMoves.Add(AddLegalMove(king, 1UL << 58, ChessBoard.King, SpecialMove.QueenSideCastleMove, false));
                 }
             }
 
@@ -1277,7 +1280,7 @@ namespace Chess
 
                 validKingMoves &= validKingMoves - 1;
 
-                kingMoves.Add(AddLegalMove(king, movelsb, ChessBoard.King, SpecialMove.None));
+                kingMoves.Add(AddLegalMove(king, movelsb, ChessBoard.King, SpecialMove.None, false));
             }
 
             return kingMoves;
@@ -1287,7 +1290,7 @@ namespace Chess
         public static List<Move> GenerateAllLegalMoves()
         {
 
-            List<Move> pseudoLegalMoves = GenerateLegalMovesBitboard(whiteToMove);
+            List<Move> pseudoLegalMoves = GenerateLegalMovesBitboard();
 
             List<Move> legalMoves = new();
 
@@ -1295,12 +1298,12 @@ namespace Chess
 
             foreach (Move move in pseudoLegalMoves)
             {
-                int rememberedPiece = ExecuteMove(whiteToMove, move.movedPiece, move.fromSquare, move.toSquare);
+                ExecuteMove(move);
 
                 // replace this with current king square
-                ulong currentKingSquare = whiteToMove ? InternalBoard.Pieces[ChessBoard.White, ChessBoard.King] : InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King];
+                ulong currentKingSquare = whiteToMove ? InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King] : InternalBoard.Pieces[ChessBoard.White, ChessBoard.King];
 
-                List<Move> opponentResponses = GenerateLegalMovesBitboard(!whiteToMove);
+                List<Move> opponentResponses = GenerateLegalMovesBitboard();
 
                 if (!opponentResponses.Any(response => response.toSquare == currentKingSquare))
                 {
@@ -1313,27 +1316,10 @@ namespace Chess
                 }
 
                 // Undo the move for the next iteration
-                UndoMove(whiteToMove, move.movedPiece, rememberedPiece, move.fromSquare, move.toSquare);
+                UndoMove(move);
 
             }
             return legalMoves;
-        }
-
-        private static int GetCapturedPiece(int opponentPieceColor, ulong toSquare)
-        {
-
-            // Check if a piece is captured
-            for (int pieceType = ChessBoard.Pawn; pieceType <= ChessBoard.King; pieceType++)
-            {
-                if ((InternalBoard.Pieces[opponentPieceColor, pieceType] & toSquare) != 0)
-                {
-                    // Capture the piece
-                    InternalBoard.Pieces[opponentPieceColor, pieceType] &= ~toSquare;
-                    return pieceType;
-                }
-            }
-
-            return -1;
         }
 
 
@@ -1503,7 +1489,7 @@ namespace Chess
 
             if (!inSearch)
             {
-                PositionHashes[newState.zobristHashKey] += 1;
+                //PositionHashes[newState.zobristHashKey] += 1;
                 //AllGameMoves.Add(move);
             }
         }
@@ -1524,19 +1510,23 @@ namespace Chess
 
             //int movedPiece = undoingPromotion ? ChessBoard.Pawn : InternalBoard.Pieces[];
 
+            int friendlyPieceColor = PositionInformation.MoveColorIndex;
+            int opponentPieceColor = PositionInformation.OpponentColorIndex;
+
             // undo promotion
 
             if (undoingPromotion)
             {
-                int promotedPiece = GetPieceAtSquare(MoveColorIndex, fromSquare);
+                int promotedPiece = GetPieceAtSquare(friendlyPieceColor, fromSquare);
 
                 // places pawn back at promotion square on either 8th or 1st rank and removes promoted piece
-                InternalBoard.Pieces[MoveColorIndex, promotedPiece] &= ~toSquare;
-                InternalBoard.Pieces[MoveColorIndex, ChessBoard.Pawn] |= toSquare;
+                InternalBoard.Pieces[friendlyPieceColor, promotedPiece] &= ~toSquare;
+                InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Pawn] |= toSquare;
             }
 
-            RemoveAndAddPieceBitboards(movedPiece, MoveColorIndex, toSquare, fromSquare);
+            RemoveAndAddPieceBitboards(movedPiece, friendlyPieceColor, toSquare, fromSquare);
 
+            // undo any capture move (en passant or normal)
             if (undoingCapture)
             {
                 ulong captureSquare = toSquare;
@@ -1546,31 +1536,41 @@ namespace Chess
                     captureSquare = whiteToMove ? captureSquare >> 8 : captureSquare << 8;
                 }
 
-                InternalBoard.Pieces[OpponentColorIndex, capturedPieceType] |= captureSquare;
+                InternalBoard.Pieces[opponentPieceColor, capturedPieceType] |= captureSquare;
 
             }
 
             if (movedPiece is ChessBoard.King)
             {
+                if(move.specialMove == SpecialMove.KingSideCastleMove)
+                {
+                    InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Rook] &= ~(toSquare >> 1);
 
-            }
+                    InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Rook] |= toSquare << 1;
+                }
 
-
-            // Move the piece back
-            // InternalBoard.Pieces[pieceColor, movedPiece] &= ~toSquare;
-            // InternalBoard.Pieces[pieceColor, movedPiece] |= fromSquare;
-
-            // Restore the captured piece, if any
-            if (capturedPieceType != -1)
-            {
-                InternalBoard.Pieces[opponentPieceColor, capturedPieceType] |= toSquare;
+                if (move.specialMove == SpecialMove.QueenSideCastleMove)
+                {
+                    InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Rook] &= ~(toSquare << 1);
+                    InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Rook] |= toSquare >> 2;
+                }
             }
 
             InternalBoard.UpdateCompositeBitboards();
+
+            if(!inSearch)
+            {
+                //PositionHashes
+            }
+
+            // go back to previous game state
+            GameStateHistory.Pop();
+            CurrentGameState = GameStateHistory.Peek();
+            halfMoveAccumulator--;
         }
 
 
-        public static List<Move> GenerateLegalMovesBitboard(bool whiteToMove)
+        public static List<Move> GenerateLegalMovesBitboard()
         {
             // create list to store legal moves
             List<Move> moves = new();

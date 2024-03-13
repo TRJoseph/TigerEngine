@@ -20,8 +20,6 @@ namespace Chess
         public Image[] pieceButtons; // References to the Image components of the buttons
         public Button[] promotionButtons;
 
-        public int promotionSelection;
-
         public bool selectionMade = false;
 
         public List<Sprite> whitePieceSprites; // Sprites for the white promotion pieces (queen, rook, bishop, knight)
@@ -41,19 +39,19 @@ namespace Chess
             switch (button)
             {
                 case "Queen":
-                    promotionSelection = ChessBoard.Queen;
+                    promotionSelection = PromotionFlags.PromoteToQueenFlag;
                     break;
                 case "Rook":
-                    promotionSelection = ChessBoard.Rook;
+                    promotionSelection = PromotionFlags.PromoteToRookFlag;
                     break;
                 case "Bishop":
-                    promotionSelection = ChessBoard.Bishop;
+                    promotionSelection = PromotionFlags.PromoteToBishopFlag;
                     break;
                 case "Knight":
-                    promotionSelection = ChessBoard.Knight;
+                    promotionSelection = PromotionFlags.PromoteToKnightFlag;
                     break;
                 default:
-                    promotionSelection = -1;
+                    promotionSelection = PromotionFlags.None;
                     break;
             }
             selectionMade = true;
@@ -61,7 +59,7 @@ namespace Chess
 
         public void ShowPromotionDropdown(ulong toSquare)
         {
-            Board.currentState = Board.GameState.AwaitingPromotion;
+            currentStatus = GameStatus.AwaitingPromotion;
             PromotionPanel.gameObject.SetActive(true);
 
             PromotionPanel.gameObject.transform.position = new Vector3(((int)Math.Log(toSquare, 2) % 8) - 1, ((int)Math.Log(toSquare, 2) / 8) - 2, -2);
@@ -93,10 +91,10 @@ namespace Chess
             PromotionPanel.gameObject.SetActive(false);
 
             // Updates the game state
-            Board.currentState = Board.GameState.Normal;
+            Board.currentStatus = Board.GameStatus.Normal;
 
             // Now update pawn to new selected piece and recalculate moves
-            Board.UpdatePromotedPawn(toSquare);
+            //Board.UpdatePromotedPawn(toSquare);
         }
 
 

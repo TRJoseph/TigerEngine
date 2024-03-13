@@ -26,7 +26,7 @@ namespace Chess
 
         private void Think()
         {
-            while (Board.currentState != Board.GameState.Ended)
+            while (Board.currentStatus != GameStatus.Ended)
             {
                 // engine should be analyzing the position constantly while the gamestate is active
                 if (BoardManager.ComputerSide == BoardManager.CurrentTurn)
@@ -41,10 +41,10 @@ namespace Chess
             }
         }
 
-        public static int EvaluateBestPromotionPiece()
+        public static PromotionFlags EvaluateBestPromotionPiece()
         {
             // Later, add more sophisticated logic
-            return ChessBoard.Queen;
+            return PromotionFlags.PromoteToQueenFlag;
         }
 
         private static Board.Move SimpleEval()

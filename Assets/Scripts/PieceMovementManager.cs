@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Data.SqlTypes;
 using System.Diagnostics.Tracing;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -154,39 +155,60 @@ namespace Chess
             }
         }
 
-        private void HandleMoveExecution(GameObject selectedPiece, Transform closestSquare)
+        private static bool IsPawnPromotion(ulong toSquare)
         {
+            if (toSquare >> 8 == 0 || toSquare << 8 == 0)
+            {
+                return true;
+            }
 
-            /* 
-            PSA: Piece GameObjects have an associated Tile and Tile GameObjects have an associated piece,
-            these are updated here when a move is made
-
-            */
-            // update the internal board state when a move is made
-            UpdateBitboards((int)originalPosition.x, (int)originalPosition.y, (int)selectedPiece.transform.position.x, (int)selectedPiece.transform.position.y);
-
-            boardManager.ClearExistingPieces();
-            boardManager.RenderPiecesOnBoardBitBoard();
-
-            HandleGameStateAfterMove();
+            return false;
         }
 
-        public void HandleEngineMoveExecution(Move legalMove)
+        private void HandleMoveExecution(GameObject selectedPiece, Transform closestSquare)
         {
+            int fromSquareIndex = (int)originalPosition.y * 8 + (int)originalPosition.x;
+            int toSquareIndex = (int)selectedPiece.transform.position.y * 8 + (int)selectedPiece.transform.position.x;
 
-            int originalXPosition = (int)Math.Log(legalMove.fromSquare, 2) % 8;
-            int originalYPosition = (int)Math.Log(legalMove.fromSquare, 2) / 8;
+            ulong fromSquare = 1UL << fromSquareIndex;
+            ulong toSquare = 1UL << toSquareIndex;
 
-            int newXPosition = (int)Math.Log(legalMove.toSquare, 2) % 8;
-            int newYPosition = (int)Math.Log(legalMove.toSquare, 2) / 8;
+            Move move = legalMoves.Single(move => move.fromSquare == fromSquare && move.toSquare == toSquare);
+            
+            if(IsPawnPromotion(move.toSquare)) {
+                // user drop down,
+                if (BoardManager.CurrentTurn == BoardManager.ComputerSide)
+                {
+                    UpdatePromotedPawnEngine(toSquare);
+                }
+                else
+                {
+                    UIController.Instance.ShowPromotionDropdown(toSquare);
+                    move.promotionFlag = promotionSelection;
+                }
+            }
 
             // update the internal board state when a move is made
-            UpdateBitboards(originalXPosition, originalYPosition, newXPosition, newYPosition);
+            ExecuteMove(move);
+
 
             boardManager.ClearExistingPieces();
             boardManager.RenderPiecesOnBoardBitBoard();
 
-            HandleGameStateAfterMove();
+            //HandleGameStateAfterMove();
+            legalMoves = GenerateAllLegalMoves();
+        }
+
+        public void HandleEngineMoveExecution(Move move)
+        {
+            // update the internal board state when a move is made by the computer
+            ExecuteMove(move);
+
+            boardManager.ClearExistingPieces();
+            boardManager.RenderPiecesOnBoardBitBoard();
+
+            //HandleGameStateAfterMove();
+            legalMoves = GenerateAllLegalMoves();
         }
 
         public static void UpdateFrontEndPromotion(int pieceType, int xPos, int yPos)

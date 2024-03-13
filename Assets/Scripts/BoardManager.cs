@@ -79,6 +79,14 @@ namespace Chess
             ulong zobristHashKey = ZobristHashing.InitializeHashKey();
             CurrentGameState = new GameState(0, PositionInformation.EnPassantFile, PositionInformation.CastlingRights, PositionInformation.halfMoveAccumulator, zobristHashKey);
 
+            GameStateHistory.Push(CurrentGameState);
+
+            //position hash here
+
+            // test perft here
+            //int numPos = Perft(5);
+            //Debug.Log("number of positions:" + numPos);
+
             /* ChooseSide controls what side the player will play 
             For example, if Sides.White is passed in, the player will be able to control the white pieces
             and the engine will move the black pieces.
@@ -95,6 +103,23 @@ namespace Chess
 
             // The engine should be analyzing the position constantly whether or not its the engine's turn
             engine.StartThinking();
+        }
+
+        public static int Perft(int depth)
+        {
+            if (depth == 0) return 1;
+
+            List<Move> moves = GenerateAllLegalMoves();
+            int numPositions = 0;
+
+            foreach (Move move in moves)
+            {
+                ExecuteMove(move);
+                numPositions += Perft(depth - 1);
+                UndoMove(move);
+            }
+
+            return numPositions;
         }
 
         public void ChooseSide(Sides playerSide)
