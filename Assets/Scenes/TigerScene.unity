@@ -872,6 +872,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   WhichPlayerMoveText: {fileID: 445064451}
+  MovementManager: {fileID: 1938672572}
   PromotionPanel: {fileID: 240684452}
   pieceButtons:
   - {fileID: 1312257668}
@@ -883,7 +884,6 @@ MonoBehaviour:
   - {fileID: 1652397075}
   - {fileID: 786986437}
   - {fileID: 1986068899}
-  promotionSelection: 
   selectionMade: 0
   whitePieceSprites:
   - {fileID: 21300000, guid: 2690ec2ac9a154d009df0bbab5ce1dc0, type: 3}

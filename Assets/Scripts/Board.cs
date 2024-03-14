@@ -4,12 +4,13 @@ using System.Collections.Generic;
 using static Chess.PositionInformation;
 using static Chess.ZobristHashing;
 using Unity.PlasticSCM.Editor.WebApi;
+using UnityEngine;
 
 namespace Chess
 {
     public static class Board
     {
-
+        public static BoardManager boardManager;
         public struct ChessBoard
         {
             // https://www.chessprogramming.org/Bitboard_Board-Definition
@@ -312,24 +313,24 @@ namespace Chess
             }
         }
 
-        private static void HandlePawnPromotionInternal(ulong toSquare)
-        {
-            if (IsPawnPromotion(toSquare))
-            {
-                if (BoardManager.CurrentTurn == BoardManager.ComputerSide)
-                {
-                    UpdatePromotedPawnEngine(toSquare);
-                }
-                else
-                {
-                    UIController.Instance.ShowPromotionDropdown(toSquare);
-                }
-            }
-            else
-            {
-                return;
-            }
-        }
+        //private static void HandlePawnPromotionInternal(ulong toSquare)
+        //{
+        //    if (IsPawnPromotion(toSquare))
+        //    {
+        //        if (BoardManager.CurrentTurn == BoardManager.ComputerSide)
+        //        {
+        //            UpdatePromotedPawnEngine(toSquare);
+        //        }
+        //        else
+        //        {
+        //            UIController.Instance.ShowPromotionDropdown(toSquare);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        return;
+        //    }
+        //}
 
         //public static void UpdateBitboards(int originalXPosition, int originalYPosition, int newXPosition, int newYPosition)
         //{
@@ -433,10 +434,10 @@ namespace Chess
 
         //    InternalBoard.UpdateCompositeBitboards();
         //}
-        public static void UpdatePromotedPawnEngine(ulong toSquare)
+        public static PromotionFlags UpdatePromotedPawnEngine()
         {
-            promotionSelection = Engine.EvaluateBestPromotionPiece();
             UIController.Instance.UpdateMoveStatusUIInformation();
+            return Engine.EvaluateBestPromotionPiece();
         }
 
         //public static void UpdatePromotedPawn(ulong toSquare)
@@ -774,16 +775,12 @@ namespace Chess
 
                 if (WhitePawnsAbleToPushOneSquare(isolatedPawnlsb, ~InternalBoard.AllPieces) != isolatedPawnlsb)
                 {
-                    validPawnMoves &= ~MoveTables.RankMasks[(currentPawnPos / 8) + 1];
+                    validPawnMoves &= ~(isolatedPawnlsb << 8);
                 }
 
                 if (WhitePawnsAbleToPushTwoSquares(isolatedPawnlsb, ~InternalBoard.AllPieces) != isolatedPawnlsb)
                 {
-                    // fix this later
-                    if (currentPawnPos < 48)
-                    {
-                        validPawnMoves &= ~MoveTables.RankMasks[(currentPawnPos / 8) + 2];
-                    }
+                    validPawnMoves &= ~(isolatedPawnlsb << 16);
                 }
 
                 // if a pawn can capture any black piece it is a pseudo-legal capture
@@ -817,7 +814,7 @@ namespace Chess
                     ulong movelsb = validPawnMoves & (~validPawnMoves + 1);
 
                     validPawnMoves &= validPawnMoves - 1;
-                    whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, false));
+                    whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, (movelsb << 8) == 0));
                 }
 
                 // move to the next pawn
@@ -843,16 +840,12 @@ namespace Chess
 
                 if (BlackPawnsAbleToPushOneSquare(isolatedPawnlsb, ~InternalBoard.AllPieces) != isolatedPawnlsb)
                 {
-                    validPawnMoves &= ~MoveTables.RankMasks[(currentPawnPos / 8) - 1];
+                    validPawnMoves &= ~(isolatedPawnlsb >> 8);
                 }
 
                 if (BlackPawnsAbleToPushTwoSquares(isolatedPawnlsb, ~InternalBoard.AllPieces) != isolatedPawnlsb)
                 {
-                    // fix this later
-                    if (currentPawnPos > 15)
-                    {
-                        validPawnMoves &= ~MoveTables.RankMasks[(currentPawnPos / 8) - 2];
-                    }
+                    validPawnMoves &= ~(isolatedPawnlsb >> 16);
                 }
 
                 // if a pawn can capture any black piece it is a pseudo-legal capture
@@ -887,7 +880,7 @@ namespace Chess
                     ulong movelsb = validPawnMoves & (~validPawnMoves + 1);
 
                     validPawnMoves &= validPawnMoves - 1;
-                    blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, false));
+                    blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, (movelsb >> 8) == 0));
                 }
 
                 blackPawns &= blackPawns - 1;
@@ -1414,12 +1407,12 @@ namespace Chess
                     PromotionFlags.PromoteToRookFlag => ChessBoard.Rook,
                     PromotionFlags.PromoteToBishopFlag => ChessBoard.Bishop,
                     PromotionFlags.PromoteToKnightFlag => ChessBoard.Knight,
-                    _ => -1
+                    _ => 0
                 };
 
                 // Remove pawn from promotion square and add promoted piece instead
-                InternalBoard.Pieces[friendlyPieceColor, promotionPieceType] |= toSquare;
                 InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Pawn] &= ~toSquare;
+                InternalBoard.Pieces[friendlyPieceColor, promotionPieceType] |= toSquare;
             }
 
             // Pawn has moved two forwards, mark file with en-passant flag
@@ -1517,7 +1510,7 @@ namespace Chess
 
             if (undoingPromotion)
             {
-                int promotedPiece = GetPieceAtSquare(friendlyPieceColor, fromSquare);
+                int promotedPiece = GetPieceAtSquare(friendlyPieceColor, toSquare);
 
                 // places pawn back at promotion square on either 8th or 1st rank and removes promoted piece
                 InternalBoard.Pieces[friendlyPieceColor, promotedPiece] &= ~toSquare;

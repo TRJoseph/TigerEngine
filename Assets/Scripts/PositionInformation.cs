@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections;
+using static Chess.Board;
 
 namespace Chess
 {
@@ -56,6 +57,11 @@ namespace Chess
         public static Dictionary<ulong, int> PositionHashes = new();
 
         public static Stack<GameState> GameStateHistory = new();
+
+
+        /* Misc */
+
+        public static Move SavedMoveForPromotion;
     }
 
 }

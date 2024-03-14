@@ -12,9 +12,10 @@ namespace Chess
 {
     public class UIController : MonoBehaviour
     {
-
         public static UIController Instance;
         public TextMeshProUGUI WhichPlayerMoveText;
+
+        public PieceMovementManager MovementManager;
 
         public GameObject PromotionPanel;
         public Image[] pieceButtons; // References to the Image components of the buttons
@@ -25,6 +26,9 @@ namespace Chess
         public List<Sprite> whitePieceSprites; // Sprites for the white promotion pieces (queen, rook, bishop, knight)
         public List<Sprite> blackPieceSprites; // Sprites for the black promotion pieces
 
+        public delegate void PromotionSelectedHandler(PromotionFlags selectedFlag);
+        public static event PromotionSelectedHandler OnPromotionSelected;
+
 
         void Start()
         {
@@ -32,29 +36,49 @@ namespace Chess
             promotionButtons[1].onClick.AddListener(() => HandlePromotion("Rook"));
             promotionButtons[2].onClick.AddListener(() => HandlePromotion("Bishop"));
             promotionButtons[3].onClick.AddListener(() => HandlePromotion("Knight"));
+
+            // Subscribe to the promotion selected event
+            OnPromotionSelected += HandlePromotionSelected;
         }
+
+        private void HandlePromotionSelected(PromotionFlags selectedFlag)
+        {
+            // execute move with new flag 
+            SavedMoveForPromotion.promotionFlag = selectedFlag;
+            MovementManager.DoMove(SavedMoveForPromotion);
+        }
+
+        // This method is called when the user selects a promotion option
+        public void PromotionSelected(PromotionFlags selectedFlag)
+        {
+            // Hide the promotion panel
+            PromotionPanel.gameObject.SetActive(false);
+
+            // Fire the promotion selected event
+            OnPromotionSelected?.Invoke(selectedFlag);
+        }
+
 
         private void HandlePromotion(string button)
         {
             switch (button)
             {
                 case "Queen":
-                    promotionSelection = PromotionFlags.PromoteToQueenFlag;
+                    PromotionSelected(PromotionFlags.PromoteToQueenFlag);
                     break;
                 case "Rook":
-                    promotionSelection = PromotionFlags.PromoteToRookFlag;
+                    PromotionSelected(PromotionFlags.PromoteToRookFlag);
                     break;
                 case "Bishop":
-                    promotionSelection = PromotionFlags.PromoteToBishopFlag;
+                    PromotionSelected(PromotionFlags.PromoteToBishopFlag);
                     break;
                 case "Knight":
-                    promotionSelection = PromotionFlags.PromoteToKnightFlag;
+                    PromotionSelected(PromotionFlags.PromoteToKnightFlag);
                     break;
                 default:
-                    promotionSelection = PromotionFlags.None;
+                    PromotionSelected(PromotionFlags.None);
                     break;
             }
-            selectionMade = true;
         }
 
         public void ShowPromotionDropdown(ulong toSquare)
@@ -70,33 +94,7 @@ namespace Chess
                 pieceButtons[i].sprite = pieceSprites[i];
             }
 
-            // this begins the coroutine that essential 'waits' for the user to select a new piece before allowing the game to continue
-            StartCoroutine(WaitForSelection(toSquare, PromotionPanel));
         }
-
-        /* This method is important as it allows for the program to wait for the user to make a selection. During this time the gamestate is
-        locked on "Awaiting Promotion". This prevents the main thread from attempting to calculate pawn moves off the edge of the board.
-        Once the selection is made, the Board is set back to its normal game state and the internal board is updated with the new piece type information
-        */
-        IEnumerator WaitForSelection(ulong toSquare, GameObject PromotionPanel)
-        {
-            selectionMade = false;
-
-            while (!selectionMade)
-            {
-                yield return null; // Wait for the next frame
-            }
-
-            // hide the promotion panel gameobject
-            PromotionPanel.gameObject.SetActive(false);
-
-            // Updates the game state
-            Board.currentStatus = Board.GameStatus.Normal;
-
-            // Now update pawn to new selected piece and recalculate moves
-            //Board.UpdatePromotedPawn(toSquare);
-        }
-
 
         private void Awake()
         {

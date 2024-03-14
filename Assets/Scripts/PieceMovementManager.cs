@@ -108,7 +108,7 @@ namespace Chess
              * move attempted was actually valid, determining whether or not to remove the highlights*/
             RemoveLegalMoveHighlights();
 
-            SnapToNearestSquare(legalMove);
+            if(selectedPiece != null) { SnapToNearestSquare(legalMove); }
 
             selectedPiece = null;
         }
@@ -151,12 +151,17 @@ namespace Chess
 
 
                 // this is reached when a move is made
-                HandleMoveExecution(selectedPiece, closestSquare);
+                HandleMovePlayed(selectedPiece, closestSquare);
             }
         }
 
-        private static bool IsPawnPromotion(ulong toSquare)
+        private static bool IsPawnPromotion(ulong toSquare, int movedPiece)
         {
+            if(movedPiece != ChessBoard.Pawn)
+            {
+                return false;
+            }
+
             if (toSquare >> 8 == 0 || toSquare << 8 == 0)
             {
                 return true;
@@ -165,7 +170,7 @@ namespace Chess
             return false;
         }
 
-        private void HandleMoveExecution(GameObject selectedPiece, Transform closestSquare)
+        private void HandleMovePlayed(GameObject selectedPiece, Transform closestSquare)
         {
             int fromSquareIndex = (int)originalPosition.y * 8 + (int)originalPosition.x;
             int toSquareIndex = (int)selectedPiece.transform.position.y * 8 + (int)selectedPiece.transform.position.x;
@@ -175,29 +180,35 @@ namespace Chess
 
             Move move = legalMoves.Single(move => move.fromSquare == fromSquare && move.toSquare == toSquare);
             
-            if(IsPawnPromotion(move.toSquare)) {
+            if(IsPawnPromotion(move.toSquare, move.movedPiece)) {
                 // user drop down,
                 if (BoardManager.CurrentTurn == BoardManager.ComputerSide)
                 {
-                    UpdatePromotedPawnEngine(toSquare);
+                    move.promotionFlag = UpdatePromotedPawnEngine();
+                    DoMove(move);
                 }
                 else
                 {
+                    // "SavedMoveForPromotion" holds onto the move made until the user selects a promotion piece
+                    SavedMoveForPromotion = move;
                     UIController.Instance.ShowPromotionDropdown(toSquare);
-                    move.promotionFlag = promotionSelection;
                 }
+            } else
+            {
+                DoMove(move);
             }
+        }
 
-            // update the internal board state when a move is made
+        public void DoMove(Move move)
+        {
             ExecuteMove(move);
-
 
             boardManager.ClearExistingPieces();
             boardManager.RenderPiecesOnBoardBitBoard();
 
-            //HandleGameStateAfterMove();
             legalMoves = GenerateAllLegalMoves();
         }
+
 
         public void HandleEngineMoveExecution(Move move)
         {

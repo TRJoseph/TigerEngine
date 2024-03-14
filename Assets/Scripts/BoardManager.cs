@@ -31,10 +31,10 @@ namespace Chess
         [SerializeField] public GameObject chessPiecePrefab;
 
         // Forsyth-Edwards Notation representing positions in a chess game
-        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
+        //private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
 
         // FEN string for testing draw rules
-        //private readonly string FENString = "4k3/2b5/8/3P4/7B/8/8/4K3 w - - 0 1"; // starting position in chess
+        private readonly string FENString = "4k3/8/2P5/8/8/8/6p1/4K3 b - - 0 1"; // starting position in chess
 
         public enum Sides
         {
@@ -84,7 +84,7 @@ namespace Chess
             //position hash here
 
             // test perft here
-            //int numPos = Perft(5);
+            //int numPos = Perft(3);
             //Debug.Log("number of positions:" + numPos);
 
             /* ChooseSide controls what side the player will play 
