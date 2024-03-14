@@ -6,6 +6,7 @@ using TMPro;
 using static Chess.Board;
 // using static Chess.ZobristHashing;
 using static Chess.PositionInformation;
+using System.Diagnostics;
 
 
 namespace Chess
@@ -31,10 +32,10 @@ namespace Chess
         [SerializeField] public GameObject chessPiecePrefab;
 
         // Forsyth-Edwards Notation representing positions in a chess game
-        //private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
+        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
 
         // FEN string for testing draw rules
-        private readonly string FENString = "4k3/8/2P5/8/8/8/6p1/4K3 b - - 0 1"; // starting position in chess
+        //private readonly string FENString = "4k3/2P5/8/8/8/8/5p2/4K3 w - - 0 1"; // starting position in chess
 
         public enum Sides
         {
@@ -83,9 +84,14 @@ namespace Chess
 
             //position hash here
 
+            Stopwatch timer = Stopwatch.StartNew();
             // test perft here
-            //int numPos = Perft(3);
-            //Debug.Log("number of positions:" + numPos);
+            int numPos = Perft(5);
+            UnityEngine.Debug.Log("number of positions:" + numPos);
+            timer.Stop();
+            TimeSpan timespan = timer.Elapsed;
+            UnityEngine.Debug.Log(String.Format("{0:00}:{1:00}:{2:00}", timespan.Minutes, timespan.Seconds, timespan.Milliseconds));
+
 
             /* ChooseSide controls what side the player will play 
             For example, if Sides.White is passed in, the player will be able to control the white pieces

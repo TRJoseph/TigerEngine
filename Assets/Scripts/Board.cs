@@ -471,6 +471,7 @@ namespace Chess
                     movedPiece = movedPiece,
                     specialMove = specialMove,
                     IsPawnPromotion = isPawnPromotion,
+                    promotionFlag = promotionFlag,
                 };
         }
 
@@ -814,9 +815,20 @@ namespace Chess
                     ulong movelsb = validPawnMoves & (~validPawnMoves + 1);
 
                     validPawnMoves &= validPawnMoves - 1;
-                    whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, (movelsb << 8) == 0));
-                }
 
+
+                    if ((movelsb << 8) == 0)
+                    {
+                        whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToQueenFlag));
+                        whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToRookFlag));
+                        whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToBishopFlag));
+                        whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToKnightFlag));
+                    }
+                    else
+                    {
+                        whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, false));
+                    }
+                }
                 // move to the next pawn
                 whitePawns &= whitePawns - 1;
             }
@@ -880,7 +892,18 @@ namespace Chess
                     ulong movelsb = validPawnMoves & (~validPawnMoves + 1);
 
                     validPawnMoves &= validPawnMoves - 1;
-                    blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, (movelsb >> 8) == 0));
+
+                    if ((movelsb >> 8) == 0)
+                    {
+                        blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToQueenFlag));
+                        blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToRookFlag));
+                        blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToBishopFlag));
+                        blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToKnightFlag));
+                    }
+                    else
+                    {
+                        blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, false));
+                    }
                 }
 
                 blackPawns &= blackPawns - 1;
@@ -1287,8 +1310,6 @@ namespace Chess
 
             List<Move> legalMoves = new();
 
-            kingInCheck = false;
-
             foreach (Move move in pseudoLegalMoves)
             {
                 ExecuteMove(move);
@@ -1303,11 +1324,6 @@ namespace Chess
                     // if the king is not under attack after the move, add it to legal moves
                     legalMoves.Add(move);
                 }
-                else
-                {
-                    kingInCheck = true;
-                }
-
                 // Undo the move for the next iteration
                 UndoMove(move);
 
@@ -1535,7 +1551,7 @@ namespace Chess
 
             if (movedPiece is ChessBoard.King)
             {
-                if(move.specialMove == SpecialMove.KingSideCastleMove)
+                if (move.specialMove == SpecialMove.KingSideCastleMove)
                 {
                     InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Rook] &= ~(toSquare >> 1);
 
@@ -1551,7 +1567,7 @@ namespace Chess
 
             InternalBoard.UpdateCompositeBitboards();
 
-            if(!inSearch)
+            if (!inSearch)
             {
                 //PositionHashes
             }

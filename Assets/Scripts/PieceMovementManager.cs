@@ -108,7 +108,7 @@ namespace Chess
              * move attempted was actually valid, determining whether or not to remove the highlights*/
             RemoveLegalMoveHighlights();
 
-            if(selectedPiece != null) { SnapToNearestSquare(legalMove); }
+            if (selectedPiece != null) { SnapToNearestSquare(legalMove); }
 
             selectedPiece = null;
         }
@@ -157,7 +157,7 @@ namespace Chess
 
         private static bool IsPawnPromotion(ulong toSquare, int movedPiece)
         {
-            if(movedPiece != ChessBoard.Pawn)
+            if (movedPiece != ChessBoard.Pawn)
             {
                 return false;
             }
@@ -178,26 +178,41 @@ namespace Chess
             ulong fromSquare = 1UL << fromSquareIndex;
             ulong toSquare = 1UL << toSquareIndex;
 
-            Move move = legalMoves.Single(move => move.fromSquare == fromSquare && move.toSquare == toSquare);
-            
-            if(IsPawnPromotion(move.toSquare, move.movedPiece)) {
-                // user drop down,
+            // Get all moves that match the from and to squares
+            var matchingMoves = legalMoves.Where(move => move.fromSquare == fromSquare && move.toSquare == toSquare).ToList();
+
+            if (matchingMoves.Count == 0)
+            {
+                Debug.Log("Error: No matching moves found for this played move!");
+                return;
+            }
+
+            Move move;
+            if (matchingMoves.Count > 1)
+            {
+                // This implies promotion moves are possible, handle accordingly
                 if (BoardManager.CurrentTurn == BoardManager.ComputerSide)
                 {
-                    move.promotionFlag = UpdatePromotedPawnEngine();
+                    var promotionFlag = UpdatePromotedPawnEngine();
+                    move = matchingMoves.First(m => m.promotionFlag == promotionFlag);
                     DoMove(move);
                 }
                 else
                 {
-                    // "SavedMoveForPromotion" holds onto the move made until the user selects a promotion piece
-                    SavedMoveForPromotion = move;
-                    UIController.Instance.ShowPromotionDropdown(toSquare);
+                    var savedPromotionMoves = legalMoves.Where(move => move.fromSquare == fromSquare && move.toSquare == toSquare && move.IsPawnPromotion).ToList();
+                    // SavedMoveForPromotionBase = new MoveBase { fromSquare = fromSquare, toSquare = toSquare };
+                    UIController.Instance.ShowPromotionDropdown(toSquare, savedPromotionMoves);
+                    // The actual selection of the promotionFlag is handled by the promotion dropdown, after the user move input
                 }
-            } else
+            }
+            else
             {
+                // Only one matching move, so it's not a promotion or it's a non-pawn move
+                move = matchingMoves.Single();
                 DoMove(move);
             }
         }
+
 
         public void DoMove(Move move)
         {

@@ -7,6 +7,7 @@ using System;
 using System.Net.Security;
 using static Chess.Board;
 using static Chess.PositionInformation;
+using System.Linq;
 
 namespace Chess
 {
@@ -26,64 +27,54 @@ namespace Chess
         public List<Sprite> whitePieceSprites; // Sprites for the white promotion pieces (queen, rook, bishop, knight)
         public List<Sprite> blackPieceSprites; // Sprites for the black promotion pieces
 
-        public delegate void PromotionSelectedHandler(PromotionFlags selectedFlag);
+        public delegate void PromotionSelectedHandler(Move move);
         public static event PromotionSelectedHandler OnPromotionSelected;
 
+        List<Move> currentPromotionMoves = new();
 
         void Start()
         {
-            promotionButtons[0].onClick.AddListener(() => HandlePromotion("Queen"));
-            promotionButtons[1].onClick.AddListener(() => HandlePromotion("Rook"));
-            promotionButtons[2].onClick.AddListener(() => HandlePromotion("Bishop"));
-            promotionButtons[3].onClick.AddListener(() => HandlePromotion("Knight"));
+            promotionButtons[0].onClick.AddListener(() => HandlePromotion(GetCurrentPromotionMove(PromotionFlags.PromoteToQueenFlag)));
+            promotionButtons[1].onClick.AddListener(() => HandlePromotion(GetCurrentPromotionMove(PromotionFlags.PromoteToRookFlag)));
+            promotionButtons[2].onClick.AddListener(() => HandlePromotion(GetCurrentPromotionMove(PromotionFlags.PromoteToBishopFlag)));
+            promotionButtons[3].onClick.AddListener(() => HandlePromotion(GetCurrentPromotionMove(PromotionFlags.PromoteToKnightFlag)));
 
             // Subscribe to the promotion selected event
             OnPromotionSelected += HandlePromotionSelected;
         }
 
-        private void HandlePromotionSelected(PromotionFlags selectedFlag)
+        private Move GetCurrentPromotionMove(PromotionFlags flag)
         {
-            // execute move with new flag 
-            SavedMoveForPromotion.promotionFlag = selectedFlag;
-            MovementManager.DoMove(SavedMoveForPromotion);
+            return currentPromotionMoves.Single(move => move.promotionFlag == flag);
+        }
+        private void HandlePromotionSelected(Move move)
+        {
+            MovementManager.DoMove(move);
         }
 
         // This method is called when the user selects a promotion option
-        public void PromotionSelected(PromotionFlags selectedFlag)
+        public void PromotionSelected(Move move)
         {
             // Hide the promotion panel
             PromotionPanel.gameObject.SetActive(false);
 
             // Fire the promotion selected event
-            OnPromotionSelected?.Invoke(selectedFlag);
+            OnPromotionSelected?.Invoke(move);
         }
 
 
-        private void HandlePromotion(string button)
+        private void HandlePromotion(Move move)
         {
-            switch (button)
-            {
-                case "Queen":
-                    PromotionSelected(PromotionFlags.PromoteToQueenFlag);
-                    break;
-                case "Rook":
-                    PromotionSelected(PromotionFlags.PromoteToRookFlag);
-                    break;
-                case "Bishop":
-                    PromotionSelected(PromotionFlags.PromoteToBishopFlag);
-                    break;
-                case "Knight":
-                    PromotionSelected(PromotionFlags.PromoteToKnightFlag);
-                    break;
-                default:
-                    PromotionSelected(PromotionFlags.None);
-                    break;
-            }
+            PromotionSelected(move);
         }
 
-        public void ShowPromotionDropdown(ulong toSquare)
+        public void ShowPromotionDropdown(ulong toSquare, List<Move> savedPromotionMoves)
         {
             currentStatus = GameStatus.AwaitingPromotion;
+
+            // this is responsible for updating the dropdown list with the correct corresponding promotion move choice
+            currentPromotionMoves = savedPromotionMoves;
+
             PromotionPanel.gameObject.SetActive(true);
 
             PromotionPanel.gameObject.transform.position = new Vector3(((int)Math.Log(toSquare, 2) % 8) - 1, ((int)Math.Log(toSquare, 2) / 8) - 2, -2);
@@ -93,7 +84,6 @@ namespace Chess
             {
                 pieceButtons[i].sprite = pieceSprites[i];
             }
-
         }
 
         private void Awake()
