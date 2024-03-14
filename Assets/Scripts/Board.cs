@@ -5,6 +5,8 @@ using static Chess.PositionInformation;
 using static Chess.ZobristHashing;
 using Unity.PlasticSCM.Editor.WebApi;
 using UnityEngine;
+using static Chess.Board;
+using Unity.VisualScripting;
 
 namespace Chess
 {
@@ -117,9 +119,17 @@ namespace Chess
             public bool IsPawnPromotion;
 
             public PromotionFlags? promotionFlag;
+
+            public bool IsDefault()
+            {
+                return fromSquare == 0 && toSquare == 0 && movedPiece == 0 && specialMove == SpecialMove.None && !IsPawnPromotion && promotionFlag == null;
+            }
         }
 
-        public static List<Move> legalMoves = new List<Move>();
+        public static Move[] legalMoves = new Move[256];
+
+        private static int currentMoveIndex;
+
 
         private static ulong lastPawnDoubleMoveBitboard = 0;
 
@@ -475,11 +485,6 @@ namespace Chess
                 };
         }
 
-        public static void ClearListMoves()
-        {
-            legalMoves.Clear();
-        }
-
         //public static void HandleGameStateAfterMove()
         //{
 
@@ -670,9 +675,8 @@ namespace Chess
 
         //
 
-        public static List<Move> GenerateRookMoves(ref ulong rookBitboard, ref ulong friendlyPieces)
+        public static void GenerateRookMoves(ref Span<Move> moves, ref ulong rookBitboard, ref ulong friendlyPieces)
         {
-            List<Move> rookMoves = new();
 
             ulong rooks = rookBitboard;
 
@@ -691,18 +695,15 @@ namespace Chess
                     ulong movelsb = validRookMoves & (~validRookMoves + 1);
 
                     validRookMoves &= validRookMoves - 1;
-                    rookMoves.Add(AddLegalMove(isolatedRooklsb, movelsb, ChessBoard.Rook, SpecialMove.None, false));
+                    moves[currentMoveIndex] = AddLegalMove(isolatedRooklsb, movelsb, ChessBoard.Rook, SpecialMove.None, false);
+                    currentMoveIndex++;
                 }
                 rooks &= rooks - 1;
             }
-
-            return rookMoves;
         }
 
-        public static List<Move> GenerateBishopMoves(ref ulong bishopBitboard, ref ulong friendlyPieces)
+        public static void GenerateBishopMoves(ref Span<Move> moves, ref ulong bishopBitboard, ref ulong friendlyPieces)
         {
-            List<Move> bishopMoves = new();
-
             ulong bishops = bishopBitboard;
 
             while (bishops != 0)
@@ -720,18 +721,15 @@ namespace Chess
                     ulong movelsb = validBishopMoves & (~validBishopMoves + 1);
 
                     validBishopMoves &= validBishopMoves - 1;
-                    bishopMoves.Add(AddLegalMove(isolatedBishoplsb, movelsb, ChessBoard.Bishop, SpecialMove.None, false));
+                    moves[currentMoveIndex] = AddLegalMove(isolatedBishoplsb, movelsb, ChessBoard.Bishop, SpecialMove.None, false);
+                    currentMoveIndex++;
                 }
                 bishops &= bishops - 1;
             }
-
-            return bishopMoves;
         }
 
-        public static List<Move> GenerateQueenMoves(ref ulong queenBitboard, ref ulong friendlyPieces)
+        public static void GenerateQueenMoves(ref Span<Move> moves, ref ulong queenBitboard, ref ulong friendlyPieces)
         {
-            List<Move> queenMoves = new();
-
             ulong queens = queenBitboard;
 
             while (queens != 0)
@@ -751,18 +749,15 @@ namespace Chess
                     ulong movelsb = validQueenMoves & (~validQueenMoves + 1);
 
                     validQueenMoves &= validQueenMoves - 1;
-                    queenMoves.Add(AddLegalMove(isolatedQueenlsb, movelsb, ChessBoard.Queen, SpecialMove.None, false));
+                    moves[currentMoveIndex] = AddLegalMove(isolatedQueenlsb, movelsb, ChessBoard.Queen, SpecialMove.None, false);
+                    currentMoveIndex++;
                 }
                 queens &= queens - 1;
             }
-
-            return queenMoves;
         }
 
-        public static List<Move> GenerateWhitePawnMoves(ref ulong whitePawnBitboard)
+        public static void GenerateWhitePawnMoves(ref Span<Move> moves, ref ulong whitePawnBitboard)
         {
-            List<Move> whitePawnMoves = new();
-
             ulong whitePawns = whitePawnBitboard;
 
             while (whitePawns != 0)
@@ -788,27 +783,27 @@ namespace Chess
                 ulong validPawnCaptures = MoveTables.PrecomputedWhitePawnCaptures[currentPawnPos] & InternalBoard.AllBlackPieces;
                 validPawnMoves |= validPawnCaptures;
 
-                if (lastPawnDoubleMoveBitboard != 0)
-                {
-                    // northwest potential en passant capture square
-                    int pawnCaptureOffset = (int)Math.Log(lastPawnDoubleMoveBitboard, 2) - currentPawnPos;
-                    if (pawnCaptureOffset == 7 && ((isolatedPawnlsb >> 1) & InternalBoard.AllBlackPieces) != 0)
-                    {
-                        if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
-                        {
-                            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant, false));
-                        }
-                    }
+                //if (lastPawnDoubleMoveBitboard != 0)
+                //{
+                //    // northwest potential en passant capture square
+                //    int pawnCaptureOffset = (int)Math.Log(lastPawnDoubleMoveBitboard, 2) - currentPawnPos;
+                //    if (pawnCaptureOffset == 7 && ((isolatedPawnlsb >> 1) & InternalBoard.AllBlackPieces) != 0)
+                //    {
+                //        if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
+                //        {
+                //            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant, false));
+                //        }
+                //    }
 
-                    // northeast potential en passant capture square 
-                    if (pawnCaptureOffset == 9 && ((isolatedPawnlsb << 1) & InternalBoard.AllBlackPieces) != 0)
-                    {
-                        if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
-                        {
-                            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant, false));
-                        }
-                    }
-                }
+                //    // northeast potential en passant capture square 
+                //    if (pawnCaptureOffset == 9 && ((isolatedPawnlsb << 1) & InternalBoard.AllBlackPieces) != 0)
+                //    {
+                //        if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
+                //        {
+                //            whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant, false));
+                //        }
+                //    }
+                //}
 
                 while (validPawnMoves != 0)
                 {
@@ -819,26 +814,28 @@ namespace Chess
 
                     if ((movelsb << 8) == 0)
                     {
-                        whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToQueenFlag));
-                        whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToRookFlag));
-                        whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToBishopFlag));
-                        whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToKnightFlag));
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToQueenFlag);
+                        currentMoveIndex++;
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToRookFlag);
+                        currentMoveIndex++;
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToBishopFlag);
+                        currentMoveIndex++;
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToKnightFlag);
+                        currentMoveIndex++;
                     }
                     else
                     {
-                        whitePawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, false));
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, false);
+                        currentMoveIndex++;
                     }
                 }
                 // move to the next pawn
                 whitePawns &= whitePawns - 1;
             }
-
-            return whitePawnMoves;
         }
 
-        public static List<Move> GenerateBlackPawnMoves(ref ulong blackPawnBitboard)
+        public static void GenerateBlackPawnMoves(ref Span<Move> moves, ref ulong blackPawnBitboard)
         {
-            List<Move> blackPawnMoves = new();
 
             ulong blackPawns = blackPawnBitboard;
 
@@ -864,28 +861,28 @@ namespace Chess
                 ulong validPawnCaptures = MoveTables.PrecomputedBlackPawnCaptures[currentPawnPos] & InternalBoard.AllWhitePieces;
                 validPawnMoves |= validPawnCaptures;
 
-                if (lastPawnDoubleMoveBitboard != 0)
-                {
+                //if (lastPawnDoubleMoveBitboard != 0)
+                //{
 
-                    // southwest potential en passant capture square
-                    int pawnCaptureOffset = currentPawnPos - (int)Math.Log(lastPawnDoubleMoveBitboard, 2);
-                    if (pawnCaptureOffset == 9 && ((isolatedPawnlsb >> 1) & InternalBoard.AllWhitePieces) != 0)
-                    {
-                        if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
-                        {
-                            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant, false));
-                        }
-                    }
+                //    // southwest potential en passant capture square
+                //    int pawnCaptureOffset = currentPawnPos - (int)Math.Log(lastPawnDoubleMoveBitboard, 2);
+                //    if (pawnCaptureOffset == 9 && ((isolatedPawnlsb >> 1) & InternalBoard.AllWhitePieces) != 0)
+                //    {
+                //        if ((lastPawnDoubleMoveBitboard & AFileMask) != 0)
+                //        {
+                //            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant, false));
+                //        }
+                //    }
 
-                    // southeast potential en passant capture square 
-                    if (pawnCaptureOffset == 7 && ((isolatedPawnlsb >> 1) & InternalBoard.AllWhitePieces) != 0)
-                    {
-                        if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
-                        {
-                            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant, false));
-                        }
-                    }
-                }
+                //    // southeast potential en passant capture square 
+                //    if (pawnCaptureOffset == 7 && ((isolatedPawnlsb >> 1) & InternalBoard.AllWhitePieces) != 0)
+                //    {
+                //        if ((lastPawnDoubleMoveBitboard & HFileMask) != 0)
+                //        {
+                //            blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, lastPawnDoubleMoveBitboard, ChessBoard.Pawn, SpecialMove.EnPassant, false));
+                //        }
+                //    }
+                //}
 
                 while (validPawnMoves != 0)
                 {
@@ -895,26 +892,28 @@ namespace Chess
 
                     if ((movelsb >> 8) == 0)
                     {
-                        blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToQueenFlag));
-                        blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToRookFlag));
-                        blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToBishopFlag));
-                        blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToKnightFlag));
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToQueenFlag);
+                        currentMoveIndex++;
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToRookFlag);
+                        currentMoveIndex++;
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToBishopFlag);
+                        currentMoveIndex++;
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToKnightFlag);
+                        currentMoveIndex++;
                     }
                     else
                     {
-                        blackPawnMoves.Add(AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, false));
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, false);
+                        currentMoveIndex++;
                     }
                 }
 
                 blackPawns &= blackPawns - 1;
             }
-
-            return blackPawnMoves;
         }
 
-        public static List<Move> GenerateKnightMoves(ref ulong knightBitboard, ref ulong friendlyPieces)
+        public static void GenerateKnightMoves(ref Span<Move> moves, ref ulong knightBitboard, ref ulong friendlyPieces)
         {
-            List<Move> knightMoves = new();
 
             ulong knights = knightBitboard;
             while (knights != 0)
@@ -931,13 +930,13 @@ namespace Chess
                     ulong movelsb = validKnightMoves & (~validKnightMoves + 1);
 
                     validKnightMoves &= validKnightMoves - 1;
-                    knightMoves.Add(AddLegalMove(isolatedKnightlsb, movelsb, ChessBoard.Knight, SpecialMove.None, false));
+                    moves[currentMoveIndex] = AddLegalMove(isolatedKnightlsb, movelsb, ChessBoard.Knight, SpecialMove.None, false);
+                    currentMoveIndex++;
                 }
 
                 // move to next knight
                 knights &= knights - 1;
             }
-            return knightMoves;
         }
 
         /* 
@@ -1249,9 +1248,8 @@ namespace Chess
             return true;
         }
 
-        public static List<Move> GenerateKingMoves(ref ulong king, ref ulong friendlyPieces)
+        public static void GenerateKingMoves(ref Span<Move> moves, ref ulong king, ref ulong friendlyPieces)
         {
-            List<Move> kingMoves = new();
 
             // king index converts the king bitboard 
             int kingIndex = (int)Math.Log(king, 2);
@@ -1267,12 +1265,14 @@ namespace Chess
             {
                 if (CanCastleKingsideWhite())
                 {
-                    kingMoves.Add(AddLegalMove(king, 1UL << 6, ChessBoard.King, SpecialMove.KingSideCastleMove, false));
+                    moves[currentMoveIndex] = AddLegalMove(king, 1UL << 6, ChessBoard.King, SpecialMove.KingSideCastleMove, false);
+                    currentMoveIndex++;
                 }
 
                 if (CanCastleQueensideWhite())
                 {
-                    kingMoves.Add(AddLegalMove(king, 1UL << 2, ChessBoard.King, SpecialMove.QueenSideCastleMove, false));
+                    moves[currentMoveIndex] = AddLegalMove(king, 1UL << 2, ChessBoard.King, SpecialMove.QueenSideCastleMove, false);
+                    currentMoveIndex++;
                 }
 
             }
@@ -1280,12 +1280,14 @@ namespace Chess
             {
                 if (CanCastleKingsideBlack())
                 {
-                    kingMoves.Add(AddLegalMove(king, 1UL << 62, ChessBoard.King, SpecialMove.KingSideCastleMove, false));
+                    moves[currentMoveIndex] = AddLegalMove(king, 1UL << 62, ChessBoard.King, SpecialMove.KingSideCastleMove, false);
+                    currentMoveIndex++;
                 }
 
                 if (CanCastleQueensideBlack())
                 {
-                    kingMoves.Add(AddLegalMove(king, 1UL << 58, ChessBoard.King, SpecialMove.QueenSideCastleMove, false));
+                    moves[currentMoveIndex] = AddLegalMove(king, 1UL << 58, ChessBoard.King, SpecialMove.QueenSideCastleMove, false);
+                    currentMoveIndex++;
                 }
             }
 
@@ -1296,41 +1298,69 @@ namespace Chess
 
                 validKingMoves &= validKingMoves - 1;
 
-                kingMoves.Add(AddLegalMove(king, movelsb, ChessBoard.King, SpecialMove.None, false));
+                moves[currentMoveIndex] = AddLegalMove(king, movelsb, ChessBoard.King, SpecialMove.None, false);
+                currentMoveIndex++;
             }
+        }
 
-            return kingMoves;
+        public static void Initialize()
+        {
+            currentMoveIndex = 0;
         }
 
 
-        public static List<Move> GenerateAllLegalMoves()
+        public static Move[] GenerateMoves()
         {
+            Span<Move> moves = stackalloc Move[256];
+            Span<Move> opponentMoves = stackalloc Move[256]; 
 
-            List<Move> pseudoLegalMoves = GenerateLegalMovesBitboard();
+            int validMoveCount = GenerateAllLegalMoves(ref moves, ref opponentMoves);
 
-            List<Move> legalMoves = new();
-
-            foreach (Move move in pseudoLegalMoves)
+            Move[] movesArray = new Move[validMoveCount];
+            for (int i = 0; i < validMoveCount; i++)
             {
-                ExecuteMove(move);
+                movesArray[i] = moves[i];
+            }
+            return movesArray;
+        }
 
-                // replace this with current king square
+        public static int GenerateAllLegalMoves(ref Span<Move> pseudoLegalMoves, ref Span<Move> opponentMoves)
+        {
+            Initialize();
+
+            GenerateLegalMovesBitboard(ref pseudoLegalMoves);
+
+            int legalMoveCount = 0;
+
+            for (int i = 0; i < currentMoveIndex; i ++)
+            {
+                int savedCurrentMoveIndex = currentMoveIndex;
+                ExecuteMove(pseudoLegalMoves[i]);
                 ulong currentKingSquare = whiteToMove ? InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King] : InternalBoard.Pieces[ChessBoard.White, ChessBoard.King];
 
-                List<Move> opponentResponses = GenerateLegalMovesBitboard();
+                currentMoveIndex = 0;
+                GenerateLegalMovesBitboard(ref opponentMoves);
 
-                if (!opponentResponses.Any(response => response.toSquare == currentKingSquare))
+                bool isLegal = true;
+                for (int j = 0; j < currentMoveIndex; j++)
                 {
-                    // if the king is not under attack after the move, add it to legal moves
-                    legalMoves.Add(move);
+                    if (opponentMoves[j].toSquare == currentKingSquare)
+                    {
+                        isLegal = false;
+                        break;
+                    }
                 }
-                // Undo the move for the next iteration
-                UndoMove(move);
 
+                if (isLegal)
+                {
+                    pseudoLegalMoves[legalMoveCount++] = pseudoLegalMoves[i];
+                }
+
+                UndoMove(pseudoLegalMoves[i]);
+                currentMoveIndex = savedCurrentMoveIndex;
             }
-            return legalMoves;
+            return legalMoveCount; // Returning the count of legal moves
         }
-
 
         private static int GetPieceAtSquare(int pieceColorIndex, ulong square)
         {
@@ -1579,34 +1609,31 @@ namespace Chess
         }
 
 
-        public static List<Move> GenerateLegalMovesBitboard()
+        public static void GenerateLegalMovesBitboard(ref Span<Move> moves)
         {
             // create list to store legal moves
-            List<Move> moves = new();
+            //List<Move> moves = new();
 
             // TODO edit genbishop, queen, and rook movesets to pass in reference to friendly piece bitboard
 
             if (whiteToMove)
             {
-                moves.AddRange(GenerateBishopMoves(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Bishop], ref InternalBoard.AllWhitePieces));
-                moves.AddRange(GenerateRookMoves(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook], ref InternalBoard.AllWhitePieces));
-                moves.AddRange(GenerateQueenMoves(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Queen], ref InternalBoard.AllWhitePieces));
-                moves.AddRange(GenerateWhitePawnMoves(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn]));
-                moves.AddRange(GenerateKnightMoves(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight], ref InternalBoard.AllWhitePieces));
-                moves.AddRange(GenerateKingMoves(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King], ref InternalBoard.AllWhitePieces));
+                GenerateBishopMoves(ref moves, ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Bishop], ref InternalBoard.AllWhitePieces);
+                GenerateRookMoves(ref moves, ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook], ref InternalBoard.AllWhitePieces);
+                GenerateQueenMoves(ref moves, ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Queen], ref InternalBoard.AllWhitePieces);
+                GenerateWhitePawnMoves(ref moves, ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn]);
+                GenerateKnightMoves(ref moves, ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight], ref InternalBoard.AllWhitePieces);
+                GenerateKingMoves(ref moves, ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King], ref InternalBoard.AllWhitePieces);
             }
             else
             {
-                moves.AddRange(GenerateBishopMoves(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop], ref InternalBoard.AllBlackPieces));
-                moves.AddRange(GenerateRookMoves(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook], ref InternalBoard.AllBlackPieces));
-                moves.AddRange(GenerateQueenMoves(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Queen], ref InternalBoard.AllBlackPieces));
-                moves.AddRange(GenerateBlackPawnMoves(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn]));
-                moves.AddRange(GenerateKnightMoves(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight], ref InternalBoard.AllBlackPieces));
-                moves.AddRange(GenerateKingMoves(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King], ref InternalBoard.AllBlackPieces));
+                GenerateBishopMoves(ref moves, ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop], ref InternalBoard.AllBlackPieces);
+                GenerateRookMoves(ref moves, ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook], ref InternalBoard.AllBlackPieces);
+                GenerateQueenMoves(ref moves, ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Queen], ref InternalBoard.AllBlackPieces);
+                GenerateBlackPawnMoves(ref moves, ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn]);
+                GenerateKnightMoves(ref moves, ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight], ref InternalBoard.AllBlackPieces);
+                GenerateKingMoves(ref moves, ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King], ref InternalBoard.AllBlackPieces);
             }
-
-            return moves;
-
         }
 
         // returns true if a piece is attacking the square

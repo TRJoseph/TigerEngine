@@ -33,7 +33,7 @@ namespace Chess
                 {
                     MainThreadDispatcher.Enqueue(() =>
                     {
-                        pieceMovementManager.HandleEngineMoveExecution(SimpleEval());
+                        //pieceMovementManager.HandleEngineMoveExecution(SimpleEval());
                     });
 
                 }
@@ -47,14 +47,14 @@ namespace Chess
             return PromotionFlags.PromoteToQueenFlag;
         }
 
-        private static Board.Move SimpleEval()
-        {
-            // capture piece when available
+        //private static Board.Move SimpleEval()
+        //{
+        //    // capture piece when available
 
-            // make random move, for now
-            var random = new System.Random();
-            return Board.legalMoves[random.Next(Board.legalMoves.Count)];
-        }
+        //    // make random move, for now
+        //    var random = new System.Random();
+        //    return Board.legalMoves[random.Next(Board.legalMoves.Count)];
+        //}
     }
 
 }

@@ -35,7 +35,9 @@ namespace Chess
         private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
 
         // FEN string for testing draw rules
-        //private readonly string FENString = "4k3/2P5/8/8/8/8/5p2/4K3 w - - 0 1"; // starting position in chess
+        //private readonly string FENString = "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1"; // starting position in chess
+
+        //private readonly string FENString = "4k3/8/8/3N4/8/8/8/4K3 w - - 0 1";
 
         public enum Sides
         {
@@ -50,6 +52,9 @@ namespace Chess
 
         public static Sides CurrentTurn = Sides.White;
 
+        public static Move[] testLegal = new Move[256];
+
+
         // Start is called before the first frame update
         void Start()
         {
@@ -60,7 +65,8 @@ namespace Chess
             // loads position
             LoadPosition();
 
-            legalMoves = GenerateAllLegalMoves();
+            legalMoves = GenerateMoves();
+            //legalMoves = GenerateAllLegalMoves();
         }
 
         public void LoadPosition()
@@ -115,7 +121,7 @@ namespace Chess
         {
             if (depth == 0) return 1;
 
-            List<Move> moves = GenerateAllLegalMoves();
+            Span<Move> moves = GenerateMoves();
             int numPositions = 0;
 
             foreach (Move move in moves)

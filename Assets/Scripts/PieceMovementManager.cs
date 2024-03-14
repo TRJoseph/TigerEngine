@@ -216,12 +216,13 @@ namespace Chess
 
         public void DoMove(Move move)
         {
+            bool testWhiteToMove = whiteToMove;
             ExecuteMove(move);
-
+            testWhiteToMove = whiteToMove;
             boardManager.ClearExistingPieces();
             boardManager.RenderPiecesOnBoardBitBoard();
 
-            legalMoves = GenerateAllLegalMoves();
+            legalMoves = GenerateMoves();
         }
 
 
@@ -234,7 +235,7 @@ namespace Chess
             boardManager.RenderPiecesOnBoardBitBoard();
 
             //HandleGameStateAfterMove();
-            legalMoves = GenerateAllLegalMoves();
+            legalMoves = GenerateMoves();
         }
 
         public static void UpdateFrontEndPromotion(int pieceType, int xPos, int yPos)
