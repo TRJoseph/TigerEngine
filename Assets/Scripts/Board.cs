@@ -85,6 +85,27 @@ namespace Chess
         public const ulong ABFileMask = 0x3F3F3F3F3F3F3F3F;
         public const ulong GHFileMask = 0xFCFCFCFCFCFCFCFC;
 
+        private const ulong deBruijn64 = 0x37E84A99DAE458F;
+        private static readonly int[] deBruijnTable =
+        {
+            0, 1, 17, 2, 18, 50, 3, 57,
+            47, 19, 22, 51, 29, 4, 33, 58,
+            15, 48, 20, 27, 25, 23, 52, 41,
+            54, 30, 38, 5, 43, 34, 59, 8,
+            63, 16, 49, 56, 46, 21, 28, 32,
+            14, 26, 24, 40, 53, 37, 42, 7,
+            62, 55, 45, 31, 13, 39, 36, 6,
+            61, 44, 12, 35, 60, 11, 10, 9
+        };
+
+        // Get index of least significant set bit in given 64bit value. Also clears the bit to zero.
+        public static int GetLSB(ref ulong b)
+        {
+            int i = deBruijnTable[((ulong)((long)b & -(long)b) * deBruijn64) >> 58];
+            return i;
+        }
+
+
         public enum SpecialMove
         {
             None = 0,
@@ -685,7 +706,7 @@ namespace Chess
                 // and with twos complement to isolate each rook
                 ulong isolatedRooklsb = rooks & (~rooks + 1);
 
-                ulong validRookMoves = GetRookAttacks(InternalBoard.AllPieces, (int)Math.Log(isolatedRooklsb, 2));
+                ulong validRookMoves = GetRookAttacks(InternalBoard.AllPieces, GetLSB(ref isolatedRooklsb));
 
                 // remove friendly piece blockers from potential captures 
                 validRookMoves &= ~friendlyPieces;
@@ -711,7 +732,7 @@ namespace Chess
                 // and with twos complement to isolate each bishop
                 ulong isolatedBishoplsb = bishops & (~bishops + 1);
 
-                ulong validBishopMoves = GetBishopAttacks(InternalBoard.AllPieces, (int)Math.Log(isolatedBishoplsb, 2));
+                ulong validBishopMoves = GetBishopAttacks(InternalBoard.AllPieces, GetLSB(ref isolatedBishoplsb));
 
                 // remove friendly piece blockers from potential captures 
                 validBishopMoves &= ~friendlyPieces;
@@ -737,7 +758,7 @@ namespace Chess
                 // and with twos complement to isolate each queen
                 ulong isolatedQueenlsb = queens & (~queens + 1);
 
-                int currentQueenPos = (int)Math.Log(isolatedQueenlsb, 2);
+                int currentQueenPos = GetLSB(ref isolatedQueenlsb);
                 ulong validQueenMoves = GetBishopAttacks(InternalBoard.AllPieces, currentQueenPos);
                 validQueenMoves |= GetRookAttacks(InternalBoard.AllPieces, currentQueenPos);
 
@@ -765,7 +786,7 @@ namespace Chess
                 // isolates each pawn one by one
                 ulong isolatedPawnlsb = whitePawns & (~whitePawns + 1);
                 // gets current pawn position to add to legal move list
-                int currentPawnPos = (int)Math.Log(isolatedPawnlsb, 2);
+                int currentPawnPos = GetLSB(ref isolatedPawnlsb);
                 // valid pawn moves include pushes, captures, and en passant
                 ulong validPawnMoves = MoveTables.PrecomputedWhitePawnPushes[currentPawnPos];
 
@@ -843,7 +864,7 @@ namespace Chess
             {
                 ulong isolatedPawnlsb = blackPawns & (~blackPawns + 1);
 
-                int currentPawnPos = (int)Math.Log(isolatedPawnlsb, 2);
+                int currentPawnPos = GetLSB(ref isolatedPawnlsb);
                 // valid pawn moves include pushes, captures, and en passant
                 ulong validPawnMoves = MoveTables.PrecomputedBlackPawnPushes[currentPawnPos];
 
@@ -920,7 +941,7 @@ namespace Chess
             {
                 // isolate each knight
                 ulong isolatedKnightlsb = knights & (~knights + 1);
-                int currentKnightPos = (int)Math.Log(isolatedKnightlsb, 2);
+                int currentKnightPos = GetLSB(ref isolatedKnightlsb);
 
                 // valid knight moves only include either empty squares or squares the opponent pieces occupy
                 ulong validKnightMoves = MoveTables.PrecomputedKnightMoves[currentKnightPos] & ~friendlyPieces;
@@ -1252,7 +1273,7 @@ namespace Chess
         {
 
             // king index converts the king bitboard 
-            int kingIndex = (int)Math.Log(king, 2);
+            int kingIndex = GetLSB(ref king);
 
             // grabs the corresponding bitboard representing all legal moves from the given king index on the board
             ulong validKingMoves = MoveTables.PrecomputedKingMoves[kingIndex];
