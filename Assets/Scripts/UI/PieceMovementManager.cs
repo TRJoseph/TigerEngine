@@ -216,9 +216,8 @@ namespace Chess
 
         public void DoMove(Move move)
         {
-            bool testWhiteToMove = whiteToMove;
             ExecuteMove(move);
-            testWhiteToMove = whiteToMove;
+
             boardManager.ClearExistingPieces();
             boardManager.RenderPiecesOnBoardBitBoard();
 

@@ -1533,7 +1533,7 @@ namespace Chess
             InternalBoard.UpdateCompositeBitboards();
 
             // Pawn moves and captures reset the fifty move counter and clear 3-fold repetition history
-            if (movedPiece == Piece.Pawn || capturedPieceType != -1)
+            if (movedPiece == ChessBoard.Pawn || capturedPieceType != -1)
             {
                 if (!inSearch)
                 {
