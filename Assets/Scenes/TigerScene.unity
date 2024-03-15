@@ -871,9 +871,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d327bca4084b49ae9f0252d7ebdd295, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Canvas: {fileID: 1545817158}
+  tilePrefab: {fileID: 7629693030608968657, guid: f6d1234384d094a2a9c042d2cf08a7a1, type: 3}
+  _cam: {fileID: 519420032}
   WhichPlayerMoveText: {fileID: 445064451}
   MovementManager: {fileID: 1938672572}
   PromotionPanel: {fileID: 240684452}
+  chessPiecePrefab: {fileID: 7976279080090805154, guid: 749da12b3866c3244be51a9a5bd7437c, type: 3}
+  tileFileLabels:
+  - {fileID: 4309269165316274283, guid: 51bca7c92f337a147b35acc8501fcc16, type: 3}
+  - {fileID: 7212787145201366056, guid: 00b8ecbb95459e54993359dcd01621ac, type: 3}
+  - {fileID: 6734471488616006367, guid: 06888c2881391054ea50f503d0dc8754, type: 3}
+  - {fileID: 1784253904203421076, guid: 576d49d78c40d464b88d6a4031affdf2, type: 3}
+  - {fileID: 3841480414968952987, guid: b833aa8cef92660468265ad494b5e599, type: 3}
+  - {fileID: 6605388977903161867, guid: 6b68120b978c0e44fa4f369ab193ec1f, type: 3}
+  - {fileID: 6071837703059424550, guid: f55c66f5cdac3d74cbe96bdc09905dfb, type: 3}
+  - {fileID: 1827069831639083081, guid: e299e13e2b1b37d419b59ce50207effa, type: 3}
+  tileRankLabels:
+  - {fileID: 1981225700097104272, guid: c7ff46e09aeee12499b37a71ee66e331, type: 3}
+  - {fileID: 1939384290962657547, guid: 5e7f4858f3ce5ff4a9be677dc9d831a8, type: 3}
+  - {fileID: 2596483151761280974, guid: 16df2539f0afc7f41b90a3b96086c582, type: 3}
+  - {fileID: 6872614818417202690, guid: 5a3fa6512cc37c746a3d7bc238b9a384, type: 3}
+  - {fileID: 152297982344272627, guid: 7127e5d25fae6b54191088dc082bf4e5, type: 3}
+  - {fileID: 2526740651183141962, guid: 16cbf5675b1a4844281342294c5ae7d6, type: 3}
+  - {fileID: 5371917911464600651, guid: e60cc284500d42f43977239c3528e490, type: 3}
+  - {fileID: 7506626940383409747, guid: 08ce446149ac4fa4990bb7258c98db63, type: 3}
   pieceButtons:
   - {fileID: 1312257668}
   - {fileID: 212198526}
@@ -884,7 +906,6 @@ MonoBehaviour:
   - {fileID: 1652397075}
   - {fileID: 786986437}
   - {fileID: 1986068899}
-  selectionMade: 0
   whitePieceSprites:
   - {fileID: 21300000, guid: 2690ec2ac9a154d009df0bbab5ce1dc0, type: 3}
   - {fileID: 21300000, guid: 2f416424dc18243f296801054fd36af2, type: 3}
@@ -1363,29 +1384,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3bb97f67fb12a4600bf5fec988e5d670, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  tilePrefab: {fileID: 7629693030608968657, guid: f6d1234384d094a2a9c042d2cf08a7a1, type: 3}
-  _cam: {fileID: 519420032}
   engine: {fileID: 1938672573}
-  Canvas: {fileID: 1545817158}
-  tileFileLabels:
-  - {fileID: 4309269165316274283, guid: 51bca7c92f337a147b35acc8501fcc16, type: 3}
-  - {fileID: 7212787145201366056, guid: 00b8ecbb95459e54993359dcd01621ac, type: 3}
-  - {fileID: 6734471488616006367, guid: 06888c2881391054ea50f503d0dc8754, type: 3}
-  - {fileID: 1784253904203421076, guid: 576d49d78c40d464b88d6a4031affdf2, type: 3}
-  - {fileID: 3841480414968952987, guid: b833aa8cef92660468265ad494b5e599, type: 3}
-  - {fileID: 6605388977903161867, guid: 6b68120b978c0e44fa4f369ab193ec1f, type: 3}
-  - {fileID: 6071837703059424550, guid: f55c66f5cdac3d74cbe96bdc09905dfb, type: 3}
-  - {fileID: 1827069831639083081, guid: e299e13e2b1b37d419b59ce50207effa, type: 3}
-  tileRankLabels:
-  - {fileID: 1981225700097104272, guid: c7ff46e09aeee12499b37a71ee66e331, type: 3}
-  - {fileID: 1939384290962657547, guid: 5e7f4858f3ce5ff4a9be677dc9d831a8, type: 3}
-  - {fileID: 2596483151761280974, guid: 16df2539f0afc7f41b90a3b96086c582, type: 3}
-  - {fileID: 6872614818417202690, guid: 5a3fa6512cc37c746a3d7bc238b9a384, type: 3}
-  - {fileID: 152297982344272627, guid: 7127e5d25fae6b54191088dc082bf4e5, type: 3}
-  - {fileID: 2526740651183141962, guid: 16cbf5675b1a4844281342294c5ae7d6, type: 3}
-  - {fileID: 5371917911464600651, guid: e60cc284500d42f43977239c3528e490, type: 3}
-  - {fileID: 7506626940383409747, guid: 08ce446149ac4fa4990bb7258c98db63, type: 3}
-  chessPiecePrefab: {fileID: 7976279080090805154, guid: 749da12b3866c3244be51a9a5bd7437c, type: 3}
 --- !u!4 &1938672571
 Transform:
   m_ObjectHideFlags: 0

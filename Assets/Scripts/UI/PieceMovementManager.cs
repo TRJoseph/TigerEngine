@@ -218,8 +218,8 @@ namespace Chess
         {
             ExecuteMove(move);
 
-            boardManager.ClearExistingPieces();
-            boardManager.RenderPiecesOnBoardBitBoard();
+            UIController.Instance.ClearExistingPieces();
+            UIController.Instance.RenderPiecesOnBoard();
 
             legalMoves = GenerateMoves();
         }
@@ -230,8 +230,8 @@ namespace Chess
             // update the internal board state when a move is made by the computer
             ExecuteMove(move);
 
-            boardManager.ClearExistingPieces();
-            boardManager.RenderPiecesOnBoardBitBoard();
+            UIController.Instance.ClearExistingPieces();
+            UIController.Instance.RenderPiecesOnBoard();
 
             //HandleGameStateAfterMove();
             legalMoves = GenerateMoves();
@@ -242,7 +242,7 @@ namespace Chess
 
             PieceRender renderScript = FindChessPieceGameObject(xPos, yPos);
 
-            Sprite pieceSprite = BoardManager.GetSpriteForPiece(pieceType, whiteToMove ? ChessBoard.White : ChessBoard.Black, renderScript);
+            Sprite pieceSprite = UIController.GetSpriteForPiece(pieceType, whiteToMove ? ChessBoard.White : ChessBoard.Black, renderScript);
 
             renderScript.GetComponent<SpriteRenderer>().sprite = pieceSprite;
         }

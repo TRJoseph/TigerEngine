@@ -1,43 +1,26 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 using TMPro;
 using static Chess.Board;
 // using static Chess.ZobristHashing;
 using static Chess.PositionInformation;
-using System.Diagnostics;
-
 
 namespace Chess
 {
     public class BoardManager : MonoBehaviour
     {
-        // reference to game tile prefab
-        [SerializeField] private Tile tilePrefab;
-
-        [SerializeField] private Transform _cam;
-
         [SerializeField] public Engine engine;
 
-        // this holds the UI elements for the scene
-        public Canvas Canvas;
-
-        // holds all the rank and file labels
-        public List<TextMeshProUGUI> tileFileLabels = new List<TextMeshProUGUI>();
-        public List<TextMeshProUGUI> tileRankLabels = new List<TextMeshProUGUI>();
-
-
-        // this game object holds all the sprites for each chess piece
-        [SerializeField] public GameObject chessPiecePrefab;
-
         // Forsyth-Edwards Notation representing positions in a chess game
-        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
+        //private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
 
         // FEN string for testing draw rules
         //private readonly string FENString = "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1"; // starting position in chess
 
-        //private readonly string FENString = "4k3/8/8/3N4/8/8/8/4K3 w - - 0 1";
+        private readonly string FENString = "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1";
 
         public enum Sides
         {
@@ -52,30 +35,28 @@ namespace Chess
 
         public static Sides CurrentTurn = Sides.White;
 
-        public static Move[] testLegal = new Move[256];
-
-
         // Start is called before the first frame update
         void Start()
+        {
+            InitializeLookupTables();
+            // loads position
+            LoadPosition();
+        }
+
+        public void InitializeLookupTables()
         {
             // initializes bishop and rook move lookup tables (every possible permutation of blocking pieces)
             InitBishopLookup();
             InitRookLookup();
-
-            // loads position
-            LoadPosition();
-
-            legalMoves = GenerateMoves();
-            //legalMoves = GenerateAllLegalMoves();
         }
 
         public void LoadPosition()
         {
-            GenerateGrid();
             // load in fen string and set position information
             LoadFENString();
-            RenderPiecesOnBoardBitBoard();
 
+            UIController.Instance.GenerateGrid();
+            UIController.Instance.RenderPiecesOnBoard();
             UIController.Instance.UpdateMoveStatusUIInformation();
 
             // generates zobrist hash key
@@ -92,7 +73,7 @@ namespace Chess
 
             Stopwatch timer = Stopwatch.StartNew();
             // test perft here
-            int numPos = Perft(5);
+            int numPos = Perft(4);
             UnityEngine.Debug.Log("number of positions:" + numPos);
             timer.Stop();
             TimeSpan timespan = timer.Elapsed;
@@ -112,7 +93,7 @@ namespace Chess
 
             // TODO: this will likely get moved to some sort of button trigger on a UI main menu (starting the game)
             //currentState = GameState.Normal;
-
+            legalMoves = GenerateMoves();
             // The engine should be analyzing the position constantly whether or not its the engine's turn
             engine.StartThinking();
         }
@@ -140,41 +121,7 @@ namespace Chess
             ComputerSide = (playerSide == Sides.White) ? Sides.Black : Sides.White; ;
         }
 
-        void GenerateGrid()
-        {
-            int file = 0;
-            int rank = 0;
-            for (file = 0; file < 8; file++)
-            {
-                // instantiates labels for each file
-                TextMeshProUGUI fileLabel = Instantiate(tileFileLabels[file]);
-                fileLabel.transform.position = new Vector3(file, -1, -1);
-                fileLabel.transform.SetParent(Canvas.transform, true);
-                fileLabel.transform.localScale = new Vector3(1f, 1f, 1f);
 
-                for (rank = 0; rank < 8; rank++)
-                {
-                    var tile = Instantiate(tilePrefab, new Vector3(file, rank, 0), Quaternion.identity);
-
-                    bool isLightSquare = (file + rank) % 2 != 0;
-
-                    tile.SetTileColor(isLightSquare);
-
-                    tile.name = $"Tile file: {file} rank: {rank}";
-
-                    if (file == 0)
-                    {
-                        TextMeshProUGUI rankLabel = Instantiate(tileRankLabels[rank]);
-                        rankLabel.transform.position = new Vector3(-1, rank, -1);
-                        rankLabel.transform.SetParent(Canvas.transform, true);
-                        rankLabel.transform.localScale = new Vector3(1f, 1f, 1f);
-                    }
-                }
-            }
-
-            _cam.transform.position = new Vector3((float)file / 2 - 0.5f, (float)rank / 2 - 0.5f, -10);
-
-        }
         void LoadFENString()
         {
 
@@ -306,71 +253,6 @@ namespace Chess
             InternalBoard.Pieces[pieceColor, pieceType] |= 1UL << currentPosition;
         }
 
-        public void ClearExistingPieces()
-        {
-            var pieces = GameObject.FindGameObjectsWithTag("ChessPiece");
-            foreach (var piece in pieces)
-            {
-                Destroy(piece);
-            }
-        }
-
-        public void RenderPiecesOnBoardBitBoard()
-        {
-            PlacePieces(ChessBoard.Pawn, ChessBoard.White);
-            PlacePieces(ChessBoard.Knight, ChessBoard.White);
-            PlacePieces(ChessBoard.Bishop, ChessBoard.White);
-            PlacePieces(ChessBoard.Rook, ChessBoard.White);
-            PlacePieces(ChessBoard.Queen, ChessBoard.White);
-            PlacePieces(ChessBoard.King, ChessBoard.White);
-
-            PlacePieces(ChessBoard.Pawn, ChessBoard.Black);
-            PlacePieces(ChessBoard.Knight, ChessBoard.Black);
-            PlacePieces(ChessBoard.Bishop, ChessBoard.Black);
-            PlacePieces(ChessBoard.Rook, ChessBoard.Black);
-            PlacePieces(ChessBoard.Queen, ChessBoard.Black);
-            PlacePieces(ChessBoard.King, ChessBoard.Black);
-
-        }
-
-        private void PlacePieces(int pieceType, int pieceColor)
-        {
-            for (int i = 0; i < BoardSize; i++)
-            {
-                if ((InternalBoard.Pieces[pieceColor, pieceType] & (1UL << i)) != 0)
-                {
-                    GameObject piece = Instantiate(chessPiecePrefab, new Vector3(i % 8, i / 8, -1), Quaternion.identity);
-                    PieceRender renderScript = piece.GetComponent<PieceRender>();
-                    Sprite pieceSprite = GetSpriteForPiece(pieceType, pieceColor, renderScript);
-                    piece.GetComponent<SpriteRenderer>().sprite = pieceSprite;
-                    renderScript.isWhitePiece = pieceColor == ChessBoard.White;
-
-                    // this may be removed for a better alternative for sizing the pieces
-                    piece.transform.localScale = new Vector3(0.125f, 0.125f, 1f);
-                }
-            }
-        }
-
-        public static Sprite GetSpriteForPiece(int pieceType, int pieceColor, PieceRender renderScript)
-        {
-            switch (pieceType)
-            {
-                case ChessBoard.Pawn:
-                    return (pieceColor == ChessBoard.White) ? renderScript.whitePawn : renderScript.blackPawn;
-                case ChessBoard.Knight:
-                    return (pieceColor == ChessBoard.White) ? renderScript.whiteKnight : renderScript.blackKnight;
-                case ChessBoard.Bishop:
-                    return (pieceColor == ChessBoard.White) ? renderScript.whiteBishop : renderScript.blackBishop;
-                case ChessBoard.Rook:
-                    return (pieceColor == ChessBoard.White) ? renderScript.whiteRook : renderScript.blackRook;
-                case ChessBoard.Queen:
-                    return (pieceColor == ChessBoard.White) ? renderScript.whiteQueen : renderScript.blackQueen;
-                case ChessBoard.King:
-                    return (pieceColor == ChessBoard.White) ? renderScript.whiteKing : renderScript.blackKing;
-                default:
-                    return null;  // For the 'Empty' piece or any unexpected value
-            }
-        }
     }
 
 }

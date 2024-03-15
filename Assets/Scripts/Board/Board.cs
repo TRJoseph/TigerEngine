@@ -777,6 +777,18 @@ namespace Chess
             }
         }
 
+        private static void BranchForPromotion(ref Span<Move> moves, ulong isolatedPawnlsb, ulong movelsb)
+        {
+            moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToQueenFlag);
+            currentMoveIndex++;
+            moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToRookFlag);
+            currentMoveIndex++;
+            moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToBishopFlag);
+            currentMoveIndex++;
+            moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToKnightFlag);
+            currentMoveIndex++;
+        }
+
         public static void GenerateWhitePawnMoves(ref Span<Move> moves, ref ulong whitePawnBitboard)
         {
             ulong whitePawns = whitePawnBitboard;
@@ -835,14 +847,7 @@ namespace Chess
 
                     if ((movelsb << 8) == 0)
                     {
-                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToQueenFlag);
-                        currentMoveIndex++;
-                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToRookFlag);
-                        currentMoveIndex++;
-                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToBishopFlag);
-                        currentMoveIndex++;
-                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToKnightFlag);
-                        currentMoveIndex++;
+                        BranchForPromotion(ref moves, isolatedPawnlsb, movelsb);
                     }
                     else
                     {
@@ -913,14 +918,7 @@ namespace Chess
 
                     if ((movelsb >> 8) == 0)
                     {
-                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToQueenFlag);
-                        currentMoveIndex++;
-                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToRookFlag);
-                        currentMoveIndex++;
-                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToBishopFlag);
-                        currentMoveIndex++;
-                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, movelsb, ChessBoard.Pawn, SpecialMove.None, true, PromotionFlags.PromoteToKnightFlag);
-                        currentMoveIndex++;
+                        BranchForPromotion(ref moves, isolatedPawnlsb, movelsb);
                     }
                     else
                     {
@@ -1333,7 +1331,7 @@ namespace Chess
         public static Move[] GenerateMoves()
         {
             Span<Move> moves = stackalloc Move[256];
-            Span<Move> opponentMoves = stackalloc Move[256]; 
+            Span<Move> opponentMoves = stackalloc Move[256];
 
             int validMoveCount = GenerateAllLegalMoves(ref moves, ref opponentMoves);
 
@@ -1353,7 +1351,7 @@ namespace Chess
 
             int legalMoveCount = 0;
 
-            for (int i = 0; i < currentMoveIndex; i ++)
+            for (int i = 0; i < currentMoveIndex; i++)
             {
                 int savedCurrentMoveIndex = currentMoveIndex;
                 ExecuteMove(pseudoLegalMoves[i]);

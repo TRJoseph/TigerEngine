@@ -3,7 +3,11 @@ guid: 6d327bca4084b49ae9f0252d7ebdd295
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - WhichPlayerMoveText: {instanceID: 0}
+  - MovementManager: {instanceID: 0}
+  - PromotionPanel: {instanceID: 0}
+  - chessPiecePrefab: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
