@@ -144,7 +144,7 @@ namespace Chess
 
                     bool isLightSquare = (file + rank) % 2 != 0;
 
-                    tile.SetTileColor(isLightSquare);
+                    tile.SetTileColor(!isLightSquare);
 
                     tile.name = $"Tile file: {file} rank: {rank}";
 
