@@ -1374,6 +1374,21 @@ namespace Chess
             currentMoveIndex = 0;
         }
 
+        public static bool IsKingInCheck()
+        {
+            int currentKingSquare = whiteToMove ? GetLSB(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]) : GetLSB(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]);
+
+            ulong kingUnderAttack = 0;
+            kingUnderAttack |= GetBishopAttacks(InternalBoard.AllPieces, currentKingSquare) & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Bishop];
+            kingUnderAttack |= GetRookAttacks(InternalBoard.AllPieces, currentKingSquare) & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Rook];
+            kingUnderAttack |= MoveTables.PrecomputedKnightMoves[currentKingSquare] & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Knight];
+            kingUnderAttack |= MoveTables.PrecomputedKingMoves[currentKingSquare] & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.King];
+
+            ulong pawnAttacks = whiteToMove ? MoveTables.PrecomputedWhitePawnCaptures[currentKingSquare] : MoveTables.PrecomputedBlackPawnCaptures[currentKingSquare];
+            kingUnderAttack |= pawnAttacks & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Pawn];
+
+            return kingUnderAttack != 0;
+        }
 
         public static Move[] GenerateMoves()
         {
