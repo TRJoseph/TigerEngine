@@ -15,12 +15,12 @@ namespace Chess
         [SerializeField] public Engine engine;
 
         // Forsyth-Edwards Notation representing positions in a chess game
-        //private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
+        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
 
         // FEN string for testing draw rules
         //private readonly string FENString = "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1"; // starting position in chess
 
-        private readonly string FENString = "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1";
+        //private readonly string FENString = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
 
         public enum Sides
         {
@@ -216,14 +216,11 @@ namespace Chess
             }
             if (enPassantTargetsField[0] == '-')
             {
-                potentialEnPassantCaptureSquare = -1;
                 EnPassantFile = 0;
             }
             else
             {
-                enPassantFilePreviouslySet = true;
                 EnPassantFile = enPassantTargetsField[0] - 'a';
-                potentialEnPassantCaptureSquare = EnPassantFile + ((int.Parse(enPassantTargetsField[1].ToString()) - 1) * 8);
             }
 
             if (halfMoveClockField[0] == '-')

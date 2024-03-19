@@ -19,11 +19,6 @@ namespace Chess
 
         public static int CastlingRights = 0;
 
-        public static int potentialEnPassantCaptureSquare;
-
-
-        public static bool enPassantFilePreviouslySet = false;
-
         public static int EnPassantFile = 0;
 
 
@@ -54,7 +49,7 @@ namespace Chess
         /* Move history information */
 
         // PositionHashes is for efficient checking of repeated positions (three fold repetition)
-        public static Dictionary<ulong, int> PositionHashes = new();
+        public static Stack<ulong> PositionHashes = new();
 
         public static Stack<GameState> GameStateHistory = new();
 
