@@ -981,21 +981,37 @@ namespace Chess
             currentMoveIndex = 0;
         }
 
-        public static bool IsKingInCheck()
+        public static bool IsKingInCheck(int currentKingSquare)
         {
-            int currentKingSquare = whiteToMove ? GetLSB(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]) : GetLSB(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]);
+            // Check for pawn attacks
+            ulong pawnAttacks = whiteToMove ?
+                MoveTables.PrecomputedBlackPawnCaptures[currentKingSquare] :
+                MoveTables.PrecomputedWhitePawnCaptures[currentKingSquare];
+            if ((pawnAttacks & InternalBoard.Pieces[MoveColorIndex, ChessBoard.Pawn]) != 0) return true;
 
-            ulong kingUnderAttack = 0;
-            kingUnderAttack |= GetBishopAttacks(InternalBoard.AllPieces, currentKingSquare) & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Bishop];
-            kingUnderAttack |= GetRookAttacks(InternalBoard.AllPieces, currentKingSquare) & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Rook];
-            kingUnderAttack |= MoveTables.PrecomputedKnightMoves[currentKingSquare] & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Knight];
-            kingUnderAttack |= MoveTables.PrecomputedKingMoves[currentKingSquare] & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.King];
+            // Check for knight attacks
+            ulong knightAttacks = MoveTables.PrecomputedKnightMoves[currentKingSquare];
+            if ((knightAttacks & InternalBoard.Pieces[MoveColorIndex, ChessBoard.Knight]) != 0) return true;
 
-            ulong pawnAttacks = whiteToMove ? MoveTables.PrecomputedWhitePawnCaptures[currentKingSquare] : MoveTables.PrecomputedBlackPawnCaptures[currentKingSquare];
-            kingUnderAttack |= pawnAttacks & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Pawn];
+            // Check for sliding pieces (bishops, rooks, queens)
+            ulong bishopQueenAttacks = GetBishopAttacks(InternalBoard.AllPieces, currentKingSquare);
+            ulong rookQueenAttacks = GetRookAttacks(InternalBoard.AllPieces, currentKingSquare);
 
-            return kingUnderAttack != 0;
+            ulong bishopsQueens = InternalBoard.Pieces[MoveColorIndex, ChessBoard.Bishop] |
+                                  InternalBoard.Pieces[MoveColorIndex, ChessBoard.Queen];
+            ulong rooksQueens = InternalBoard.Pieces[MoveColorIndex, ChessBoard.Rook] |
+                                InternalBoard.Pieces[MoveColorIndex, ChessBoard.Queen];
+
+            if ((bishopQueenAttacks & bishopsQueens) != 0) return true;
+            if ((rookQueenAttacks & rooksQueens) != 0) return true;
+
+            // Check for king attacks (useful in edge cases and avoids self-check scenarios)
+            ulong kingAttacks = MoveTables.PrecomputedKingMoves[currentKingSquare];
+            if ((kingAttacks & InternalBoard.Pieces[MoveColorIndex, ChessBoard.King]) != 0) return true;
+
+            return false;
         }
+
 
         public static Move[] GenerateMoves()
         {
@@ -1022,30 +1038,16 @@ namespace Chess
 
             for (int i = 0; i < currentMoveIndex; i++)
             {
-                int savedCurrentMoveIndex = currentMoveIndex;
                 ExecuteMove(pseudoLegalMoves[i]);
-                ulong currentKingSquare = whiteToMove ? InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King] : InternalBoard.Pieces[ChessBoard.White, ChessBoard.King];
 
-                currentMoveIndex = 0;
-                GenerateLegalMovesBitboard(ref opponentMoves);
+                int currentKingSquare = whiteToMove ? GetLSB(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]) : GetLSB(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]);
 
-                bool isLegal = true;
-                for (int j = 0; j < currentMoveIndex; j++)
-                {
-                    if (opponentMoves[j].toSquare == currentKingSquare)
-                    {
-                        isLegal = false;
-                        break;
-                    }
-                }
-
-                if (isLegal)
+                if (!IsKingInCheck(currentKingSquare))
                 {
                     pseudoLegalMoves[legalMoveCount++] = pseudoLegalMoves[i];
                 }
 
                 UndoMove(pseudoLegalMoves[i]);
-                currentMoveIndex = savedCurrentMoveIndex;
             }
             return legalMoveCount; // Returning the count of legal moves
         }
