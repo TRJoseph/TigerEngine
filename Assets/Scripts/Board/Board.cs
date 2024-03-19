@@ -1231,7 +1231,7 @@ namespace Chess
             }
 
             // checks to make sure neither the kingside rook or king has moved
-            if ((CastlingRights & 0x1) == 0)
+            if ((CurrentGameState.castlingRights & 0x1) == 0)
             {
                 return false;
             }
@@ -1256,7 +1256,7 @@ namespace Chess
             }
 
             // checks to make sure neither the queenside rook or king has moved
-            if ((CastlingRights & 0x2) == 0)
+            if ((CurrentGameState.castlingRights & 0x2) == 0)
             {
                 return false;
             }
@@ -1278,7 +1278,7 @@ namespace Chess
                 return false;
             }
 
-            if ((CastlingRights & 0x4) == 0)
+            if ((CurrentGameState.castlingRights & 0x4) == 0)
             {
                 return false;
             }
@@ -1300,7 +1300,7 @@ namespace Chess
                 return false;
             }
 
-            if ((CastlingRights & 0x8) == 0)
+            if ((CurrentGameState.castlingRights & 0x8) == 0)
             {
                 return false;
             }
