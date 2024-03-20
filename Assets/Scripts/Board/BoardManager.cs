@@ -5,7 +5,6 @@ using System.Diagnostics;
 using UnityEngine;
 using TMPro;
 using static Chess.Board;
-// using static Chess.ZobristHashing;
 using static Chess.PositionInformation;
 
 namespace Chess
@@ -21,19 +20,6 @@ namespace Chess
         //private readonly string FENString = "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1"; // starting position in chess
 
         //private readonly string FENString = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
-
-        public enum Sides
-        {
-            White = 0,
-            Black = 1
-        }
-
-        // these will be updated and selected based on UI elements in some sort of main menu before the game is started
-        public static Sides humanPlayer = Sides.White;
-
-        public static Sides ComputerSide = Sides.White;
-
-        public static Sides CurrentTurn = Sides.White;
 
         // Start is called before the first frame update
         void Start()
@@ -69,58 +55,11 @@ namespace Chess
 
             GameStateHistory.Push(CurrentGameState);
 
-            //position hash here
+            // run performance tests
+            //Verification.RunPerformanceTests(6);
 
-            Stopwatch timer = Stopwatch.StartNew();
-            // test perft here
-            int numPos = Perft(4);
-            UnityEngine.Debug.Log("number of positions:" + numPos);
-            timer.Stop();
-            TimeSpan timespan = timer.Elapsed;
-            UnityEngine.Debug.Log(String.Format("{0:00}:{1:00}:{2:00}", timespan.Minutes, timespan.Seconds, timespan.Milliseconds));
-
-
-            /* ChooseSide controls what side the player will play 
-            For example, if Sides.White is passed in, the player will be able to control the white pieces
-            and the engine will move the black pieces.
-            If the goal is to have the engine play itself, comment out this ChooseSide function call below and
-            comment out the 'SwapTurns' call from inside the 'AfterMove' method.
-
-            If the goal is to let the human player make both white and black moves, just comment out the 
-            'SwapTurns' call from inside the 'AfterMove' method.
-            */
-            ChooseSide(Sides.White);
-
-            // TODO: this will likely get moved to some sort of button trigger on a UI main menu (starting the game)
-            //currentState = GameState.Normal;
-            legalMoves = GenerateMoves();
-            // The engine should be analyzing the position constantly whether or not its the engine's turn
-            engine.StartThinking();
+            Arbiter.StartGame();
         }
-
-        public static int Perft(int depth)
-        {
-            if (depth == 0) return 1;
-
-            Span<Move> moves = GenerateMoves();
-            int numPositions = 0;
-
-            foreach (Move move in moves)
-            {
-                ExecuteMove(move);
-                numPositions += Perft(depth - 1);
-                UndoMove(move);
-            }
-
-            return numPositions;
-        }
-
-        public void ChooseSide(Sides playerSide)
-        {
-            humanPlayer = playerSide;
-            ComputerSide = (playerSide == Sides.White) ? Sides.Black : Sides.White; ;
-        }
-
 
         void LoadFENString()
         {

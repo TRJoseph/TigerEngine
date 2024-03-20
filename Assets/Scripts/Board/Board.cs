@@ -185,7 +185,7 @@ namespace Chess
             return false;
         }
 
-        private static Move AddLegalMove(ulong startSquare, ulong endSquare, int movedPiece, SpecialMove specialMove, bool isPawnPromotion, PromotionFlags promotionFlag = PromotionFlags.None)
+        private static Move AddLegalMove(ulong startSquare, ulong endSquare, int movedPiece, SpecialMove specialMove = SpecialMove.None, bool isPawnPromotion = false, PromotionFlags promotionFlag = PromotionFlags.None)
         {
             return
                 new Move
@@ -280,50 +280,6 @@ namespace Chess
             return false;
         }
 
-        //private static void CheckForGameOverRules()
-        //{
-        //    if (legalMoves.Count == 0 && kingInCheck)
-        //    {
-        //        UnityEngine.Debug.Log("CheckMate!");
-        //        currentState = GameState.Ended;
-        //    }
-
-        //    if (legalMoves.Count == 0 && !kingInCheck)
-        //    {
-        //        UnityEngine.Debug.Log("Stalemate!");
-        //        currentState = GameState.Ended;
-        //    }
-
-        //    // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence
-        //    if (halfMoveAccumulator == 100)
-        //    {
-        //        UnityEngine.Debug.Log("Draw by 50 move rule!");
-        //        currentState = GameState.Ended;
-        //    }
-
-        //    // threefold repetition rule (position repeats three times is a draw)
-        //    if (PositionHashes[ZobristHashKey] >= 3)
-        //    {
-        //        UnityEngine.Debug.Log("Draw by Threefold Repetition!");
-        //        currentState = GameState.Ended;
-        //    }
-
-        //    // draw by insufficient material rule, for example: knight and king cannot deliver checkmate
-
-        //    if (CheckForInsufficientMaterial())
-        //    {
-        //        UnityEngine.Debug.Log("Draw by Insufficient Material!");
-        //        currentState = GameState.Ended;
-        //    }
-        //}
-
-        private static void SwapTurn()
-        {
-            BoardManager.CurrentTurn = BoardManager.CurrentTurn == BoardManager.Sides.White
-                                    ? BoardManager.Sides.Black
-                                    : BoardManager.Sides.White;
-        }
-
         /* these functions came from "https://www.chessprogramming.org/Pawn_Pushes_(Bitboards)"
         * the pawn is able to push if no impeding piece (friendly or foe) is blocking the path, these functions traverse
         * the intersection of pawns with the shifted down empty squares in the opposite direction
@@ -376,7 +332,7 @@ namespace Chess
                     ulong movelsb = validRookMoves & (~validRookMoves + 1);
 
                     validRookMoves &= validRookMoves - 1;
-                    moves[currentMoveIndex] = AddLegalMove(isolatedRooklsb, movelsb, ChessBoard.Rook, SpecialMove.None, false);
+                    moves[currentMoveIndex] = AddLegalMove(isolatedRooklsb, movelsb, ChessBoard.Rook);
                     currentMoveIndex++;
                 }
                 rooks &= rooks - 1;
@@ -402,7 +358,7 @@ namespace Chess
                     ulong movelsb = validBishopMoves & (~validBishopMoves + 1);
 
                     validBishopMoves &= validBishopMoves - 1;
-                    moves[currentMoveIndex] = AddLegalMove(isolatedBishoplsb, movelsb, ChessBoard.Bishop, SpecialMove.None, false);
+                    moves[currentMoveIndex] = AddLegalMove(isolatedBishoplsb, movelsb, ChessBoard.Bishop);
                     currentMoveIndex++;
                 }
                 bishops &= bishops - 1;
@@ -430,7 +386,7 @@ namespace Chess
                     ulong movelsb = validQueenMoves & (~validQueenMoves + 1);
 
                     validQueenMoves &= validQueenMoves - 1;
-                    moves[currentMoveIndex] = AddLegalMove(isolatedQueenlsb, movelsb, ChessBoard.Queen, SpecialMove.None, false);
+                    moves[currentMoveIndex] = AddLegalMove(isolatedQueenlsb, movelsb, ChessBoard.Queen);
                     currentMoveIndex++;
                 }
                 queens &= queens - 1;
@@ -469,11 +425,11 @@ namespace Chess
                     }
                     else
                     {
-                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, oneSquareMove, ChessBoard.Pawn, SpecialMove.None, false);
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, oneSquareMove, ChessBoard.Pawn);
                         currentMoveIndex++;
                         if (WhitePawnsAbleToPushTwoSquares(isolatedPawnlsb, ~InternalBoard.AllPieces) == isolatedPawnlsb)
                         {
-                            moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, isolatedPawnlsb << 16, ChessBoard.Pawn, SpecialMove.TwoSquarePawnMove, false);
+                            moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, isolatedPawnlsb << 16, ChessBoard.Pawn, SpecialMove.TwoSquarePawnMove);
                             currentMoveIndex++;
                         }
                     }
@@ -489,7 +445,7 @@ namespace Chess
                     // Handle en passant captures
                     if (enPassantCapture != 0)
                     {
-                        moves[currentMoveIndex++] = AddLegalMove(isolatedPawnlsb, enPassantTargetSquare, ChessBoard.Pawn, SpecialMove.EnPassant, false);
+                        moves[currentMoveIndex++] = AddLegalMove(isolatedPawnlsb, enPassantTargetSquare, ChessBoard.Pawn, SpecialMove.EnPassant);
                     }
                 }
 
@@ -507,7 +463,7 @@ namespace Chess
                     }
                     else
                     {
-                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, pawnCapture, ChessBoard.Pawn, SpecialMove.None, false);
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, pawnCapture, ChessBoard.Pawn);
                         currentMoveIndex++;
                     }
                     validPawnCaptures &= validPawnCaptures - 1;
@@ -538,11 +494,11 @@ namespace Chess
                     }
                     else
                     {
-                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, oneSquareMove, ChessBoard.Pawn, SpecialMove.None, false);
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, oneSquareMove, ChessBoard.Pawn);
                         currentMoveIndex++;
                         if (BlackPawnsAbleToPushTwoSquares(isolatedPawnlsb, ~InternalBoard.AllPieces) == isolatedPawnlsb)
                         {
-                            moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, isolatedPawnlsb >> 16, ChessBoard.Pawn, SpecialMove.TwoSquarePawnMove, false);
+                            moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, isolatedPawnlsb >> 16, ChessBoard.Pawn, SpecialMove.TwoSquarePawnMove);
                             currentMoveIndex++;
                         }
                     }
@@ -557,7 +513,7 @@ namespace Chess
                     // Handle en passant captures
                     if (enPassantCapture != 0)
                     {
-                        moves[currentMoveIndex++] = AddLegalMove(isolatedPawnlsb, enPassantTargetSquare, ChessBoard.Pawn, SpecialMove.EnPassant, false);
+                        moves[currentMoveIndex++] = AddLegalMove(isolatedPawnlsb, enPassantTargetSquare, ChessBoard.Pawn, SpecialMove.EnPassant);
                     }
                 }
 
@@ -576,7 +532,7 @@ namespace Chess
                     }
                     else
                     {
-                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, pawnCapture, ChessBoard.Pawn, SpecialMove.None, false);
+                        moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, pawnCapture, ChessBoard.Pawn);
                         currentMoveIndex++;
                     }
                     validPawnCaptures &= validPawnCaptures - 1;
@@ -604,7 +560,7 @@ namespace Chess
                     ulong movelsb = validKnightMoves & (~validKnightMoves + 1);
 
                     validKnightMoves &= validKnightMoves - 1;
-                    moves[currentMoveIndex] = AddLegalMove(isolatedKnightlsb, movelsb, ChessBoard.Knight, SpecialMove.None, false);
+                    moves[currentMoveIndex] = AddLegalMove(isolatedKnightlsb, movelsb, ChessBoard.Knight);
                     currentMoveIndex++;
                 }
 
@@ -938,13 +894,13 @@ namespace Chess
             {
                 if (CanCastleKingsideWhite())
                 {
-                    moves[currentMoveIndex] = AddLegalMove(king, 1UL << 6, ChessBoard.King, SpecialMove.KingSideCastleMove, false);
+                    moves[currentMoveIndex] = AddLegalMove(king, 1UL << 6, ChessBoard.King, SpecialMove.KingSideCastleMove);
                     currentMoveIndex++;
                 }
 
                 if (CanCastleQueensideWhite())
                 {
-                    moves[currentMoveIndex] = AddLegalMove(king, 1UL << 2, ChessBoard.King, SpecialMove.QueenSideCastleMove, false);
+                    moves[currentMoveIndex] = AddLegalMove(king, 1UL << 2, ChessBoard.King, SpecialMove.QueenSideCastleMove);
                     currentMoveIndex++;
                 }
 
@@ -953,13 +909,13 @@ namespace Chess
             {
                 if (CanCastleKingsideBlack())
                 {
-                    moves[currentMoveIndex] = AddLegalMove(king, 1UL << 62, ChessBoard.King, SpecialMove.KingSideCastleMove, false);
+                    moves[currentMoveIndex] = AddLegalMove(king, 1UL << 62, ChessBoard.King, SpecialMove.KingSideCastleMove);
                     currentMoveIndex++;
                 }
 
                 if (CanCastleQueensideBlack())
                 {
-                    moves[currentMoveIndex] = AddLegalMove(king, 1UL << 58, ChessBoard.King, SpecialMove.QueenSideCastleMove, false);
+                    moves[currentMoveIndex] = AddLegalMove(king, 1UL << 58, ChessBoard.King, SpecialMove.QueenSideCastleMove);
                     currentMoveIndex++;
                 }
             }
@@ -971,7 +927,7 @@ namespace Chess
 
                 validKingMoves &= validKingMoves - 1;
 
-                moves[currentMoveIndex] = AddLegalMove(king, movelsb, ChessBoard.King, SpecialMove.None, false);
+                moves[currentMoveIndex] = AddLegalMove(king, movelsb, ChessBoard.King);
                 currentMoveIndex++;
             }
         }
@@ -1016,9 +972,8 @@ namespace Chess
         public static Move[] GenerateMoves()
         {
             Span<Move> moves = stackalloc Move[256];
-            Span<Move> opponentMoves = stackalloc Move[256];
 
-            int validMoveCount = GenerateAllLegalMoves(ref moves, ref opponentMoves);
+            int validMoveCount = GenerateAllLegalMoves(ref moves);
 
             Move[] movesArray = new Move[validMoveCount];
             for (int i = 0; i < validMoveCount; i++)
@@ -1028,7 +983,7 @@ namespace Chess
             return movesArray;
         }
 
-        public static int GenerateAllLegalMoves(ref Span<Move> pseudoLegalMoves, ref Span<Move> opponentMoves)
+        public static int GenerateAllLegalMoves(ref Span<Move> pseudoLegalMoves)
         {
             Initialize();
 
@@ -1109,7 +1064,8 @@ namespace Chess
 
                     // remove en passant captured piece
                     newZobristKey ^= ZobristHashing.pieceAtEachSquareArray[opponentPieceColor, capturedPieceType, captureSquareIndex];
-                } else
+                }
+                else
                 {
                     // remove captured piece from zobrist hash
                     newZobristKey ^= ZobristHashing.pieceAtEachSquareArray[opponentPieceColor, capturedPieceType, toSquareIndex];
