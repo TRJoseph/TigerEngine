@@ -191,7 +191,7 @@ namespace Chess
             if (matchingMoves.Count > 1)
             {
                 // This implies promotion moves are possible, handle accordingly
-                if (BoardManager.CurrentTurn == BoardManager.ComputerSide)
+                if (Arbiter.CurrentTurn == Arbiter.ComputerSide)
                 {
                     var promotionFlag = UpdatePromotedPawnEngine();
                     move = matchingMoves.First(m => m.promotionFlag == promotionFlag);

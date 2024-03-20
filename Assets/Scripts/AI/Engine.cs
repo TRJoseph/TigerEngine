@@ -29,7 +29,7 @@ namespace Chess
             while (Board.currentStatus != GameStatus.Ended)
             {
                 // engine should be analyzing the position constantly while the gamestate is active
-                if (BoardManager.ComputerSide == BoardManager.CurrentTurn)
+                if (Arbiter.ComputerSide == Arbiter.CurrentTurn)
                 {
                     MainThreadDispatcher.Enqueue(() =>
                     {
