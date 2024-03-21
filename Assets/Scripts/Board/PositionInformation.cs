@@ -23,14 +23,11 @@ namespace Chess
 
 
         /* Game ending conditions */
-        public static bool kingInCheck;
 
+        public static bool kingInCheck;
         public static int halfMoveAccumulator;
 
         public static int fullMoveAccumulator;
-
-        public static int threeFoldAccumulator = 0;
-
 
         /* Game State information */
         public static GameState CurrentGameState;
@@ -39,6 +36,7 @@ namespace Chess
 
         public static string GameStartFENString;
 
+        public static GameResult currentStatus;
 
         /* Side to move information */
         public static bool whiteToMove;
@@ -53,10 +51,6 @@ namespace Chess
 
         public static Stack<GameState> GameStateHistory = new();
 
-
-        /* Misc */
-
-        public static Move SavedMoveForPromotion;
     }
 
 }

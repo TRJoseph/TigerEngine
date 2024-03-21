@@ -8,6 +8,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using static Chess.Board;
 using static Chess.PositionInformation;
+using static Chess.MoveGen;
 
 namespace Chess
 {
@@ -190,40 +191,18 @@ namespace Chess
             Move move;
             if (matchingMoves.Count > 1)
             {
-                // This implies promotion moves are possible, handle accordingly
-                if (Arbiter.CurrentTurn == Arbiter.ComputerSide)
-                {
-                    var promotionFlag = UpdatePromotedPawnEngine();
-                    move = matchingMoves.First(m => m.promotionFlag == promotionFlag);
-                    DoMove(move);
-                }
-                else
-                {
-                    var savedPromotionMoves = legalMoves.Where(move => move.fromSquare == fromSquare && move.toSquare == toSquare && move.IsPawnPromotion).ToList();
-                    // SavedMoveForPromotionBase = new MoveBase { fromSquare = fromSquare, toSquare = toSquare };
-                    UIController.Instance.ShowPromotionDropdown(toSquare, savedPromotionMoves);
-                    // The actual selection of the promotionFlag is handled by the promotion dropdown, after the user move input
-                }
+                var savedPromotionMoves = legalMoves.Where(move => move.fromSquare == fromSquare && move.toSquare == toSquare && move.IsPawnPromotion).ToList();
+                // SavedMoveForPromotionBase = new MoveBase { fromSquare = fromSquare, toSquare = toSquare };
+                UIController.Instance.ShowPromotionDropdown(toSquare, savedPromotionMoves);
+                // The actual selection of the promotionFlag is handled by the promotion dropdown, after the user move input
             }
             else
             {
                 // Only one matching move, so it's not a promotion or it's a non-pawn move
                 move = matchingMoves.Single();
-                DoMove(move);
+                Arbiter.DoTurn(move);
             }
         }
-
-
-        public void DoMove(Move move)
-        {
-            ExecuteMove(move);
-
-            UIController.Instance.ClearExistingPieces();
-            UIController.Instance.RenderPiecesOnBoard();
-
-            legalMoves = GenerateMoves();
-        }
-
 
         public void HandleEngineMoveExecution(Move move)
         {

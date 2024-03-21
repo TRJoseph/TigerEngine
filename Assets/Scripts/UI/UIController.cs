@@ -64,7 +64,7 @@ namespace Chess
         }
         private void HandlePromotionSelected(Move move)
         {
-            MovementManager.DoMove(move);
+            Arbiter.DoTurn(move);
         }
 
         // This method is called when the user selects a promotion option
@@ -85,8 +85,6 @@ namespace Chess
 
         public void ShowPromotionDropdown(ulong toSquare, List<Move> savedPromotionMoves)
         {
-            currentStatus = GameStatus.AwaitingPromotion;
-
             // this is responsible for updating the dropdown list with the correct corresponding promotion move choice
             currentPromotionMoves = savedPromotionMoves;
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using static Chess.Board;
+using static Chess.MoveGen;
 
 namespace Chess
 {

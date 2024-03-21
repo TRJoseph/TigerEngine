@@ -6,27 +6,27 @@ using UnityEngine;
 using TMPro;
 using static Chess.Board;
 using static Chess.PositionInformation;
+using static Chess.MoveGen;
 
 namespace Chess
 {
     public class BoardManager : MonoBehaviour
     {
-        [SerializeField] public Engine engine;
 
         // Forsyth-Edwards Notation representing positions in a chess game
-        private readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
+        private static readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
 
         // FEN string for testing draw rules
-        //private readonly string FENString = "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1"; // starting position in chess
+        //private readonly string FENString = "3r1k2/8/8/8/8/3Q4/8/4K3 w - - 0 1";
 
-        //private readonly string FENString = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
+        //private readonly string FENString = "8/7k/5ppp/7r/2Q3bq/1p2P3/5PP1/6K1 w - - 0 1";
 
         // Start is called before the first frame update
         void Start()
         {
             InitializeLookupTables();
             // loads position
-            LoadPosition();
+            Arbiter.MatchUpConfiguration();
         }
 
         public void InitializeLookupTables()
@@ -36,33 +36,10 @@ namespace Chess
             InitRookLookup();
         }
 
-        public void LoadPosition()
+
+        public static void LoadFENString()
         {
-            // load in fen string and set position information
-            LoadFENString();
-
-            UIController.Instance.GenerateGrid();
-            UIController.Instance.RenderPiecesOnBoard();
-            UIController.Instance.UpdateMoveStatusUIInformation();
-
-            // generates zobrist hash key
-            ZobristHashing.GenerateZobristHashes();
-
-            // Set game state (note: calculating zobrist key relies on current game state)
-            CurrentGameState = new GameState(0, PositionInformation.EnPassantFile, PositionInformation.CastlingRights, PositionInformation.halfMoveAccumulator, 0);
-            ulong zobristHashKey = ZobristHashing.InitializeHashKey();
-            CurrentGameState = new GameState(0, PositionInformation.EnPassantFile, PositionInformation.CastlingRights, PositionInformation.halfMoveAccumulator, zobristHashKey);
-
-            GameStateHistory.Push(CurrentGameState);
-
-            // run performance tests
-            //Verification.RunPerformanceTests(6);
-
-            Arbiter.StartGame();
-        }
-
-        void LoadFENString()
-        {
+            GameStartFENString = FENString;
 
             // start at 7th rank and 0th file (top left of board)
             // (7th rank is actually 8th rank on board, 0th file is the a file)
@@ -184,7 +161,7 @@ namespace Chess
             InternalBoard.UpdateCompositeBitboards();
         }
 
-        private void InitializeBitBoards(int pieceType, int pieceColor, int currentPosition)
+        private static void InitializeBitBoards(int pieceType, int pieceColor, int currentPosition)
         {
             InternalBoard.Pieces[pieceColor, pieceType] |= 1UL << currentPosition;
         }
