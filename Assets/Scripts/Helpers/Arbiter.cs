@@ -3,11 +3,13 @@ using static Chess.Board;
 using static Chess.PositionInformation;
 using static Chess.MoveGen;
 using System.Diagnostics;
+using UnityEngine;
+using System.Collections;
 
 namespace Chess
 {
 
-    public static class Arbiter
+    public class Arbiter : MonoBehaviour
     {
         public enum Sides
         {
@@ -31,7 +33,7 @@ namespace Chess
 
         public static Sides CurrentTurn = Sides.White;
 
-        public static GameType gameType = GameType.HumanVersusComputer;
+        public static GameType gameType = GameType.ComputerVersusComputer;
 
         public static RandomMoveEngine randomMoveEngine = new();
         public static MiniMaxEngineV0 miniMaxEngineV0 = new();
@@ -39,19 +41,27 @@ namespace Chess
 
         public static void MatchUpConfiguration()
         {
-            StartGame(gameType);
+            //StartGame(gameType, 4);
+            Verification.ComputerVsComputerMatches(10, 4);
         }
 
 
         public static void InitializeGame()
         {
-            // load in fen string and set position information
+            // create empty bitboards
+            InternalBoard = ChessBoard.Create();
+
+            // load in fen string, set position information, and fill bitboards
             BoardManager.LoadFENString();
+
+            // reset game status
+            currentStatus = GameResult.InProgress;
 
             // reset the game state and position hashes
             GameStateHistory.Clear();
             PositionHashes.Clear();
 
+            UIController.Instance.ClearExistingPieces();
             UIController.Instance.GenerateGrid();
             UIController.Instance.RenderPiecesOnBoard();
             UIController.Instance.UpdateMoveStatusUIInformation();
@@ -63,21 +73,19 @@ namespace Chess
             CurrentGameState = new GameState(0, PositionInformation.EnPassantFile, PositionInformation.CastlingRights, PositionInformation.halfMoveAccumulator, 0);
             ulong zobristHashKey = ZobristHashing.InitializeHashKey();
             CurrentGameState = new GameState(0, PositionInformation.EnPassantFile, PositionInformation.CastlingRights, PositionInformation.halfMoveAccumulator, zobristHashKey);
-
             GameStateHistory.Push(CurrentGameState);
 
             // run performance tests
             //Verification.RunPerformanceTests(5);
         }
 
-        public static void StartGame(GameType gameType)
+        public static void StartGame(GameType gameType, int searchDepth = 1, bool isLogging = false)
         {
             switch (gameType)
             {
                 case GameType.HumanVersusHuman:
                     InitializeGame();
                     legalMoves = GenerateMoves();
-                    currentStatus = GameResult.InProgress;
                     break;
                 case GameType.HumanVersusComputer:
 
@@ -86,35 +94,65 @@ namespace Chess
 
                     InitializeGame();
                     legalMoves = GenerateMoves();
-                    HvsCGame();
-                    currentStatus = GameResult.InProgress;
+                    HvsCGame(searchDepth);
                     break;
 
                 case GameType.ComputerVersusComputer:
                     ComputerPlayer1 = Sides.White;
                     ComputerPlayer2 = Sides.Black;
+                    InitializeGame();
+                    if (isLogging)
+                    {
+                        // run this line to simply executer a computer versus computer game
+                        ComputerVsComputerGame(searchDepth);
+                    }
+                    else
+                    {
+                        // run this to watch a game between two computers be played
+                        UIController.Instance.StartComputerVsComputerGame(searchDepth);
+                    }
+
                     break;
                 default:
                     break;
             }
-
-
-            // RandomMoveEngine randomMoveEngine = new();
-            // MiniMaxEngineV0 miniMaxEngineV0 = new();
         }
 
-        private static void HvsCGame()
+        // human versus computer game 
+        private static void HvsCGame(int opponentSearchDepth)
         {
             //SwapTurn();
 
             if (ComputerPlayer1 == Sides.White && whiteToMove)
             {
-                DoTurn(miniMaxEngineV0.FindBestMove(4).BestMove);
+                DoTurn(miniMaxEngineV0.FindBestMove(opponentSearchDepth).BestMove);
             }
 
             if (ComputerPlayer1 == Sides.Black && !whiteToMove)
             {
-                DoTurn(miniMaxEngineV0.FindBestMove(4).BestMove);
+                DoTurn(miniMaxEngineV0.FindBestMove(opponentSearchDepth).BestMove);
+            }
+        }
+
+        // Verification.cs essentially calls this over and over to log engine performance versus previous iterations
+        private static void ComputerVsComputerGame(int searchDepth)
+        {
+            while (currentStatus == GameResult.InProgress)
+            {
+                if (CurrentTurn == Sides.White)
+                {
+                    DoTurn(miniMaxEngineV0.FindBestMove(searchDepth).BestMove);
+                }
+                else
+                {
+                    DoTurn(randomMoveEngine.FindBestMove(searchDepth).BestMove);
+                }
+
+                if (currentStatus != GameResult.InProgress)
+                {
+                    return; // game is over
+                }
+                SwapTurn();
             }
         }
 
@@ -130,14 +168,9 @@ namespace Chess
             // check for game over rules
             currentStatus = CheckForGameOverRules();
 
-            if (currentStatus != GameResult.InProgress)
-            {
-                UnityEngine.Debug.Log("Game Over");
-            }
-
             if (gameType == GameType.HumanVersusComputer)
             {
-                HvsCGame();
+                HvsCGame(4);
             }
         }
 
@@ -261,7 +294,7 @@ namespace Chess
             return GameResult.InProgress;
         }
 
-        private static void SwapTurn()
+        public static void SwapTurn()
         {
             CurrentTurn = CurrentTurn == Sides.White
                                     ? Sides.Black

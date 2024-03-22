@@ -226,6 +226,35 @@ namespace Chess
             }
         }
 
+
+
+        public void StartComputerVsComputerGame(int searchDepth)
+        {
+            StartCoroutine(ComputerVsComputerGameCoroutine(searchDepth));
+        }
+
+
+        private IEnumerator ComputerVsComputerGameCoroutine(int searchDepth)
+        {
+            while (currentStatus == GameResult.InProgress)
+            {
+                if (Arbiter.CurrentTurn == Arbiter.Sides.White)
+                {
+                    Arbiter.DoTurn(Arbiter.miniMaxEngineV0.FindBestMove(searchDepth).BestMove);
+                }
+                else
+                {
+                    Arbiter.DoTurn(Arbiter.randomMoveEngine.FindBestMove(searchDepth).BestMove);
+                }
+
+                Arbiter.SwapTurn();
+
+                // Wait for a second (or any suitable duration) before making the next move
+                yield return new WaitForSeconds(0.2f);
+            }
+            // Handle end of game (display result, restart, etc.)
+        }
+
     }
 }
 

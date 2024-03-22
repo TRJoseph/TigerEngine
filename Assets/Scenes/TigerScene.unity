@@ -1363,7 +1363,6 @@ GameObject:
   - component: {fileID: 1938672571}
   - component: {fileID: 1938672570}
   - component: {fileID: 1938672572}
-  - component: {fileID: 1938672573}
   - component: {fileID: 1938672574}
   m_Layer: 0
   m_Name: BoardManager
@@ -1384,7 +1383,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3bb97f67fb12a4600bf5fec988e5d670, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  engine: {fileID: 1938672573}
 --- !u!4 &1938672571
 Transform:
   m_ObjectHideFlags: 0
@@ -1414,20 +1412,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   highlightOverlayPrefab: {fileID: 5593409470330700248, guid: eca842774a1b21b4cb95eda8fc1fa63c, type: 3}
   boardManager: {fileID: 1938672570}
---- !u!114 &1938672573
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1938672569}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2758ce834b192457eb0de7ddff1bf799, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  boardManager: {fileID: 0}
-  pieceMovementManager: {fileID: 1938672572}
 --- !u!114 &1938672574
 MonoBehaviour:
   m_ObjectHideFlags: 0

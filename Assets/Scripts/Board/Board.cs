@@ -70,7 +70,7 @@ namespace Chess
 
         }
 
-        public static ChessBoard InternalBoard = ChessBoard.Create();
+        public static ChessBoard InternalBoard;
 
         public const int BoardSize = 64;
 
