@@ -8,6 +8,7 @@ using System.Net.Security;
 using static Chess.Board;
 using static Chess.PositionInformation;
 using System.Linq;
+using static Chess.Arbiter;
 
 namespace Chess
 {
@@ -126,6 +127,9 @@ namespace Chess
         }
         public void GenerateGrid()
         {
+            Canvas.transform.position = new Vector3(3.5f, 3.5f, 0);
+            _cam.transform.position = new Vector3(3.5f, 3.5f, -10);
+
             int file = 0;
             int rank = 0;
             for (file = 0; file < 8; file++)
@@ -155,8 +159,6 @@ namespace Chess
                     }
                 }
             }
-
-            _cam.transform.position = new Vector3((float)file / 2 - 0.5f, (float)rank / 2 - 0.5f, -10);
 
         }
 
@@ -238,19 +240,34 @@ namespace Chess
         {
             while (currentStatus == GameResult.InProgress)
             {
-                if (Arbiter.CurrentTurn == Arbiter.Sides.White)
+
+                if (whiteToMove)
                 {
-                    Arbiter.DoTurn(Arbiter.miniMaxEngineV0.FindBestMove(searchDepth).BestMove);
+                    if (ComputerPlayer1.Side == Sides.White)
+                    {
+                        // engine 1 
+                        DoTurn(ComputerPlayer1.Engine.FindBestMove(searchDepth).BestMove);
+                    }
+                    else
+                    {
+                        // engine 2 
+                        DoTurn(ComputerPlayer2.Engine.FindBestMove(searchDepth).BestMove);
+                    }
                 }
                 else
                 {
-                    Arbiter.DoTurn(Arbiter.randomMoveEngine.FindBestMove(searchDepth).BestMove);
+                    if (ComputerPlayer1.Side == Sides.Black)
+                    {
+                        DoTurn(ComputerPlayer1.Engine.FindBestMove(searchDepth).BestMove);
+                    }
+                    else
+                    {
+                        DoTurn(ComputerPlayer2.Engine.FindBestMove(searchDepth).BestMove);
+                    }
                 }
 
-                Arbiter.SwapTurn();
-
                 // Wait for a second (or any suitable duration) before making the next move
-                yield return new WaitForSeconds(0.2f);
+                yield return new WaitForSeconds(0.5f);
             }
             // Handle end of game (display result, restart, etc.)
         }

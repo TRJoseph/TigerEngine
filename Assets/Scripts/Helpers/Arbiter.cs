@@ -24,25 +24,41 @@ namespace Chess
             ComputerVersusComputer
         }
 
-        // these will be updated and selected based on UI elements in some sort of main menu before the game is started
+        // this struct holds what engine version the computer will play using as well as the side it will play on (white or black)
+        public struct ComputerPlayer
+        {
+            public Sides Side;
+            public IChessEngine Engine;
+        }
+
+        /* These will likely be updated and selected based on UI elements in some sort of main menu before the game is started.
+         * Make sure the 'humanPlayer' side is chosen to be different side than its computer opponent for the human versus
+         * computer matchup.
+         */
         public static Sides humanPlayer = Sides.White;
+        
+        /* when setting multiple computer players for a computer versus computer matchup,
+         make sure that they are playing as opposite sides!! */ 
+        public static ComputerPlayer ComputerPlayer1 = new()
+        {
+            Side = Sides.White,
+            Engine = new MiniMaxEngineV0()
+        };
 
-        public static Sides ComputerPlayer1 = Sides.White;
+        public static ComputerPlayer ComputerPlayer2 = new()
+        {
+            Side = Sides.Black,
+            Engine = new RandomMoveEngine()
+        };
 
-        public static Sides ComputerPlayer2 = Sides.Black;
 
-        public static Sides CurrentTurn = Sides.White;
-
-        public static GameType gameType = GameType.ComputerVersusComputer;
-
-        public static RandomMoveEngine randomMoveEngine = new();
-        public static MiniMaxEngineV0 miniMaxEngineV0 = new();
-
+        // set for the desired game type
+        public static GameType gameType = GameType.HumanVersusComputer;
 
         public static void MatchUpConfiguration()
         {
-            //StartGame(gameType, 4);
-            Verification.ComputerVsComputerMatches(10, 4);
+            StartGame(gameType, 4);
+            //Verification.ComputerVsComputerMatches(3, 4);
         }
 
 
@@ -88,19 +104,14 @@ namespace Chess
                     legalMoves = GenerateMoves();
                     break;
                 case GameType.HumanVersusComputer:
-
-                    humanPlayer = Sides.White;
-                    ComputerPlayer1 = Sides.Black;
-
                     InitializeGame();
                     legalMoves = GenerateMoves();
                     HvsCGame(searchDepth);
                     break;
 
                 case GameType.ComputerVersusComputer:
-                    ComputerPlayer1 = Sides.White;
-                    ComputerPlayer2 = Sides.Black;
                     InitializeGame();
+                    legalMoves = GenerateMoves();
                     if (isLogging)
                     {
                         // run this line to simply executer a computer versus computer game
@@ -123,14 +134,14 @@ namespace Chess
         {
             //SwapTurn();
 
-            if (ComputerPlayer1 == Sides.White && whiteToMove)
+            if (ComputerPlayer1.Side == Sides.White && whiteToMove)
             {
-                DoTurn(miniMaxEngineV0.FindBestMove(opponentSearchDepth).BestMove);
+                DoTurn(ComputerPlayer1.Engine.FindBestMove(opponentSearchDepth).BestMove);
             }
 
-            if (ComputerPlayer1 == Sides.Black && !whiteToMove)
+            if (ComputerPlayer1.Side == Sides.Black && !whiteToMove)
             {
-                DoTurn(miniMaxEngineV0.FindBestMove(opponentSearchDepth).BestMove);
+                DoTurn(ComputerPlayer1.Engine.FindBestMove(opponentSearchDepth).BestMove);
             }
         }
 
@@ -139,20 +150,30 @@ namespace Chess
         {
             while (currentStatus == GameResult.InProgress)
             {
-                if (CurrentTurn == Sides.White)
+                // if white to move
+                if(whiteToMove)
                 {
-                    DoTurn(miniMaxEngineV0.FindBestMove(searchDepth).BestMove);
-                }
-                else
+                    if (ComputerPlayer1.Side == Sides.White)
+                    {
+                        // engine 1 
+                        DoTurn(ComputerPlayer1.Engine.FindBestMove(searchDepth).BestMove);
+                    }
+                    else
+                    {
+                        // engine 2 
+                        DoTurn(ComputerPlayer2.Engine.FindBestMove(searchDepth).BestMove);
+                    }
+                } else
                 {
-                    DoTurn(randomMoveEngine.FindBestMove(searchDepth).BestMove);
+                    if (ComputerPlayer1.Side == Sides.Black)
+                    {
+                        DoTurn(ComputerPlayer1.Engine.FindBestMove(searchDepth).BestMove);
+                    }
+                    else
+                    {
+                        DoTurn(ComputerPlayer2.Engine.FindBestMove(searchDepth).BestMove);
+                    }
                 }
-
-                if (currentStatus != GameResult.InProgress)
-                {
-                    return; // game is over
-                }
-                SwapTurn();
             }
         }
 
@@ -167,6 +188,8 @@ namespace Chess
 
             // check for game over rules
             currentStatus = CheckForGameOverRules();
+
+            UIController.Instance.UpdateMoveStatusUIInformation();
 
             if (gameType == GameType.HumanVersusComputer)
             {
@@ -292,19 +315,6 @@ namespace Chess
                 return GameResult.InsufficientMaterial;
             }
             return GameResult.InProgress;
-        }
-
-        public static void SwapTurn()
-        {
-            CurrentTurn = CurrentTurn == Sides.White
-                                    ? Sides.Black
-                                    : Sides.White;
-        }
-
-        public static void ChooseSide(Sides playerSide)
-        {
-            humanPlayer = playerSide;
-            ComputerPlayer1 = (playerSide == Sides.White) ? Sides.Black : Sides.White;
         }
     }
 
