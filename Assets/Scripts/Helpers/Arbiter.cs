@@ -30,18 +30,12 @@ namespace Chess
             public Sides Side;
             public IChessEngine Engine;
         }
-
-        /* These will likely be updated and selected based on UI elements in some sort of main menu before the game is started.
-         * Make sure the 'humanPlayer' side is chosen to be different side than its computer opponent for the human versus
-         * computer matchup.
-         */
-        public static Sides humanPlayer = Sides.White;
         
         /* when setting multiple computer players for a computer versus computer matchup,
          make sure that they are playing as opposite sides!! */ 
         public static ComputerPlayer ComputerPlayer1 = new()
         {
-            Side = Sides.White,
+            Side = Sides.Black,
             Engine = new MiniMaxEngineV0()
         };
 
@@ -80,7 +74,7 @@ namespace Chess
             UIController.Instance.ClearExistingPieces();
             UIController.Instance.GenerateGrid();
             UIController.Instance.RenderPiecesOnBoard();
-            UIController.Instance.UpdateMoveStatusUIInformation();
+            UIController.Instance.UpdateToMoveText();
 
             // generates zobrist hash key
             ZobristHashing.GenerateZobristHashes();
@@ -130,18 +124,26 @@ namespace Chess
         }
 
         // human versus computer game 
-        private static void HvsCGame(int opponentSearchDepth)
+        private static void HvsCGame(int searchDepth)
         {
             //SwapTurn();
 
             if (ComputerPlayer1.Side == Sides.White && whiteToMove)
             {
-                DoTurn(ComputerPlayer1.Engine.FindBestMove(opponentSearchDepth).BestMove);
+                Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(searchDepth);
+
+                DoTurn(bestMoveAndEval.BestMove);
+
+                UIController.Instance.UpdateEvaluationText(bestMoveAndEval.Evaluation);
             }
 
             if (ComputerPlayer1.Side == Sides.Black && !whiteToMove)
             {
-                DoTurn(ComputerPlayer1.Engine.FindBestMove(opponentSearchDepth).BestMove);
+                Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(searchDepth);
+
+                DoTurn(bestMoveAndEval.BestMove);
+
+                UIController.Instance.UpdateEvaluationText(bestMoveAndEval.Evaluation);
             }
         }
 
@@ -156,22 +158,29 @@ namespace Chess
                     if (ComputerPlayer1.Side == Sides.White)
                     {
                         // engine 1 
-                        DoTurn(ComputerPlayer1.Engine.FindBestMove(searchDepth).BestMove);
+                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(searchDepth);
+
+                        DoTurn(bestMoveAndEval.BestMove);
                     }
                     else
                     {
-                        // engine 2 
-                        DoTurn(ComputerPlayer2.Engine.FindBestMove(searchDepth).BestMove);
+                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer2.Engine.FindBestMove(searchDepth);
+
+                        DoTurn(bestMoveAndEval.BestMove);
                     }
                 } else
                 {
                     if (ComputerPlayer1.Side == Sides.Black)
                     {
-                        DoTurn(ComputerPlayer1.Engine.FindBestMove(searchDepth).BestMove);
+                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(searchDepth);
+
+                        DoTurn(bestMoveAndEval.BestMove);
                     }
                     else
                     {
-                        DoTurn(ComputerPlayer2.Engine.FindBestMove(searchDepth).BestMove);
+                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer2.Engine.FindBestMove(searchDepth);
+
+                        DoTurn(bestMoveAndEval.BestMove);
                     }
                 }
             }
@@ -189,7 +198,7 @@ namespace Chess
             // check for game over rules
             currentStatus = CheckForGameOverRules();
 
-            UIController.Instance.UpdateMoveStatusUIInformation();
+            UIController.Instance.UpdateToMoveText();
 
             if (gameType == GameType.HumanVersusComputer)
             {
@@ -287,7 +296,7 @@ namespace Chess
         {
             bool playerInCheck = IsPlayerInCheck();
 
-            if (Board.legalMoveCount == 0 && playerInCheck)
+            if (legalMoveCount == 0 && playerInCheck)
             {
                 return GameResult.CheckMate;
             }

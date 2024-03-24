@@ -17,7 +17,6 @@ namespace Chess
 
     public class RandomMoveEngine : IChessEngine
     {
-
         public Evaluation.MoveEvaluation FindBestMove(int depth)
         {
 
@@ -29,10 +28,14 @@ namespace Chess
 
     public class MiniMaxEngineV0 : IChessEngine
     {
+        const int infinity = 9999999;
+        const int negativeInfinity = -infinity;
+
+        SearchInformation searchInformation = new();
 
         public Evaluation.MoveEvaluation FindBestMove(int depth)
         {
-            int bestEval = int.MinValue;
+            int bestEval = negativeInfinity;
             Move bestMove = new();
 
             Span<Move> moves = MoveGen.GenerateMoves();
@@ -50,17 +53,23 @@ namespace Chess
                 }
             }
 
+            // in the rare case that a move is not available pick a random move
+            if(bestMove.IsDefault() && PositionInformation.currentStatus == GameResult.InProgress)
+            {
+                var random = new System.Random();
+                bestMove = moves[random.Next(moves.Length)];
+            }
+
             return new Evaluation.MoveEvaluation(bestMove, bestEval);
         }
 
-        public static int MiniMax(int depth)
+        public int MiniMax(int depth)
         {
             if (depth == 0)
             {
+                searchInformation.PositionsEvaluated++;
                 return Evaluation.SimpleEval();
             }
-
-            int maxEval = int.MinValue;
 
             Span<Move> moves = MoveGen.GenerateMoves();
 
@@ -72,17 +81,20 @@ namespace Chess
 
             if (gameResult == GameResult.CheckMate)
             {
-                return -100000 + depth;
+                // prioritize the fastest mate
+                return negativeInfinity - depth;
             }
+
+            int bestEval = negativeInfinity;
 
             foreach (Move move in moves)
             {
                 ExecuteMove(move);
                 int eval = -MiniMax(depth - 1);
-                maxEval = Math.Max(maxEval, eval);
+                bestEval = Math.Max(bestEval, eval);
                 UndoMove(move);
             }
-            return maxEval;
+            return bestEval;
         }
 
     }

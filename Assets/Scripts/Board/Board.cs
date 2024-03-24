@@ -136,6 +136,11 @@ namespace Chess
             public bool IsPawnPromotion;
 
             public PromotionFlags? promotionFlag;
+
+            public bool IsDefault()
+            {
+                return fromSquare == 0 && movedPiece == 0 && toSquare == 0 && specialMove == SpecialMove.None;
+            }
         }
 
         public static Move[] legalMoves = new Move[256];

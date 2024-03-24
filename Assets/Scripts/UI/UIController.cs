@@ -26,6 +26,8 @@ namespace Chess
 
         public TextMeshProUGUI WhichPlayerMoveText;
 
+        public TextMeshProUGUI EvalText;
+
         public PieceMovementManager MovementManager;
 
         public GameObject PromotionPanel;
@@ -113,7 +115,7 @@ namespace Chess
         }
 
 
-        public void UpdateMoveStatusUIInformation()
+        public void UpdateToMoveText()
         {
             if (whiteToMove)
             {
@@ -125,6 +127,12 @@ namespace Chess
             }
 
         }
+
+        public void UpdateEvaluationText(int evaluation)
+        {
+            EvalText.text = "Evaluation: " + evaluation.ToString();
+        }
+
         public void GenerateGrid()
         {
             Canvas.transform.position = new Vector3(3.5f, 3.5f, 0);
@@ -245,24 +253,40 @@ namespace Chess
                 {
                     if (ComputerPlayer1.Side == Sides.White)
                     {
-                        // engine 1 
-                        DoTurn(ComputerPlayer1.Engine.FindBestMove(searchDepth).BestMove);
+                        // engine 1
+                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(searchDepth);
+
+                        DoTurn(bestMoveAndEval.BestMove);
+
+                        Instance.UpdateEvaluationText(bestMoveAndEval.Evaluation);
                     }
                     else
                     {
                         // engine 2 
-                        DoTurn(ComputerPlayer2.Engine.FindBestMove(searchDepth).BestMove);
+                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer2.Engine.FindBestMove(searchDepth);
+
+                        DoTurn(bestMoveAndEval.BestMove);
+
+                        Instance.UpdateEvaluationText(bestMoveAndEval.Evaluation);
                     }
                 }
                 else
                 {
                     if (ComputerPlayer1.Side == Sides.Black)
                     {
-                        DoTurn(ComputerPlayer1.Engine.FindBestMove(searchDepth).BestMove);
+                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(searchDepth);
+
+                        DoTurn(bestMoveAndEval.BestMove);
+
+                        Instance.UpdateEvaluationText(bestMoveAndEval.Evaluation);
                     }
                     else
                     {
-                        DoTurn(ComputerPlayer2.Engine.FindBestMove(searchDepth).BestMove);
+                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer2.Engine.FindBestMove(searchDepth);
+
+                        DoTurn(bestMoveAndEval.BestMove);
+
+                        Instance.UpdateEvaluationText(bestMoveAndEval.Evaluation);
                     }
                 }
 
