@@ -137,7 +137,7 @@ namespace Chess
 
             public PromotionFlags? promotionFlag;
 
-            public bool IsDefault()
+            public readonly bool IsDefault()
             {
                 return fromSquare == 0 && movedPiece == 0 && toSquare == 0 && specialMove == SpecialMove.None;
             }

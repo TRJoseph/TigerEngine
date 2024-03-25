@@ -24,11 +24,13 @@ namespace Chess
 
         [SerializeField] private Transform _cam;
 
-        public TextMeshProUGUI WhichPlayerMoveText;
 
+        // Panel for useful display informatio
+        public TextMeshProUGUI WhichPlayerMoveText;
         public TextMeshProUGUI SearchDepthText;
-        public TextMeshProUGUI EvalText;
         public TextMeshProUGUI PositionsEvaluatedText;
+        public TextMeshProUGUI NumCheckMatesText;
+        public TextMeshProUGUI EvalText;
 
         public PieceMovementManager MovementManager;
 
@@ -133,8 +135,9 @@ namespace Chess
         public void UpdateSearchUIInfo(ref SearchInformation searchInformation)
         {
             SearchDepthText.text = "Search Depth: " + searchInformation.DepthSearched;
-            EvalText.text = "Evaluation: " + searchInformation.MoveEvaluationInformation.Evaluation.ToString();
             PositionsEvaluatedText.text = "Positions Evaluated: " + searchInformation.PositionsEvaluated;
+            NumCheckMatesText.text = "CheckMates Found: " + searchInformation.NumOfCheckMates;
+            EvalText.text = "Evaluation: " + searchInformation.MoveEvaluationInformation.Evaluation;
         }
 
         public void GenerateGrid()

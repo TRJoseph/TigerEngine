@@ -51,6 +51,7 @@ namespace Chess
         public SearchInformation FixedDepthSearch(int searchDepth)
         {
             SearchInformation.PositionsEvaluated = 0;
+            SearchInformation.NumOfCheckMates = 0;
             SearchInformation.DepthSearched = searchDepth;
             SearchInformation.MoveEvaluationInformation = FindBestMove(searchDepth);
 
@@ -67,7 +68,7 @@ namespace Chess
             foreach (Move move in moves)
             {
                 ExecuteMove(move);
-                int eval = -MiniMax(depth - 1); // Switch to the other player's perspective for the next depth.
+                int eval = -NegaMax(depth - 1); // Switch to the other player's perspective for the next depth.
                 UndoMove(move);
 
                 if (eval > bestEval)
@@ -87,7 +88,7 @@ namespace Chess
             return new Evaluation.MoveEvaluation(bestMove, bestEval);
         }
 
-        public int MiniMax(int depth)
+        public int NegaMax(int depth)
         {
             if (depth == 0)
             {
@@ -105,6 +106,7 @@ namespace Chess
 
             if (gameResult == GameResult.CheckMate)
             {
+                SearchInformation.NumOfCheckMates++;
                 // prioritize the fastest mate
                 return negativeInfinity - depth;
             }
@@ -114,7 +116,7 @@ namespace Chess
             foreach (Move move in moves)
             {
                 ExecuteMove(move);
-                int eval = -MiniMax(depth - 1);
+                int eval = -NegaMax(depth - 1);
                 bestEval = Math.Max(bestEval, eval);
                 UndoMove(move);
             }
