@@ -6,6 +6,7 @@ using System.Threading;
 using static Chess.Board;
 using System.Diagnostics.Tracing;
 using UnityEditor.Experimental.GraphView;
+using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace Chess
 {
@@ -13,10 +14,19 @@ namespace Chess
     public interface IChessEngine
     {
         Evaluation.MoveEvaluation FindBestMove(int depth);
+
+        SearchInformation FixedDepthSearch(int searchDepth);
     }
 
     public class RandomMoveEngine : IChessEngine
     {
+        readonly SearchInformation SearchInformation = new();
+        public SearchInformation FixedDepthSearch(int searchDepth)
+        {
+            SearchInformation.MoveEvaluationInformation = FindBestMove(searchDepth);
+
+            return SearchInformation;
+        }
         public Evaluation.MoveEvaluation FindBestMove(int depth)
         {
 
@@ -31,7 +41,21 @@ namespace Chess
         const int infinity = 9999999;
         const int negativeInfinity = -infinity;
 
-        SearchInformation searchInformation = new();
+        readonly SearchInformation SearchInformation = new();
+
+        public void IterativeDeepeningSearch()
+        {
+
+        }
+
+        public SearchInformation FixedDepthSearch(int searchDepth)
+        {
+            SearchInformation.PositionsEvaluated = 0;
+            SearchInformation.DepthSearched = searchDepth;
+            SearchInformation.MoveEvaluationInformation = FindBestMove(searchDepth);
+
+            return SearchInformation;
+        }
 
         public Evaluation.MoveEvaluation FindBestMove(int depth)
         {
@@ -67,7 +91,7 @@ namespace Chess
         {
             if (depth == 0)
             {
-                searchInformation.PositionsEvaluated++;
+                SearchInformation.PositionsEvaluated++;
                 return Evaluation.SimpleEval();
             }
 

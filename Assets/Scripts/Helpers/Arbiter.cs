@@ -35,7 +35,7 @@ namespace Chess
          make sure that they are playing as opposite sides!! */ 
         public static ComputerPlayer ComputerPlayer1 = new()
         {
-            Side = Sides.Black,
+            Side = Sides.White,
             Engine = new MiniMaxEngineV0()
         };
 
@@ -130,20 +130,20 @@ namespace Chess
 
             if (ComputerPlayer1.Side == Sides.White && whiteToMove)
             {
-                Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(searchDepth);
+                SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(searchDepth);
 
-                DoTurn(bestMoveAndEval.BestMove);
+                DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
 
-                UIController.Instance.UpdateEvaluationText(bestMoveAndEval.Evaluation);
+                UIController.Instance.UpdateSearchUIInfo(ref searchInformation);
             }
 
             if (ComputerPlayer1.Side == Sides.Black && !whiteToMove)
             {
-                Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(searchDepth);
+                SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(searchDepth);
 
-                DoTurn(bestMoveAndEval.BestMove);
+                DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
 
-                UIController.Instance.UpdateEvaluationText(bestMoveAndEval.Evaluation);
+                UIController.Instance.UpdateSearchUIInfo(ref searchInformation);
             }
         }
 

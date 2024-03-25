@@ -26,7 +26,9 @@ namespace Chess
 
         public TextMeshProUGUI WhichPlayerMoveText;
 
+        public TextMeshProUGUI SearchDepthText;
         public TextMeshProUGUI EvalText;
+        public TextMeshProUGUI PositionsEvaluatedText;
 
         public PieceMovementManager MovementManager;
 
@@ -128,9 +130,11 @@ namespace Chess
 
         }
 
-        public void UpdateEvaluationText(int evaluation)
+        public void UpdateSearchUIInfo(ref SearchInformation searchInformation)
         {
-            EvalText.text = "Evaluation: " + evaluation.ToString();
+            SearchDepthText.text = "Search Depth: " + searchInformation.DepthSearched;
+            EvalText.text = "Evaluation: " + searchInformation.MoveEvaluationInformation.Evaluation.ToString();
+            PositionsEvaluatedText.text = "Positions Evaluated: " + searchInformation.PositionsEvaluated;
         }
 
         public void GenerateGrid()
@@ -254,39 +258,39 @@ namespace Chess
                     if (ComputerPlayer1.Side == Sides.White)
                     {
                         // engine 1
-                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(searchDepth);
+                        SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(searchDepth);
 
-                        DoTurn(bestMoveAndEval.BestMove);
+                        DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
 
-                        Instance.UpdateEvaluationText(bestMoveAndEval.Evaluation);
+                        Instance.UpdateSearchUIInfo(ref searchInformation);
                     }
                     else
                     {
                         // engine 2 
-                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer2.Engine.FindBestMove(searchDepth);
+                        SearchInformation searchInformation = ComputerPlayer2.Engine.FixedDepthSearch(searchDepth);
 
-                        DoTurn(bestMoveAndEval.BestMove);
+                        DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
 
-                        Instance.UpdateEvaluationText(bestMoveAndEval.Evaluation);
+                        Instance.UpdateSearchUIInfo(ref searchInformation);
                     }
                 }
                 else
                 {
                     if (ComputerPlayer1.Side == Sides.Black)
                     {
-                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(searchDepth);
+                        SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(searchDepth);
 
-                        DoTurn(bestMoveAndEval.BestMove);
+                        DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
 
-                        Instance.UpdateEvaluationText(bestMoveAndEval.Evaluation);
+                        Instance.UpdateSearchUIInfo(ref searchInformation);
                     }
                     else
                     {
-                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer2.Engine.FindBestMove(searchDepth);
+                        SearchInformation searchInformation = ComputerPlayer2.Engine.FixedDepthSearch(searchDepth);
 
-                        DoTurn(bestMoveAndEval.BestMove);
+                        DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
 
-                        Instance.UpdateEvaluationText(bestMoveAndEval.Evaluation);
+                        Instance.UpdateSearchUIInfo(ref searchInformation);
                     }
                 }
 

@@ -9,5 +9,7 @@ namespace Chess
         public int NumOfCheckMates;
 
         public int MoveNumber;
+
+        public Evaluation.MoveEvaluation MoveEvaluationInformation;
     }
 }
