@@ -2,9 +2,13 @@ using System;
 using System.Collections;
 using System.Data.SqlTypes;
 using System.Diagnostics.Tracing;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Unity.VisualScripting;
 using UnityEngine;
+using static Chess.Board;
+using static Chess.PositionInformation;
+using static Chess.MoveGen;
 
 namespace Chess
 {
@@ -74,7 +78,7 @@ namespace Chess
             originalPosition = selectedPiece.transform.position;
 
             // Implement your conditions and logic
-            if (BoardManager.whiteToMove)
+            if (whiteToMove)
             {
                 if (!selectedPiece.GetComponent<PieceRender>().isWhitePiece)
                 {
@@ -105,7 +109,7 @@ namespace Chess
              * move attempted was actually valid, determining whether or not to remove the highlights*/
             RemoveLegalMoveHighlights();
 
-            SnapToNearestSquare(legalMove);
+            if (selectedPiece != null) { SnapToNearestSquare(legalMove); }
 
             selectedPiece = null;
         }
@@ -148,76 +152,76 @@ namespace Chess
 
 
                 // this is reached when a move is made
-                HandleMoveExecution(selectedPiece, closestSquare);
+                HandleMovePlayed(selectedPiece, closestSquare);
             }
         }
 
-        private void HandleMoveExecution(GameObject selectedPiece, Transform closestSquare)
+        private static bool IsPawnPromotion(ulong toSquare, int movedPiece)
         {
-
-            /* 
-            PSA: Piece GameObjects have an associated Tile and Tile GameObjects have an associated piece,
-            these are updated here when a move is made
-
-            */
-            // update the internal board state when a move is made
-            Board.UpdateInternalState((int)originalPosition.x, (int)originalPosition.y, (int)selectedPiece.transform.position.x, (int)selectedPiece.transform.position.y);
-
-            boardManager.ClearExistingPieces();
-            boardManager.RenderPiecesOnBoard();
-
-            // update who's move it is
-            BoardManager.whiteToMove = !BoardManager.whiteToMove;
-
-            if (Board.currentState == Board.GameState.Normal)
+            if (movedPiece != ChessBoard.Pawn)
             {
-                // wipe the available moves once a move is executed
-                Board.ClearListMoves();
-
-                Board.legalMoves = Board.AfterMove();
-
-                // TODO Reference the UI instance in the top of this file
-                UIController.Instance.UpdateMoveStatusUIInformation();
+                return false;
             }
-        }
 
-        public void HandleEngineMoveExecution(Board.LegalMove legalMove)
-        {
-
-            int originalXPosition = legalMove.startSquare % 8;
-            int originalYPosition = legalMove.startSquare / 8;
-
-            int newXPosition = legalMove.endSquare % 8;
-            int newYPosition = legalMove.endSquare / 8;
-
-            // update the internal board state when a move is made
-            Board.UpdateInternalState(originalXPosition, originalYPosition, newXPosition, newYPosition);
-
-            boardManager.ClearExistingPieces();
-            boardManager.RenderPiecesOnBoard();
-
-            // update who's move it is
-            BoardManager.whiteToMove = !BoardManager.whiteToMove;
-
-            if (Board.currentState == Board.GameState.Normal)
+            if (toSquare >> 8 == 0 || toSquare << 8 == 0)
             {
-                // wipe the available moves once a move is executed
-                Board.ClearListMoves();
+                return true;
+            }
 
-                Board.legalMoves = Board.AfterMove();
+            return false;
+        }
 
-                UIController.Instance.UpdateMoveStatusUIInformation();
+        private void HandleMovePlayed(GameObject selectedPiece, Transform closestSquare)
+        {
+            int fromSquareIndex = (int)originalPosition.y * 8 + (int)originalPosition.x;
+            int toSquareIndex = (int)selectedPiece.transform.position.y * 8 + (int)selectedPiece.transform.position.x;
+
+            ulong fromSquare = 1UL << fromSquareIndex;
+            ulong toSquare = 1UL << toSquareIndex;
+
+            // Get all moves that match the from and to squares
+            var matchingMoves = legalMoves.Where(move => move.fromSquare == fromSquare && move.toSquare == toSquare).ToList();
+
+            if (matchingMoves.Count == 0)
+            {
+                Debug.Log("Error: No matching moves found for this played move!");
+                return;
+            }
+
+            Move move;
+            if (matchingMoves.Count > 1)
+            {
+                var savedPromotionMoves = legalMoves.Where(move => move.fromSquare == fromSquare && move.toSquare == toSquare && move.IsPawnPromotion).ToList();
+                // SavedMoveForPromotionBase = new MoveBase { fromSquare = fromSquare, toSquare = toSquare };
+                UIController.Instance.ShowPromotionDropdown(toSquare, savedPromotionMoves);
+                // The actual selection of the promotionFlag is handled by the promotion dropdown, after the user move input
+            }
+            else
+            {
+                // Only one matching move, so it's not a promotion or it's a non-pawn move
+                move = matchingMoves.Single();
+                Arbiter.DoTurn(move);
             }
         }
 
-        public static void UpdateFrontEndPromotion(int encodedPiece, int xPos, int yPos)
+        public void HandleEngineMoveExecution(Move move)
         {
-            int decodedPieceColor = encodedPiece & 24;
-            int decodedPiece = encodedPiece & 7;
+            // update the internal board state when a move is made by the computer
+            ExecuteMove(move);
+
+            UIController.Instance.ClearExistingPieces();
+            UIController.Instance.RenderPiecesOnBoard();
+
+            //HandleGameStateAfterMove();
+            legalMoves = GenerateMoves();
+        }
+
+        public static void UpdateFrontEndPromotion(int pieceType, int xPos, int yPos)
+        {
 
             PieceRender renderScript = FindChessPieceGameObject(xPos, yPos);
 
-            Sprite pieceSprite = BoardManager.GetSpriteForPiece(decodedPiece, decodedPieceColor, renderScript);
+            Sprite pieceSprite = UIController.GetSpriteForPiece(pieceType, whiteToMove ? ChessBoard.White : ChessBoard.Black, renderScript);
 
             renderScript.GetComponent<SpriteRenderer>().sprite = pieceSprite;
         }
@@ -249,15 +253,14 @@ namespace Chess
         private void DisplayLegalMoves(float xPos, float yPos)
         {
 
-            var selectedPiece = Board.Squares[(int)yPos * 8 + (int)xPos];
-
             int selectedPieceSquare = (int)yPos * 8 + (int)xPos;
 
-            foreach (var move in Board.legalMoves)
+            foreach (var move in legalMoves)
             {
-                if (selectedPieceSquare == move.startSquare)
+                int legalmoveSquare = (int)Math.Log(move.fromSquare, 2);
+                if (selectedPieceSquare == legalmoveSquare)
                 {
-                    Vector2 newPos2 = new Vector2(move.endSquare % 8, move.endSquare / 8);
+                    Vector2 newPos2 = new Vector2((int)Math.Log(move.toSquare, 2) % 8, (int)Math.Log(move.toSquare, 2) / 8);
                     Instantiate(highlightOverlayPrefab, newPos2, Quaternion.identity);
                 }
             }
