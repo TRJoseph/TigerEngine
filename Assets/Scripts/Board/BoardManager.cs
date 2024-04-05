@@ -17,13 +17,16 @@ namespace Chess
         private static readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
 
         // FEN string for testing draw rules
-        //private readonly string FENString = "3r1k2/8/8/8/8/3Q4/8/4K3 w - - 0 1";
+        //private static readonly string FENString = "3r1k2/8/8/8/8/3Q4/8/4K3 w - - 0 1";
 
-        //private readonly string FENString = "8/7k/5ppp/7r/2Q3bq/1p2P3/5PP1/6K1 w - - 0 1";
+        //private static readonly string FENString = "4kr2/8/8/8/5Q2/8/4K3/8 b - - 0 1";
 
         //private static readonly string FENString = "8/7k/5KR1/8/8/8/8/8 w - - 0 1";
 
         //private static readonly string FENString = "8/7K/5kr1/8/8/8/8/8 b - - 0 1";
+
+        // test position from perft results page
+        //private static readonly string FENString = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
 
         // Start is called before the first frame update
         void Start()

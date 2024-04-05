@@ -7,6 +7,7 @@ using static Chess.Board;
 using System.Diagnostics.Tracing;
 using UnityEditor.Experimental.GraphView;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Diagnostics;
 
 namespace Chess
 {
@@ -53,7 +54,17 @@ namespace Chess
             SearchInformation.PositionsEvaluated = 0;
             SearchInformation.NumOfCheckMates = 0;
             SearchInformation.DepthSearched = searchDepth;
+
+            SearchInformation.searchDiagnostics.stopwatch = Stopwatch.StartNew();
+
             SearchInformation.MoveEvaluationInformation = FindBestMove(searchDepth);
+
+            SearchInformation.searchDiagnostics.stopwatch.Stop();
+            SearchInformation.searchDiagnostics.timeSpan = SearchInformation.searchDiagnostics.stopwatch.Elapsed;
+            SearchInformation.searchDiagnostics.FormatElapsedTime();
+
+            // this logs how long the fixed depth search took
+            SearchInformation.searchDiagnostics.LogElapsedTime();
 
             return SearchInformation;
         }
@@ -68,7 +79,7 @@ namespace Chess
             foreach (Move move in moves)
             {
                 ExecuteMove(move);
-                int eval = -NegaMax(depth - 1); // Switch to the other player's perspective for the next depth.
+                int eval = -NegaMax(depth - 1, negativeInfinity, infinity); // Switch to the other player's perspective for the next depth.
                 UndoMove(move);
 
                 if (eval > bestEval)
@@ -79,7 +90,7 @@ namespace Chess
             }
 
             // in the rare case that a move is not available pick a random move
-            if(bestMove.IsDefault() && PositionInformation.currentStatus == GameResult.InProgress)
+            if (bestMove.IsDefault() && PositionInformation.currentStatus == GameResult.InProgress)
             {
                 var random = new System.Random();
                 bestMove = moves[random.Next(moves.Length)];
@@ -88,8 +99,9 @@ namespace Chess
             return new Evaluation.MoveEvaluation(bestMove, bestEval);
         }
 
-        public int NegaMax(int depth)
+        public int NegaMax(int depth, int alpha, int beta)
         {
+
             if (depth == 0)
             {
                 SearchInformation.PositionsEvaluated++;
@@ -97,6 +109,9 @@ namespace Chess
             }
 
             Span<Move> moves = MoveGen.GenerateMoves();
+
+            // order move list to place good moves at top of list
+            OrderMoveList(ref moves);
 
             GameResult gameResult = Arbiter.CheckForGameOverRules();
             if (gameResult == GameResult.Stalemate || gameResult == GameResult.ThreeFold || gameResult == GameResult.FiftyMoveRule || gameResult == GameResult.InsufficientMaterial)
@@ -111,52 +126,37 @@ namespace Chess
                 return negativeInfinity - depth;
             }
 
-            int bestEval = negativeInfinity;
 
             foreach (Move move in moves)
             {
                 ExecuteMove(move);
-                int eval = -NegaMax(depth - 1);
-                bestEval = Math.Max(bestEval, eval);
+                // maintains symmetry; -beta is new alpha value for swapped perspective and likewise with -alpha; (upper and lower score safeguards)
+                int eval = -NegaMax(depth - 1, -beta, -alpha);
                 UndoMove(move);
+
+                if (eval >= beta)
+                {
+                    // prune branch, black or white had a better path earlier on in the tree
+                    return beta;
+                }
+                if (eval > alpha)
+                {
+                    alpha = eval;
+                }
             }
-            return bestEval;
+            return alpha;
+        }
+
+
+        public void OrderMoveList(ref Span<Move> moves)
+        {
+            for (int i = 0; i < currentMoveIndex; i++)
+            {
+
+
+            }
+
         }
 
     }
-
-    // public class Engine : MonoBehaviour
-    // {
-    //     public BoardManager boardManager;
-
-    //     public PieceMovementManager pieceMovementManager;
-
-    //     private static Thread _engineThread;
-
-    //     public static void StartThinking()
-    //     {
-    //         _engineThread = new Thread(Think);
-    //         _engineThread.Start();
-    //     }
-
-    //     private static void Think()
-    //     {
-    //         //MiniMax(4, PositionInformation.whiteToMove);
-    //         while (currentStatus == GameStatus.Normal)
-    //         {
-    //             if (Arbiter.ComputerSide == Arbiter.CurrentTurn)
-    //             {
-    //                 MainThreadDispatcher.Enqueue(() =>
-    //                 {
-    //                     Arbiter.DoTurn(FindBestMoveV1(4).BestMove);
-    //                 });
-
-    //             }
-    //             Thread.Sleep(100); // Prevents tight looping, adjust as needed
-    //         }
-    //     }
-
-    //     random move V0
-    // }
-
 }
