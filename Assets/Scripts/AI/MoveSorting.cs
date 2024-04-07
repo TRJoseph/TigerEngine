@@ -7,15 +7,13 @@ namespace Chess
 {
     public static class MoveSorting
     {
-        // tier 1, 2, 3, 4; tier 1 contains moves that are most likely to be good, t4, contains moves that are less likely to be as good
-        public enum MoveHeuristicType
-        {
-            // MVV LVA - most valuable victim, least valuable attacker
-            Captures = 1,
-            PromotionsAndChecks = 2,
-            PositionalMoves = 3,
-            Other = 4
-        }
+
+        const int million = 1000000;
+        const int winningCaptureBias = 8 * million;
+        const int promoteBias = 6 * million;
+        const int killerBias = 4 * million;
+        const int losingCaptureBias = 2 * million;
+        const int regularBias = 0;
 
         public struct MoveHeuristic
         {
@@ -25,40 +23,40 @@ namespace Chess
 
         public static void OrderMoveList(ref Span<Move> moves)
         {
-            MoveHeuristic[] moveHeuristicList = new MoveHeuristic[256];
+            MoveHeuristic[] moveHeuristicList = new MoveHeuristic[moves.Length];
             for (int i = 0; i < moves.Length; i++)
             {
-                int currentScore = 0;
+                int currentScore = regularBias; // Start with a base score for all moves
 
                 int capturedPieceType = GetPieceAtSquare(PositionInformation.OpponentColorIndex, moves[i].toSquare);
                 int movePieceType = GetPieceAtSquare(PositionInformation.MoveColorIndex, moves[i].fromSquare);
 
-                // if move was a capture
-                if (capturedPieceType != ChessBoard.None)
+                bool isCapture = capturedPieceType != ChessBoard.None;
+                bool isPromotion = moves[i].IsPawnPromotion;
+
+                if (isCapture)
                 {
                     int capturedPieceValue = GetPieceValue(capturedPieceType);
                     int movedPieceValue = GetPieceValue(movePieceType);
-                    // captures are tier 1, automatically prioritized over the rest
-                    currentScore = 10 * capturedPieceValue - movedPieceValue;
+                    int materialDelta = capturedPieceValue - movedPieceValue;
+
+                    currentScore += winningCaptureBias + materialDelta;
                 }
 
-                if (moves[i].IsPawnPromotion)
+                if (isPromotion)
                 {
-                    // pawn promotions are tier 2
-
-                    currentScore += ConvertPromotionFlagToPieceValue(moves[i].promotionFlag);
-
-                    // further score additions for promotion pieces that are likely a good choice (queen over rook for example)
+                    currentScore += promoteBias + ConvertPromotionFlagToPieceValue(moves[i].promotionFlag);
                 }
+
+                // if (IsKillerMove(moves[i])) currentScore += killerBias;
 
                 moveHeuristicList[i].Score = currentScore;
-
             }
 
-            // sorts the list in O(nlogn)
+            // Sort moves based on their heuristic score
             QuickSort(ref moveHeuristicList, ref moves, 0, moves.Length - 1);
-
         }
+
 
         public static void QuickSort(ref MoveHeuristic[] moveHeuristicList, ref Span<Move> moves, int low, int high)
         {

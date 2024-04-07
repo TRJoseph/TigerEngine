@@ -49,59 +49,14 @@ namespace Chess
             public ulong AllBlackPieces;
             public ulong AllPieces;
 
+            // assisting functions to help with pawn push move gen
             public readonly ulong NorthOne(ulong bitboard) { return bitboard << 8; }
-            public readonly ulong EastOne(ulong bitboard) { return (bitboard << 1) & HFileMask; }
-            public readonly ulong NorthEastOne(ulong bitboard) { return (bitboard << 9) & HFileMask; }
-            public readonly ulong SouthEastOne(ulong bitboard) { return (bitboard >> 7) & HFileMask; }
-            public readonly ulong WestOne(ulong bitboard) { return (bitboard >> 1) & AFileMask; }
-            public readonly ulong SouthWestOne(ulong bitboard) { return (bitboard >> 9) & AFileMask; }
-            public readonly ulong NorthWestOne(ulong bitboard) { return (bitboard << 7) & AFileMask; }
             public readonly ulong SouthOne(ulong bitboard) { return bitboard >> 8; }
-
-            /* knight move offsets
-             * Northeasteast, represents a knight move in an L shape that is one square up and two squares right */
-            public readonly ulong NorthNorthEast(ulong bitboard) { return (bitboard << 17) & HFileMask; }
-            public readonly ulong NorthEastEast(ulong bitboard) { return (bitboard << 10) & GHFileMask; }
-            public readonly ulong SouthEastEast(ulong bitboard) { return (bitboard >> 6) & GHFileMask; }
-            public readonly ulong SouthSouthEast(ulong bitboard) { return (bitboard >> 15) & HFileMask; }
-            public readonly ulong NorthNorthWest(ulong bitboard) { return (bitboard << 15) & AFileMask; }
-            public readonly ulong NorthWestWest(ulong bitboard) { return (bitboard << 6) & ABFileMask; }
-            public readonly ulong SouthWestWest(ulong bitboard) { return (bitboard >> 10) & ABFileMask; }
-            public readonly ulong SouthSouthWest(ulong bitboard) { return (bitboard >> 17) & AFileMask; }
-
         }
 
         public static ChessBoard InternalBoard;
 
         public const int BoardSize = 64;
-
-        // masks to prevent A file and H file wrapping for legal move calculations
-        public const ulong AFileMask = 0x7f7f7f7f7f7f7f7f;
-        public const ulong HFileMask = 0xfefefefefefefefe;
-
-        // masks to prevent knight jumps from wrapping 
-        public const ulong ABFileMask = 0x3F3F3F3F3F3F3F3F;
-        public const ulong GHFileMask = 0xFCFCFCFCFCFCFCFC;
-
-        private const ulong deBruijn64 = 0x37E84A99DAE458F;
-        private static readonly int[] deBruijnTable =
-        {
-            0, 1, 17, 2, 18, 50, 3, 57,
-            47, 19, 22, 51, 29, 4, 33, 58,
-            15, 48, 20, 27, 25, 23, 52, 41,
-            54, 30, 38, 5, 43, 34, 59, 8,
-            63, 16, 49, 56, 46, 21, 28, 32,
-            14, 26, 24, 40, 53, 37, 42, 7,
-            62, 55, 45, 31, 13, 39, 36, 6,
-            61, 44, 12, 35, 60, 11, 10, 9
-        };
-
-        // Get index of least significant set bit in given 64bit value. Also clears the bit to zero.
-        public static int GetLSB(ref ulong b)
-        {
-            int i = deBruijnTable[((ulong)((long)b & -(long)b) * deBruijn64) >> 58];
-            return i;
-        }
 
         public enum SpecialMove
         {
@@ -151,8 +106,6 @@ namespace Chess
         public static int currentMoveIndex;
 
         public static int legalMoveCount;
-
-        public static PromotionFlags promotionSelection;
 
         public enum GameResult
         {
@@ -207,8 +160,8 @@ namespace Chess
             ulong toSquare = move.toSquare;
             ulong fromSquare = move.fromSquare;
 
-            int toSquareIndex = GetLSB(ref toSquare);
-            int fromSquareIndex = GetLSB(ref fromSquare);
+            int toSquareIndex = BitBoardHelper.GetLSB(ref toSquare);
+            int fromSquareIndex = BitBoardHelper.GetLSB(ref fromSquare);
 
             bool isEnPassant = move.specialMove is SpecialMove.EnPassant;
 
@@ -238,7 +191,7 @@ namespace Chess
                 if (isEnPassant)
                 {
                     captureSquare = whiteToMove ? captureSquare >> 8 : captureSquare << 8;
-                    int captureSquareIndex = GetLSB(ref captureSquare);
+                    int captureSquareIndex = BitBoardHelper.GetLSB(ref captureSquare);
                     captureSquareIndex += whiteToMove ? -8 : 8;
 
                     // remove en passant captured piece
@@ -299,7 +252,7 @@ namespace Chess
             // Pawn has moved two forwards, mark file with en-passant flag
             if (move.specialMove == SpecialMove.TwoSquarePawnMove)
             {
-                int file = GetFile(GetLSB(ref fromSquare));
+                int file = GetFile(BitBoardHelper.GetLSB(ref fromSquare));
                 newEnPassantFile = file + 1;
                 newZobristKey ^= ZobristHashing.enPassantFile[file];
             }

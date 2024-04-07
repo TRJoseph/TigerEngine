@@ -168,7 +168,7 @@ namespace Chess
         {
 
             // king index converts the king bitboard 
-            int kingIndex = GetLSB(ref king);
+            int kingIndex = BitBoardHelper.GetLSB(ref king);
 
             // grabs the corresponding bitboard representing all legal moves from the given king index on the board
             ulong validKingMoves = MoveTables.PrecomputedKingMoves[kingIndex];
@@ -261,7 +261,7 @@ namespace Chess
                 // and with twos complement to isolate each rook
                 ulong isolatedRooklsb = rooks & (~rooks + 1);
 
-                ulong validRookMoves = GetRookAttacks(InternalBoard.AllPieces, GetLSB(ref isolatedRooklsb));
+                ulong validRookMoves = GetRookAttacks(InternalBoard.AllPieces, BitBoardHelper.GetLSB(ref isolatedRooklsb));
 
                 // remove friendly piece blockers from potential captures 
                 validRookMoves &= ~friendlyPieces;
@@ -287,7 +287,7 @@ namespace Chess
                 // and with twos complement to isolate each bishop
                 ulong isolatedBishoplsb = bishops & (~bishops + 1);
 
-                ulong validBishopMoves = GetBishopAttacks(InternalBoard.AllPieces, GetLSB(ref isolatedBishoplsb));
+                ulong validBishopMoves = GetBishopAttacks(InternalBoard.AllPieces, BitBoardHelper.GetLSB(ref isolatedBishoplsb));
 
                 // remove friendly piece blockers from potential captures 
                 validBishopMoves &= ~friendlyPieces;
@@ -313,7 +313,7 @@ namespace Chess
                 // and with twos complement to isolate each queen
                 ulong isolatedQueenlsb = queens & (~queens + 1);
 
-                int currentQueenPos = GetLSB(ref isolatedQueenlsb);
+                int currentQueenPos = BitBoardHelper.GetLSB(ref isolatedQueenlsb);
                 ulong validQueenMoves = GetBishopAttacks(InternalBoard.AllPieces, currentQueenPos);
                 validQueenMoves |= GetRookAttacks(InternalBoard.AllPieces, currentQueenPos);
 
@@ -353,7 +353,7 @@ namespace Chess
                 // isolates each pawn one by one
                 ulong isolatedPawnlsb = whitePawns & (~whitePawns + 1);
                 // gets current pawn position to add to legal move list
-                int currentPawnPos = GetLSB(ref isolatedPawnlsb);
+                int currentPawnPos = BitBoardHelper.GetLSB(ref isolatedPawnlsb);
 
                 ulong oneSquareMove = isolatedPawnlsb << 8;
                 if (WhitePawnsAbleToPushOneSquare(isolatedPawnlsb, ~InternalBoard.AllPieces) == isolatedPawnlsb)
@@ -421,7 +421,7 @@ namespace Chess
             {
                 ulong isolatedPawnlsb = blackPawns & (~blackPawns + 1);
 
-                int currentPawnPos = GetLSB(ref isolatedPawnlsb);
+                int currentPawnPos = BitBoardHelper.GetLSB(ref isolatedPawnlsb);
 
                 // valid pawn moves include pushes, captures, and en passant
                 ulong oneSquareMove = isolatedPawnlsb >> 8;
@@ -489,7 +489,7 @@ namespace Chess
             {
                 // isolate each knight
                 ulong isolatedKnightlsb = knights & (~knights + 1);
-                int currentKnightPos = GetLSB(ref isolatedKnightlsb);
+                int currentKnightPos = BitBoardHelper.GetLSB(ref isolatedKnightlsb);
 
                 // valid knight moves only include either empty squares or squares the opponent pieces occupy
                 ulong validKnightMoves = MoveTables.PrecomputedKnightMoves[currentKnightPos] & ~friendlyPieces;
@@ -572,7 +572,7 @@ namespace Chess
             {
                 ExecuteMove(pseudoLegalMoves[i]);
 
-                int currentKingSquare = whiteToMove ? GetLSB(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]) : GetLSB(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]);
+                int currentKingSquare = whiteToMove ? BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]) : BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]);
 
                 if (!IsKingInCheck(currentKingSquare))
                 {

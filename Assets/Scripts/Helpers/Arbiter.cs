@@ -30,9 +30,9 @@ namespace Chess
             public Sides Side;
             public IChessEngine Engine;
         }
-        
+
         /* when setting multiple computer players for a computer versus computer matchup,
-         make sure that they are playing as opposite sides!! */ 
+         make sure that they are playing as opposite sides!! */
         public static ComputerPlayer ComputerPlayer1 = new()
         {
             Side = Sides.Black,
@@ -153,7 +153,7 @@ namespace Chess
             while (currentStatus == GameResult.InProgress)
             {
                 // if white to move
-                if(whiteToMove)
+                if (whiteToMove)
                 {
                     if (ComputerPlayer1.Side == Sides.White)
                     {
@@ -168,7 +168,8 @@ namespace Chess
 
                         DoTurn(bestMoveAndEval.BestMove);
                     }
-                } else
+                }
+                else
                 {
                     if (ComputerPlayer1.Side == Sides.Black)
                     {
@@ -208,7 +209,7 @@ namespace Chess
 
         public static bool IsPlayerInCheck()
         {
-            int currentKingSquare = PositionInformation.whiteToMove ? GetLSB(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]) : GetLSB(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]);
+            int currentKingSquare = whiteToMove ? BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]) : BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]);
             // Check for pawn attacks
             ulong pawnAttacks = whiteToMove ?
                 MoveTables.PrecomputedWhitePawnCaptures[currentKingSquare] :
