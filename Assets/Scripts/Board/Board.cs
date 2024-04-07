@@ -13,6 +13,7 @@ namespace Chess
         public struct ChessBoard
         {
             // https://www.chessprogramming.org/Bitboard_Board-Definition
+            public const int None = -1;
             public const int Pawn = 0;
             public const int Bishop = 1;
             public const int Knight = 2;
@@ -185,7 +186,7 @@ namespace Chess
         }
 
 
-        private static int GetPieceAtSquare(int pieceColorIndex, ulong square)
+        public static int GetPieceAtSquare(int pieceColorIndex, ulong square)
         {
 
             // Check if a piece is captured
@@ -197,7 +198,7 @@ namespace Chess
                 }
             }
 
-            return -1;
+            return ChessBoard.None;
         }
 
         public static void ExecuteMove(Move move, bool inSearch = false)
@@ -230,7 +231,7 @@ namespace Chess
             RemoveAndAddPieceBitboards(movedPiece, friendlyPieceColor, fromSquare, toSquare);
 
             // a piece was captured
-            if (capturedPieceType != -1)
+            if (capturedPieceType != ChessBoard.None)
             {
                 ulong captureSquare = toSquare;
 
@@ -346,7 +347,7 @@ namespace Chess
             InternalBoard.UpdateCompositeBitboards();
 
             // Pawn moves and captures reset the fifty move counter
-            if (movedPiece == ChessBoard.Pawn || capturedPieceType != -1)
+            if (movedPiece == ChessBoard.Pawn || capturedPieceType != ChessBoard.None)
             {
                 newFiftyMoveCounter = 0;
             }
@@ -372,7 +373,7 @@ namespace Chess
 
             bool undoingEnPassant = move.specialMove == SpecialMove.EnPassant;
             bool undoingPromotion = move.IsPawnPromotion;
-            bool undoingCapture = CurrentGameState.capturedPieceType != -1;
+            bool undoingCapture = CurrentGameState.capturedPieceType != ChessBoard.None;
 
             int capturedPieceType = CurrentGameState.capturedPieceType;
 

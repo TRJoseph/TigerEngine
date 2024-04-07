@@ -76,13 +76,15 @@ namespace Chess
 
             Span<Move> moves = MoveGen.GenerateMoves();
 
+            MoveSorting.OrderMoveList(ref moves);
+
             foreach (Move move in moves)
             {
                 ExecuteMove(move);
                 int eval = -NegaMax(depth - 1, negativeInfinity, infinity); // Switch to the other player's perspective for the next depth.
                 UndoMove(move);
 
-                if (eval > bestEval)
+                if (eval >= bestEval)
                 {
                     bestEval = eval;
                     bestMove = move;
@@ -111,7 +113,7 @@ namespace Chess
             Span<Move> moves = MoveGen.GenerateMoves();
 
             // order move list to place good moves at top of list
-            OrderMoveList(ref moves);
+            MoveSorting.OrderMoveList(ref moves);
 
             GameResult gameResult = Arbiter.CheckForGameOverRules();
             if (gameResult == GameResult.Stalemate || gameResult == GameResult.ThreeFold || gameResult == GameResult.FiftyMoveRule || gameResult == GameResult.InsufficientMaterial)
@@ -125,7 +127,6 @@ namespace Chess
                 // prioritize the fastest mate
                 return negativeInfinity - depth;
             }
-
 
             foreach (Move move in moves)
             {
@@ -146,17 +147,5 @@ namespace Chess
             }
             return alpha;
         }
-
-
-        public void OrderMoveList(ref Span<Move> moves)
-        {
-            for (int i = 0; i < currentMoveIndex; i++)
-            {
-
-
-            }
-
-        }
-
     }
 }

@@ -1,4 +1,4 @@
-
+using static Chess.PieceValues;
 using static Chess.Board;
 using UnityEditor;
 
@@ -20,14 +20,6 @@ namespace Chess
                 Evaluation = evaluation;
             }
         }
-
-
-        // in centipawn values
-        const int PawnValue = 100;
-        const int KnightValue = 300;
-        const int BishopValue = 300;
-        const int RookValue = 500;
-        const int QueenValue = 900;
 
         public static int SimpleEval()
         {
