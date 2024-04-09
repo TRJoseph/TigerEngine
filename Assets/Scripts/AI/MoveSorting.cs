@@ -28,6 +28,8 @@ namespace Chess
             {
                 int currentScore = regularBias; // Start with a base score for all moves
 
+                int pieceMoveToSquare = BitBoardHelper.GetLSB(ref moves[i].toSquare);
+
                 int capturedPieceType = GetPieceAtSquare(PositionInformation.OpponentColorIndex, moves[i].toSquare);
                 int movePieceType = GetPieceAtSquare(PositionInformation.MoveColorIndex, moves[i].fromSquare);
 
@@ -40,7 +42,16 @@ namespace Chess
                     int movedPieceValue = GetPieceValue(movePieceType);
                     int materialDelta = capturedPieceValue - movedPieceValue;
 
-                    currentScore += winningCaptureBias + materialDelta;
+                    bool opponentCanRecapture = MoveGen.SquareAttackedBy(pieceMoveToSquare);
+                    if (opponentCanRecapture)
+                    {
+                        currentScore += (materialDelta >= 0 ? winningCaptureBias: losingCaptureBias ) + materialDelta;
+                    } else
+                    {
+
+                        currentScore += winningCaptureBias + materialDelta;
+                    }
+
                 }
 
                 if (isPromotion)
@@ -50,10 +61,16 @@ namespace Chess
 
                 // if (IsKillerMove(moves[i])) currentScore += killerBias;
 
+                // penalize a move for moving a piece where it can be attacked by an opponent pawn
+                if(MoveGen.SquareAttackedByPawn(pieceMoveToSquare))
+                {
+                    currentScore -= GetPieceValue(movePieceType);
+                }
+
                 moveHeuristicList[i].Score = currentScore;
             }
 
-            // Sort moves based on their heuristic score
+            // Sort moves based on their heuristic score, quicksort is O(nlogn)
             QuickSort(ref moveHeuristicList, ref moves, 0, moves.Length - 1);
         }
 

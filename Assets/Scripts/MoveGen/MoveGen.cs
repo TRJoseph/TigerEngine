@@ -25,8 +25,20 @@ namespace Chess
                 };
         }
 
+        public static bool SquareAttackedByPawn(int square)
+        {
+            if (whiteToMove)
+            {
+                if ((MoveTables.PrecomputedWhitePawnCaptures[square] & InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn]) != 0) return true;
+            } else
+            {
+                if ((MoveTables.PrecomputedBlackPawnCaptures[square] & InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn]) != 0) return true;
+            }
+            return false;
+        }
+
         // returns true if a piece is attacking the square
-        private static bool SquareAttackedBy(int square)
+        public static bool SquareAttackedBy(int square)
         {
 
             /* What is going on here is confusing at first glance. For example, with pawn captures, if we want to find if a square is under
