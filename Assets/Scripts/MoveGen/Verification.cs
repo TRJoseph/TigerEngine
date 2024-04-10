@@ -46,7 +46,7 @@ namespace Chess
             return numPositions;
         }
 
-        public static void ComputerVsComputerMatches(int numOfMatches, int searchDepth)
+        public static void ComputerVsComputerMatches(int numOfMatches)
         {
             string logFilePath = Path.Combine(Application.dataPath, "../Logs/ChessMatchResults.txt");
 
@@ -59,7 +59,7 @@ namespace Chess
 
             for (int match = 1; match <= numOfMatches; match++)
             {
-                Arbiter.StartGame(Arbiter.GameType.ComputerVersusComputer, searchDepth, true);
+                Arbiter.StartGame(Arbiter.GameType.ComputerVersusComputer, true);
 
                 string resultLine = $"Match {match}: ";
                 switch (PositionInformation.currentStatus)

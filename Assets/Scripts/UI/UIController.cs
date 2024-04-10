@@ -245,13 +245,13 @@ namespace Chess
 
 
 
-        public void StartComputerVsComputerGame(int searchDepth)
+        public void StartComputerVsComputerGame()
         {
-            StartCoroutine(ComputerVsComputerGameCoroutine(searchDepth));
+            StartCoroutine(ComputerVsComputerGameCoroutine());
         }
 
 
-        private IEnumerator ComputerVsComputerGameCoroutine(int searchDepth)
+        private IEnumerator ComputerVsComputerGameCoroutine()
         {
             while (currentStatus == GameResult.InProgress)
             {
@@ -261,7 +261,7 @@ namespace Chess
                     if (ComputerPlayer1.Side == Sides.White)
                     {
                         // engine 1
-                        SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(searchDepth);
+                        SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(ComputerPlayer1.SearchDepth);
 
                         DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
 
@@ -270,7 +270,7 @@ namespace Chess
                     else
                     {
                         // engine 2 
-                        SearchInformation searchInformation = ComputerPlayer2.Engine.FixedDepthSearch(searchDepth);
+                        SearchInformation searchInformation = ComputerPlayer2.Engine.FixedDepthSearch(ComputerPlayer2.SearchDepth);
 
                         DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
 
@@ -281,7 +281,7 @@ namespace Chess
                 {
                     if (ComputerPlayer1.Side == Sides.Black)
                     {
-                        SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(searchDepth);
+                        SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(ComputerPlayer1.SearchDepth);
 
                         DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
 
@@ -289,7 +289,7 @@ namespace Chess
                     }
                     else
                     {
-                        SearchInformation searchInformation = ComputerPlayer2.Engine.FixedDepthSearch(searchDepth);
+                        SearchInformation searchInformation = ComputerPlayer2.Engine.FixedDepthSearch(ComputerPlayer2.SearchDepth);
 
                         DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
 

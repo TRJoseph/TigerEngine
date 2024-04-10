@@ -17,6 +17,7 @@ namespace Chess
         Evaluation.MoveEvaluation FindBestMove(int depth);
 
         SearchInformation FixedDepthSearch(int searchDepth);
+
     }
 
     public class RandomMoveEngine : IChessEngine
@@ -39,10 +40,21 @@ namespace Chess
 
     public class MiniMaxEngineV0 : IChessEngine
     {
+
+        // engine references so these can be easily swapped our for testing different versions
+        readonly Evaluation evaluation;
+        readonly MoveSorting moveSorter;
+        readonly SearchInformation searchInformation;
+
+        public MiniMaxEngineV0()
+        {
+            evaluation = new();
+            searchInformation = new();
+            moveSorter = new();
+        }
+
         const int infinity = 9999999;
         const int negativeInfinity = -infinity;
-
-        readonly SearchInformation SearchInformation = new();
 
         public void IterativeDeepeningSearch()
         {
@@ -51,22 +63,22 @@ namespace Chess
 
         public SearchInformation FixedDepthSearch(int searchDepth)
         {
-            SearchInformation.PositionsEvaluated = 0;
-            SearchInformation.NumOfCheckMates = 0;
-            SearchInformation.DepthSearched = searchDepth;
+            searchInformation.PositionsEvaluated = 0;
+            searchInformation.NumOfCheckMates = 0;
+            searchInformation.DepthSearched = searchDepth;
 
-            SearchInformation.searchDiagnostics.stopwatch = Stopwatch.StartNew();
+            searchInformation.searchDiagnostics.stopwatch = Stopwatch.StartNew();
 
-            SearchInformation.MoveEvaluationInformation = FindBestMove(searchDepth);
+            searchInformation.MoveEvaluationInformation = FindBestMove(searchDepth);
 
-            SearchInformation.searchDiagnostics.stopwatch.Stop();
-            SearchInformation.searchDiagnostics.timeSpan = SearchInformation.searchDiagnostics.stopwatch.Elapsed;
-            SearchInformation.searchDiagnostics.FormatElapsedTime();
+            searchInformation.searchDiagnostics.stopwatch.Stop();
+            searchInformation.searchDiagnostics.timeSpan = searchInformation.searchDiagnostics.stopwatch.Elapsed;
+            searchInformation.searchDiagnostics.FormatElapsedTime();
 
             // this logs how long the fixed depth search took
-            SearchInformation.searchDiagnostics.LogElapsedTime();
+            searchInformation.searchDiagnostics.LogElapsedTime();
 
-            return SearchInformation;
+            return searchInformation;
         }
 
         public Evaluation.MoveEvaluation FindBestMove(int depth)
@@ -76,7 +88,7 @@ namespace Chess
 
             Span<Move> moves = MoveGen.GenerateMoves();
 
-            MoveSorting.OrderMoveList(ref moves);
+            moveSorter.OrderMoveList(ref moves);
 
             foreach (Move move in moves)
             {
@@ -106,14 +118,14 @@ namespace Chess
 
             if (depth == 0)
             {
-                SearchInformation.PositionsEvaluated++;
-                return Evaluation.SimpleEval();
+                searchInformation.PositionsEvaluated++;
+                return evaluation.EvaluatePosition();
             }
 
             Span<Move> moves = MoveGen.GenerateMoves();
 
             // order move list to place good moves at top of list
-            MoveSorting.OrderMoveList(ref moves);
+            moveSorter.OrderMoveList(ref moves);
 
             GameResult gameResult = Arbiter.CheckForGameOverRules();
             if (gameResult == GameResult.Stalemate || gameResult == GameResult.ThreeFold || gameResult == GameResult.FiftyMoveRule || gameResult == GameResult.InsufficientMaterial)
@@ -123,7 +135,7 @@ namespace Chess
 
             if (gameResult == GameResult.CheckMate)
             {
-                SearchInformation.NumOfCheckMates++;
+                searchInformation.NumOfCheckMates++;
                 // prioritize the fastest mate
                 return negativeInfinity - depth;
             }
@@ -148,4 +160,5 @@ namespace Chess
             return alpha;
         }
     }
+
 }

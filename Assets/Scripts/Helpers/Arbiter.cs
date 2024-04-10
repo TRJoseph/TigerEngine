@@ -29,30 +29,37 @@ namespace Chess
         {
             public Sides Side;
             public IChessEngine Engine;
+            public int SearchDepth;
         }
 
         /* when setting multiple computer players for a computer versus computer matchup,
          make sure that they are playing as opposite sides!! */
         public static ComputerPlayer ComputerPlayer1 = new()
         {
-            Side = Sides.Black,
-            Engine = new MiniMaxEngineV0()
+            Side = Sides.White,
+            Engine = new MiniMaxEngineV0(),
+            SearchDepth = 4
         };
 
         public static ComputerPlayer ComputerPlayer2 = new()
         {
             Side = Sides.Black,
-            Engine = new RandomMoveEngine()
+            Engine = new MiniMaxEngineV0(),
+            SearchDepth = 4
         };
 
+        // set the desired initial computer search depth
+        public static int ComputerSearchDepth = 4;
 
         // set for the desired game type
-        public static GameType gameType = GameType.HumanVersusComputer;
+        public static GameType gameType = GameType.ComputerVersusComputer;
 
         public static void MatchUpConfiguration()
         {
-            StartGame(gameType, 4);
-            //Verification.ComputerVsComputerMatches(3, 4);
+            StartGame(gameType);
+
+            // runs three matches of computer versus computer
+            //Verification.ComputerVsComputerMatches(3);
         }
 
 
@@ -89,7 +96,7 @@ namespace Chess
             //Verification.RunPerformanceTests(5);
         }
 
-        public static void StartGame(GameType gameType, int searchDepth = 1, bool isLogging = false)
+        public static void StartGame(GameType gameType, bool isLogging = false)
         {
             switch (gameType)
             {
@@ -100,7 +107,7 @@ namespace Chess
                 case GameType.HumanVersusComputer:
                     InitializeGame();
                     legalMoves = GenerateMoves();
-                    HvsCGame(searchDepth);
+                    HvsCGame();
                     break;
 
                 case GameType.ComputerVersusComputer:
@@ -109,12 +116,12 @@ namespace Chess
                     if (isLogging)
                     {
                         // run this line to simply executer a computer versus computer game
-                        ComputerVsComputerGame(searchDepth);
+                        ComputerVsComputerGame();
                     }
                     else
                     {
                         // run this to watch a game between two computers be played
-                        UIController.Instance.StartComputerVsComputerGame(searchDepth);
+                        UIController.Instance.StartComputerVsComputerGame();
                     }
 
                     break;
@@ -124,13 +131,13 @@ namespace Chess
         }
 
         // human versus computer game 
-        private static void HvsCGame(int searchDepth)
+        private static void HvsCGame()
         {
             //SwapTurn();
 
             if (ComputerPlayer1.Side == Sides.White && whiteToMove)
             {
-                SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(searchDepth);
+                SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(ComputerPlayer1.SearchDepth);
 
                 DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
 
@@ -139,7 +146,7 @@ namespace Chess
 
             if (ComputerPlayer1.Side == Sides.Black && !whiteToMove)
             {
-                SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(searchDepth);
+                SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(ComputerPlayer1.SearchDepth);
 
                 DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
 
@@ -148,7 +155,7 @@ namespace Chess
         }
 
         // Verification.cs essentially calls this over and over to log engine performance versus previous iterations
-        private static void ComputerVsComputerGame(int searchDepth)
+        private static void ComputerVsComputerGame()
         {
             while (currentStatus == GameResult.InProgress)
             {
@@ -158,13 +165,14 @@ namespace Chess
                     if (ComputerPlayer1.Side == Sides.White)
                     {
                         // engine 1 
-                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(searchDepth);
+                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(ComputerPlayer1.SearchDepth);
 
                         DoTurn(bestMoveAndEval.BestMove);
                     }
                     else
                     {
-                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer2.Engine.FindBestMove(searchDepth);
+                        // engine 2
+                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer2.Engine.FindBestMove(ComputerPlayer2.SearchDepth);
 
                         DoTurn(bestMoveAndEval.BestMove);
                     }
@@ -173,13 +181,13 @@ namespace Chess
                 {
                     if (ComputerPlayer1.Side == Sides.Black)
                     {
-                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(searchDepth);
+                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(ComputerPlayer1.SearchDepth);
 
                         DoTurn(bestMoveAndEval.BestMove);
                     }
                     else
                     {
-                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer2.Engine.FindBestMove(searchDepth);
+                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer2.Engine.FindBestMove(ComputerPlayer2.SearchDepth);
 
                         DoTurn(bestMoveAndEval.BestMove);
                     }
@@ -203,7 +211,7 @@ namespace Chess
 
             if (gameType == GameType.HumanVersusComputer)
             {
-                HvsCGame(4);
+                HvsCGame();
             }
         }
 

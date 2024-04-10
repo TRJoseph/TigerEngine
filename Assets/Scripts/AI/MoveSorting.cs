@@ -5,7 +5,7 @@ using Unity.VisualScripting;
 
 namespace Chess
 {
-    public static class MoveSorting
+    public class MoveSorting
     {
 
         const int million = 1000000;
@@ -21,7 +21,7 @@ namespace Chess
         }
 
 
-        public static void OrderMoveList(ref Span<Move> moves)
+        public void OrderMoveList(ref Span<Move> moves)
         {
             MoveHeuristic[] moveHeuristicList = new MoveHeuristic[moves.Length];
             for (int i = 0; i < moves.Length; i++)
@@ -41,17 +41,16 @@ namespace Chess
                     int capturedPieceValue = GetPieceValue(capturedPieceType);
                     int movedPieceValue = GetPieceValue(movePieceType);
                     int materialDelta = capturedPieceValue - movedPieceValue;
-
                     bool opponentCanRecapture = MoveGen.SquareAttackedBy(pieceMoveToSquare);
+
                     if (opponentCanRecapture)
                     {
-                        currentScore += (materialDelta >= 0 ? winningCaptureBias: losingCaptureBias ) + materialDelta;
-                    } else
+                        currentScore += (materialDelta > 0 ? winningCaptureBias : losingCaptureBias) + materialDelta;
+                    }
+                    else
                     {
-
                         currentScore += winningCaptureBias + materialDelta;
                     }
-
                 }
 
                 if (isPromotion)
@@ -61,8 +60,8 @@ namespace Chess
 
                 // if (IsKillerMove(moves[i])) currentScore += killerBias;
 
-                // penalize a move for moving a piece where it can be attacked by an opponent pawn
-                if(MoveGen.SquareAttackedByPawn(pieceMoveToSquare))
+                //penalize a move for moving a piece where it can be attacked by an opponent pawn
+                if (MoveGen.SquareAttackedByPawn(pieceMoveToSquare))
                 {
                     currentScore -= GetPieceValue(movePieceType);
                 }
@@ -75,7 +74,7 @@ namespace Chess
         }
 
 
-        public static void QuickSort(ref MoveHeuristic[] moveHeuristicList, ref Span<Move> moves, int low, int high)
+        public void QuickSort(ref MoveHeuristic[] moveHeuristicList, ref Span<Move> moves, int low, int high)
         {
             if (low < high)
             {
@@ -86,7 +85,7 @@ namespace Chess
             }
         }
 
-        private static int Partition(ref MoveHeuristic[] moveHeuristicList, ref Span<Move> moves, int low, int high)
+        private int Partition(ref MoveHeuristic[] moveHeuristicList, ref Span<Move> moves, int low, int high)
         {
             // Choosing the last element in the segment as the pivot
             int pivot = moveHeuristicList[high].Score;
