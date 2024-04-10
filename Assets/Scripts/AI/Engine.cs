@@ -46,11 +46,14 @@ namespace Chess
         readonly MoveSorting moveSorter;
         readonly SearchInformation searchInformation;
 
+        readonly TranspositionTable transpositionTable;
+
         public MiniMaxEngineV0()
         {
             evaluation = new();
             searchInformation = new();
             moveSorter = new();
+            transpositionTable = new();
         }
 
         const int infinity = 9999999;
