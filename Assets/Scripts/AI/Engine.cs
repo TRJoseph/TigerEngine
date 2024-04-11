@@ -100,14 +100,15 @@ namespace Chess
                 UndoMove(move);
 
                 // intially thought pruning here would be unnecessary (I was being a schmuck), turns out its incredible effective at reducing node search count, lol
-                if (eval >= beta)
-                {
-                    break;
-                }
                 if (eval > alpha) // Only update alpha if we found a better move
                 {
                     alpha = eval;
                     bestMove = move;
+                }
+
+                if (eval >= beta)
+                {
+                    break;
                 }
             }
 
@@ -146,7 +147,7 @@ namespace Chess
             {
                 searchInformation.NumOfCheckMates++;
                 // prioritize the fastest mate
-                return negativeInfinity - depth;
+                return -100000 - depth;
             }
 
             foreach (Move move in moves)
