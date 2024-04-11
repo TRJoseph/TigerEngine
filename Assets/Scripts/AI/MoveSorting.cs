@@ -2,6 +2,7 @@ using static Chess.Board;
 using static Chess.PieceValues;
 using System;
 using Unity.VisualScripting;
+using System.Text.RegularExpressions;
 
 namespace Chess
 {
@@ -15,13 +16,31 @@ namespace Chess
         const int losingCaptureBias = 2 * million;
         const int regularBias = 0;
 
+
+        public Move[,] killerMoves;
+
+
         public struct MoveHeuristic
         {
             public int Score;
         }
 
+        public MoveSorting()
+        {
+            // max depth x number of moves stored
+            killerMoves = new Move[4, 2];
+        }
 
-        public void OrderMoveList(ref Span<Move> moves)
+        public bool IsKillerMove(Move move, int currentDepth)
+        {
+            if (MatchingMove(move, killerMoves[currentDepth, 0]) || MatchingMove(move, killerMoves[currentDepth, 1]))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public void OrderMoveList(ref Span<Move> moves, int currentDepth)
         {
             MoveHeuristic[] moveHeuristicList = new MoveHeuristic[moves.Length];
             for (int i = 0; i < moves.Length; i++)
@@ -58,7 +77,8 @@ namespace Chess
                     currentScore += promoteBias + ConvertPromotionFlagToPieceValue(moves[i].promotionFlag);
                 }
 
-                // if (IsKillerMove(moves[i])) currentScore += killerBias;
+
+                //if (IsKillerMove(moves[i], currentDepth)) currentScore += killerBias;
 
                 //penalize a move for moving a piece where it can be attacked by an opponent pawn
                 if (MoveGen.SquareAttackedByPawn(pieceMoveToSquare))

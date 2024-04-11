@@ -86,35 +86,41 @@ namespace Chess
 
         public Evaluation.MoveEvaluation FindBestMove(int depth)
         {
-            int bestEval = negativeInfinity;
+            int alpha = negativeInfinity;
+            int beta = infinity;
             Move bestMove = new();
 
             Span<Move> moves = MoveGen.GenerateMoves();
-
-            moveSorter.OrderMoveList(ref moves);
+            moveSorter.OrderMoveList(ref moves, depth);
 
             foreach (Move move in moves)
             {
                 ExecuteMove(move);
-                int eval = -NegaMax(depth - 1, negativeInfinity, infinity); // Switch to the other player's perspective for the next depth.
+                int eval = -NegaMax(depth - 1, -beta, -alpha); // Note the switch and use of alpha-beta here
                 UndoMove(move);
 
-                if (eval >= bestEval)
+                // intially thought pruning here would be unnecessary (I was being a schmuck), turns out its incredible effective at reducing node search count, lol
+                if (eval >= beta)
                 {
-                    bestEval = eval;
+                    break;
+                }
+                if (eval > alpha) // Only update alpha if we found a better move
+                {
+                    alpha = eval;
                     bestMove = move;
                 }
             }
 
-            // in the rare case that a move is not available pick a random move
+            // Handle the case of no valid moves
             if (bestMove.IsDefault() && PositionInformation.currentStatus == GameResult.InProgress)
             {
                 var random = new System.Random();
                 bestMove = moves[random.Next(moves.Length)];
             }
 
-            return new Evaluation.MoveEvaluation(bestMove, bestEval);
+            return new Evaluation.MoveEvaluation(bestMove, alpha);
         }
+
 
         public int NegaMax(int depth, int alpha, int beta)
         {
@@ -128,7 +134,7 @@ namespace Chess
             Span<Move> moves = MoveGen.GenerateMoves();
 
             // order move list to place good moves at top of list
-            moveSorter.OrderMoveList(ref moves);
+            moveSorter.OrderMoveList(ref moves, depth);
 
             GameResult gameResult = Arbiter.CheckForGameOverRules();
             if (gameResult == GameResult.Stalemate || gameResult == GameResult.ThreeFold || gameResult == GameResult.FiftyMoveRule || gameResult == GameResult.InsufficientMaterial)
@@ -152,6 +158,16 @@ namespace Chess
 
                 if (eval >= beta)
                 {
+                    // int capturedPieceType = GetPieceAtSquare(PositionInformation.OpponentColorIndex, move.toSquare);
+                    // bool isCapture = capturedPieceType != ChessBoard.None;
+                    // // for quiet moves, we have a potential killer move
+
+                    // if (!isCapture)
+                    // {
+                    //     moveSorter.killerMoves[depth, 1] = moveSorter.killerMoves[depth, 0];
+                    //     moveSorter.killerMoves[depth, 0] = move;
+                    // }
+
                     // prune branch, black or white had a better path earlier on in the tree
                     return beta;
                 }

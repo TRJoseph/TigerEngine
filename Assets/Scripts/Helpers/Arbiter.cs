@@ -36,7 +36,7 @@ namespace Chess
          make sure that they are playing as opposite sides!! */
         public static ComputerPlayer ComputerPlayer1 = new()
         {
-            Side = Sides.White,
+            Side = Sides.Black,
             Engine = new MiniMaxEngineV0(),
             SearchDepth = 4
         };
@@ -47,12 +47,8 @@ namespace Chess
             Engine = new MiniMaxEngineV0(),
             SearchDepth = 4
         };
-
-        // set the desired initial computer search depth
-        public static int ComputerSearchDepth = 4;
-
         // set for the desired game type
-        public static GameType gameType = GameType.ComputerVersusComputer;
+        public static GameType gameType = GameType.HumanVersusComputer;
 
         public static void MatchUpConfiguration()
         {

@@ -99,6 +99,11 @@ namespace Chess
             }
         }
 
+        public static bool MatchingMove(Move move1, Move move2)
+        {
+            return move1.toSquare == move2.toSquare && move1.fromSquare == move2.fromSquare;
+        }
+
         public static Move[] legalMoves = new Move[256];
 
         // this holds the current move index for the move list actively being computed.
