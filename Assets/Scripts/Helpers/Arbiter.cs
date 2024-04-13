@@ -44,7 +44,7 @@ namespace Chess
         public static ComputerPlayer ComputerPlayer2 = new()
         {
             Side = Sides.Black,
-            Engine = new MiniMaxEngineV0(),
+            Engine = new RandomMoveEngine(),
             SearchDepth = 4
         };
         // set for the desired game type
@@ -90,6 +90,8 @@ namespace Chess
 
             // run performance tests
             //Verification.RunPerformanceTests(5);
+
+            legalMoves = GenerateMoves();
         }
 
         public static void StartGame(GameType gameType, bool isLogging = false)
@@ -98,17 +100,14 @@ namespace Chess
             {
                 case GameType.HumanVersusHuman:
                     InitializeGame();
-                    legalMoves = GenerateMoves();
                     break;
                 case GameType.HumanVersusComputer:
                     InitializeGame();
-                    legalMoves = GenerateMoves();
                     HvsCGame();
                     break;
 
                 case GameType.ComputerVersusComputer:
                     InitializeGame();
-                    legalMoves = GenerateMoves();
                     if (isLogging)
                     {
                         // run this line to simply executer a computer versus computer game

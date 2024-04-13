@@ -9,6 +9,8 @@ namespace Chess
     public class MoveSorting
     {
 
+        const int maxDepth = 10;
+
         const int million = 1000000;
         const int winningCaptureBias = 8 * million;
         const int promoteBias = 6 * million;
@@ -28,7 +30,7 @@ namespace Chess
         public MoveSorting()
         {
             // max depth x number of moves stored
-            killerMoves = new Move[4, 2];
+            killerMoves = new Move[maxDepth, 2];
         }
 
         public bool IsKillerMove(Move move, int currentDepth)
@@ -77,8 +79,7 @@ namespace Chess
                     currentScore += promoteBias + ConvertPromotionFlagToPieceValue(moves[i].promotionFlag);
                 }
 
-
-                //if (IsKillerMove(moves[i], currentDepth)) currentScore += killerBias;
+                if (IsKillerMove(moves[i], currentDepth)) currentScore += killerBias;
 
                 //penalize a move for moving a piece where it can be attacked by an opponent pawn
                 if (MoveGen.SquareAttackedByPawn(pieceMoveToSquare))

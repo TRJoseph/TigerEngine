@@ -159,15 +159,15 @@ namespace Chess
 
                 if (eval >= beta)
                 {
-                    // int capturedPieceType = GetPieceAtSquare(PositionInformation.OpponentColorIndex, move.toSquare);
-                    // bool isCapture = capturedPieceType != ChessBoard.None;
-                    // // for quiet moves, we have a potential killer move
+                    int capturedPieceType = GetPieceAtSquare(PositionInformation.OpponentColorIndex, move.toSquare);
+                    bool isCapture = capturedPieceType != ChessBoard.None;
+                    // for quiet moves, we have a potential killer move
 
-                    // if (!isCapture)
-                    // {
-                    //     moveSorter.killerMoves[depth, 1] = moveSorter.killerMoves[depth, 0];
-                    //     moveSorter.killerMoves[depth, 0] = move;
-                    // }
+                    if (!isCapture)
+                    {
+                        moveSorter.killerMoves[depth, 1] = moveSorter.killerMoves[depth, 0];
+                        moveSorter.killerMoves[depth, 0] = move;
+                    }
 
                     // prune branch, black or white had a better path earlier on in the tree
                     return beta;
