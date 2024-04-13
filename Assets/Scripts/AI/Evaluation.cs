@@ -1,44 +1,35 @@
 using static Chess.PieceValues;
 using static Chess.Board;
-using UnityEditor;
-using UnityEditor.ShaderKeywordFilter;
+using static Chess.MoveGen;
 
 namespace Chess
 {
     public class Evaluation
     {
+
+        //https://www.chessprogramming.org/Simplified_Evaluation_Function
         // starting from square 0 to 63, prioritizing pawn center control
-        readonly int[] PawnCentralPositionBias = {
-            0,0,0,0,0,0,0,0,
-            0,0,0,0,0,0,0,0,
-            1,1,1,1,1,1,1,1,
-            1,1,2,3,3,2,1,1,
-            1,1,2,3,3,2,1,1,
-            1,1,1,1,1,1,1,1,
-            0,0,0,0,0,0,0,0,
-            0,0,0,0,0,0,0,0,
-        };
 
         readonly int[] WhitePawnPushBias = {
-            0,0,0,0,0,0,0,0,
-            0,0,0,0,0,0,0,0,
-            1,1,1,1,1,1,1,1,
-            2,2,2,2,2,2,2,2,
-            3,3,3,3,3,3,3,3,
-            9,9,9,9,9,9,9,9,
-            10,10,10,10,10,10,
-            11,11,11,11,11,11
+             0, 0,  0,  0,  0,  0,  0,  0,
+             5, 10, 10,-20,-20, 10, 10,  5,
+             5, -5,-10,  0,  0,-10, -5,  5,
+             0,  0,  0, 20, 20,  0,  0,  0,
+             5,  5, 10, 25, 25, 10,  5,  5,
+            10, 10, 20, 30, 30, 20, 10, 10,
+            50, 50, 50, 50, 50, 50, 50, 50,
+             0,  0,  0,  0,  0,  0,  0,  0,
         };
 
         readonly int[] BlackPawnPushBias = {
-            11,11,11,11,11,11,
-            10,10,10,10,10,10,
-            9,9,9,9,9,9,9,9,
-            3,3,3,3,3,3,3,3,
-            2,2,2,2,2,2,2,2,
-            1,1,1,1,1,1,1,1,
-            0,0,0,0,0,0,0,0,
-            0,0,0,0,0,0,0,0,
+             0,  0,  0,  0,  0,  0,  0,  0,
+            50, 50, 50, 50, 50, 50, 50, 50,
+            10, 10, 20, 30, 30, 20, 10, 10,
+             5,  5, 10, 25, 25, 10,  5,  5,
+             0,  0,  0, 20, 20,  0,  0,  0,
+             5, -5,-10,  0,  0,-10, -5,  5,
+             5, 10, 10,-20,-20, 10, 10,  5,
+             0,  0,  0,  0,  0,  0,  0,  0
         };
 
 
@@ -67,7 +58,6 @@ namespace Chess
             while (whitePawns != 0)
             {
                 int index = BitBoardHelper.GetLSB(ref whitePawns);
-                pawnPosScore += PawnCentralPositionBias[index];
                 pawnPosScore += WhitePawnPushBias[index]; // Apply bias
                 whitePawns &= whitePawns - 1; // Clears the LSB
             }
@@ -77,7 +67,6 @@ namespace Chess
             while (blackPawns != 0)
             {
                 int index = BitBoardHelper.GetLSB(ref blackPawns);
-                pawnPosScore -= PawnCentralPositionBias[index]; // Apply bias, subtracting for black to balance evaluation
                 pawnPosScore -= BlackPawnPushBias[index];
                 blackPawns &= blackPawns - 1; // Clears the LSB
             }

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using static Chess.Board;
+using static Chess.MoveGen;
 
 namespace Chess
 {

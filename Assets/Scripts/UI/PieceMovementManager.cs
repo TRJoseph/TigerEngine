@@ -156,21 +156,6 @@ namespace Chess
             }
         }
 
-        private static bool IsPawnPromotion(ulong toSquare, int movedPiece)
-        {
-            if (movedPiece != ChessBoard.Pawn)
-            {
-                return false;
-            }
-
-            if (toSquare >> 8 == 0 || toSquare << 8 == 0)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
         private void HandleMovePlayed(GameObject selectedPiece, Transform closestSquare)
         {
             int fromSquareIndex = (int)originalPosition.y * 8 + (int)originalPosition.x;
@@ -202,18 +187,6 @@ namespace Chess
                 move = matchingMoves.Single();
                 Arbiter.DoTurn(move);
             }
-        }
-
-        public void HandleEngineMoveExecution(Move move)
-        {
-            // update the internal board state when a move is made by the computer
-            ExecuteMove(move);
-
-            UIController.Instance.ClearExistingPieces();
-            UIController.Instance.RenderPiecesOnBoard();
-
-            //HandleGameStateAfterMove();
-            legalMoves = GenerateMoves();
         }
 
         public static void UpdateFrontEndPromotion(int pieceType, int xPos, int yPos)

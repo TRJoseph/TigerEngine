@@ -1,13 +1,8 @@
 using System;
 using System.Linq;
-using System.Collections.Generic;
-using UnityEngine;
-using System.Threading;
-using static Chess.Board;
-using System.Diagnostics.Tracing;
-using UnityEditor.Experimental.GraphView;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Diagnostics;
+using static Chess.Board;
+using static Chess.MoveGen;
 
 namespace Chess
 {
@@ -34,7 +29,7 @@ namespace Chess
 
             var random = new System.Random();
 
-            return new Evaluation.MoveEvaluation(legalMoves[random.Next(Board.legalMoves.Count())], 0);
+            return new Evaluation.MoveEvaluation(legalMoves[random.Next(legalMoves.Count())], 0);
         }
     }
 
@@ -58,10 +53,11 @@ namespace Chess
 
         const int infinity = 9999999;
         const int negativeInfinity = -infinity;
+        const int mateScore = 100000;
 
         public void IterativeDeepeningSearch()
         {
-
+            // this is for the future, lol
         }
 
         public SearchInformation FixedDepthSearch(int searchDepth)
@@ -128,8 +124,7 @@ namespace Chess
 
             if (depth == 0)
             {
-                searchInformation.PositionsEvaluated++;
-                return evaluation.EvaluatePosition();
+                return QuiescenceSearch(alpha, beta);
             }
 
             Span<Move> moves = MoveGen.GenerateMoves();
@@ -146,8 +141,9 @@ namespace Chess
             if (gameResult == GameResult.CheckMate)
             {
                 searchInformation.NumOfCheckMates++;
+
                 // prioritize the fastest mate
-                return -100000 - depth;
+                return -mateScore - depth;
             }
 
             foreach (Move move in moves)
@@ -173,6 +169,42 @@ namespace Chess
                     return beta;
                 }
                 if (eval > alpha)
+                {
+                    alpha = eval;
+                }
+            }
+            return alpha;
+        }
+
+        // https://www.chessprogramming.org/Quiescence_Search
+        public int QuiescenceSearch(int alpha, int beta)
+        {
+            int eval = evaluation.EvaluatePosition();
+            searchInformation.PositionsEvaluated++;
+
+            if(eval >= beta)
+            {
+                return beta;
+            }
+
+            if(eval > alpha) {
+                alpha = eval;
+            }
+
+            Span<Move> captureMoves = MoveGen.GenerateMoves(true);
+
+            moveSorter.OrderMoveList(ref captureMoves, 0);
+
+            foreach (Move captureMove in captureMoves) {
+                ExecuteMove(captureMove);
+                eval = -QuiescenceSearch(-beta, -alpha);
+                UndoMove(captureMove);
+
+                if(eval >= beta)
+                {
+                    return beta;
+                }
+                if(eval > alpha)
                 {
                     alpha = eval;
                 }

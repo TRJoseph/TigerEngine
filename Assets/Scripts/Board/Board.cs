@@ -58,60 +58,6 @@ namespace Chess
 
         public const int BoardSize = 64;
 
-        public enum SpecialMove
-        {
-            None = 0,
-            KingSideCastleMove = 1,
-            QueenSideCastleMove = 2,
-            EnPassant = 3,
-            TwoSquarePawnMove = 4,
-        }
-
-        public enum PromotionFlags
-        {
-            None = 0,
-            PromoteToQueenFlag = 1,
-            PromoteToRookFlag = 2,
-            PromoteToBishopFlag = 3,
-            PromoteToKnightFlag = 4
-        }
-
-        // this structure will hold a move that can be executed
-        public struct Move
-        {
-            // 'startSquare' and 'endSquare' holds the internal board start square and end square 
-            public ulong fromSquare;
-
-            public ulong toSquare;
-
-            public int movedPiece;
-
-            // special move flags
-            public SpecialMove specialMove;
-
-            public bool IsPawnPromotion;
-
-            public PromotionFlags? promotionFlag;
-
-            public readonly bool IsDefault()
-            {
-                return fromSquare == 0 && movedPiece == 0 && toSquare == 0 && specialMove == SpecialMove.None;
-            }
-        }
-
-        public static bool MatchingMove(Move move1, Move move2)
-        {
-            return move1.toSquare == move2.toSquare && move1.fromSquare == move2.fromSquare;
-        }
-
-        public static Move[] legalMoves = new Move[256];
-
-        // this holds the current move index for the move list actively being computed.
-        // Allows for more efficient move list computations using statically allocated memory on the stack
-        public static int currentMoveIndex;
-
-        public static int legalMoveCount;
-
         public enum GameResult
         {
             InProgress,

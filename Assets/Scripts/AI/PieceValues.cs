@@ -1,4 +1,5 @@
 using static Chess.Board;
+using static Chess.MoveGen;
 
 namespace Chess
 {
@@ -6,8 +7,8 @@ namespace Chess
     {
         // in centipawn values
         public const int PawnValue = 100;
-        public const int KnightValue = 300;
-        public const int BishopValue = 300;
+        public const int KnightValue = 320;
+        public const int BishopValue = 330;
         public const int RookValue = 500;
         public const int QueenValue = 900;
 

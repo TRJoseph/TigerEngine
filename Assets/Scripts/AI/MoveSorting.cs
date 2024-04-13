@@ -1,8 +1,7 @@
 using static Chess.Board;
 using static Chess.PieceValues;
+using static Chess.MoveGen;
 using System;
-using Unity.VisualScripting;
-using System.Text.RegularExpressions;
 
 namespace Chess
 {

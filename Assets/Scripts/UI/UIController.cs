@@ -4,10 +4,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
-using System.Net.Security;
+using System.Linq;
 using static Chess.Board;
 using static Chess.PositionInformation;
-using System.Linq;
+using static Chess.MoveGen;
 using static Chess.Arbiter;
 
 namespace Chess
