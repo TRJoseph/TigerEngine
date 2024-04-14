@@ -24,6 +24,7 @@ namespace Chess
 
         [SerializeField] private Transform _cam;
 
+        private static bool isWhitePerspective = true;
 
         // Panel for useful display informatio
         public TextMeshProUGUI WhichPlayerMoveText;
@@ -37,6 +38,8 @@ namespace Chess
         public GameObject PromotionPanel;
 
         [SerializeField] public GameObject chessPiecePrefab;
+
+        public Toggle perspectiveToggle;
 
         // holds all the rank and file labels
         public List<TextMeshProUGUI> tileFileLabels = new List<TextMeshProUGUI>();
@@ -63,6 +66,28 @@ namespace Chess
 
             // Subscribe to the promotion selected event
             OnPromotionSelected += HandlePromotionSelected;
+
+            perspectiveToggle.onValueChanged.AddListener(delegate {
+                isWhitePerspective = perspectiveToggle.isOn;
+                TogglePerspective();
+            });
+        }
+
+        // this adjusts the camera rotation and the currently placed pieces to provide a nicer experience for the user.
+        // usually the human player wants to see the board where the pieces they are in control of are on their side of the screen
+        public void SetGamePerspective()
+        {
+            Quaternion newRotation = Quaternion.Euler(0, 0, isWhitePerspective ? 0 : 180);
+            Canvas.transform.rotation = newRotation;
+            _cam.transform.rotation = newRotation;
+        }
+
+        public void TogglePerspective()
+        {
+            isWhitePerspective = !isWhitePerspective;
+            SetGamePerspective();
+            UpdateFileAndRankLabels();
+            UpdatePieceRenders();
         }
 
         private Move GetCurrentPromotionMove(PromotionFlags flag)
@@ -144,18 +169,9 @@ namespace Chess
         {
             Canvas.transform.position = new Vector3(3.5f, 3.5f, 0);
             _cam.transform.position = new Vector3(3.5f, 3.5f, -10);
-
-            int file = 0;
-            int rank = 0;
-            for (file = 0; file < 8; file++)
+            for (int file = 0; file < 8; file++)
             {
-                // instantiates labels for each file
-                TextMeshProUGUI fileLabel = Instantiate(tileFileLabels[file]);
-                fileLabel.transform.position = new Vector3(file, -1, -1);
-                fileLabel.transform.SetParent(Canvas.transform, true);
-                fileLabel.transform.localScale = new Vector3(1f, 1f, 1f);
-
-                for (rank = 0; rank < 8; rank++)
+                for (int rank = 0; rank < 8; rank++)
                 {
                     var tile = Instantiate(tilePrefab, new Vector3(file, rank, 0), Quaternion.identity);
 
@@ -164,19 +180,71 @@ namespace Chess
                     tile.SetTileColor(!isLightSquare);
 
                     tile.name = $"Tile file: {file} rank: {rank}";
+                }
+            }
+        }
 
-                    if (file == 0)
+
+        public void UpdateFileAndRankLabels()
+        {
+            ClearFileAndRankLabels();
+            GenerateFileAndRankLabels();
+        }
+
+        public void ClearFileAndRankLabels()
+        {
+            var rankLabels = GameObject.FindGameObjectsWithTag("RankLabel");
+            foreach (var rankLabel in rankLabels)
+            {
+                Destroy(rankLabel);
+            }
+
+            var fileLabels = GameObject.FindGameObjectsWithTag("FileLabel");
+            foreach (var fileLabel in fileLabels)
+            {
+                Destroy(fileLabel);
+            }
+        }
+
+        public void GenerateFileAndRankLabels()
+        {
+            float labelOffset = 57f; 
+            float fileLabelY = -250f; 
+            float rankLabelX = -250f; 
+
+            for (int file = 0; file < 8; file++)
+            {
+                // Instantiates labels for each file
+                TextMeshProUGUI fileLabel = Instantiate(tileFileLabels[file]);
+                fileLabel.transform.SetParent(Canvas.transform, false);
+                fileLabel.rectTransform.localScale = Vector3.one; // Uniform scale
+                fileLabel.rectTransform.anchoredPosition = new Vector2(
+                    labelOffset * (isWhitePerspective ? file : 7 - file) - 200,
+                    fileLabelY
+                );
+
+                if (file == 0) // Instantiate rank labels only once
+                {
+                    for (int rank = 0; rank < 8; rank++)
                     {
                         TextMeshProUGUI rankLabel = Instantiate(tileRankLabels[rank]);
-                        rankLabel.transform.position = new Vector3(-1, rank, -1);
-                        rankLabel.transform.SetParent(Canvas.transform, true);
-                        rankLabel.transform.localScale = new Vector3(1f, 1f, 1f);
+                        rankLabel.transform.SetParent(Canvas.transform, false);
+                        rankLabel.rectTransform.localScale = Vector3.one; // Uniform scale
+                        rankLabel.rectTransform.anchoredPosition = new Vector2(
+                            rankLabelX,
+                            labelOffset * (isWhitePerspective ? rank : 7 - rank) - 200
+                        );
                     }
                 }
             }
-
         }
 
+
+        public void UpdatePieceRenders()
+        {
+            ClearExistingPieces();
+            RenderPiecesOnBoard();
+        }
 
         public void ClearExistingPieces()
         {
@@ -201,7 +269,6 @@ namespace Chess
             PlacePieces(ChessBoard.Rook, ChessBoard.Black);
             PlacePieces(ChessBoard.Queen, ChessBoard.Black);
             PlacePieces(ChessBoard.King, ChessBoard.Black);
-
         }
 
         private static void PlacePieces(int pieceType, int pieceColor)
@@ -211,6 +278,7 @@ namespace Chess
                 if ((InternalBoard.Pieces[pieceColor, pieceType] & (1UL << i)) != 0)
                 {
                     GameObject piece = Instantiate(Instance.chessPiecePrefab, new Vector3(i % 8, i / 8, -1), Quaternion.identity);
+                    piece.transform.eulerAngles = new Vector3(0,0, isWhitePerspective ? 0 : 180);
                     PieceRender renderScript = piece.GetComponent<PieceRender>();
                     Sprite pieceSprite = GetSpriteForPiece(pieceType, pieceColor, renderScript);
                     piece.GetComponent<SpriteRenderer>().sprite = pieceSprite;

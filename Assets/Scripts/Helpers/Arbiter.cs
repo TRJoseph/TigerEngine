@@ -74,8 +74,9 @@ namespace Chess
             GameStateHistory.Clear();
             PositionHashes.Clear();
 
-            UIController.Instance.ClearExistingPieces();
             UIController.Instance.GenerateGrid();
+            UIController.Instance.GenerateFileAndRankLabels();
+            UIController.Instance.SetGamePerspective();
             UIController.Instance.RenderPiecesOnBoard();
             UIController.Instance.UpdateToMoveText();
 
@@ -194,8 +195,7 @@ namespace Chess
         {
             ExecuteMove(move);
 
-            UIController.Instance.ClearExistingPieces();
-            UIController.Instance.RenderPiecesOnBoard();
+            UIController.Instance.UpdatePieceRenders();
 
             legalMoves = GenerateMoves();
 
