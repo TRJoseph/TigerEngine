@@ -131,7 +131,56 @@ namespace Chess
             -20,-10,-10, -5, -5,-10,-10,-20
         };
 
-        // more coming up for king, this requires weights for the beginning of the game, middlegame, and endgame
+        readonly int[] whiteKingMiddleGameBias =
+        {
+            20, 30, 10,  0,  0, 10, 30, 20,
+            20, 20,  0,  0,  0,  0, 20, 20,
+            -10,-20,-20,-20,-20,-20,-20,-10,
+            -20,-30,-30,-40,-40,-30,-30,-20,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+        };
+
+        readonly int[] blackKingMiddleGameBias =
+        {
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -30,-40,-40,-50,-50,-40,-40,-30,
+            -20,-30,-30,-40,-40,-30,-30,-20,
+            -10,-20,-20,-20,-20,-20,-20,-10,
+             20, 20,  0,  0,  0,  0, 20, 20,
+             20, 30, 10,  0,  0, 10, 30, 20
+        };
+
+        readonly int[] whiteKingEndGameBias =
+        {
+            -50,-30,-30,-30,-30,-30,-30,-50,
+            -30,-30,  0,  0,  0,  0,-30,-30,
+            -30,-10, 20, 30, 30, 20,-10,-30,
+            -30,-10, 30, 40, 40, 30,-10,-30,
+            -30,-10, 30, 40, 40, 30,-10,-30,
+            -30,-10, 20, 30, 30, 20,-10,-30,
+            -30,-20,-10,  0,  0,-10,-20,-30,
+            -50,-40,-30,-20,-20,-30,-40,-50,
+        };
+
+        readonly int[] blackKingEndGameBias =
+        {
+            -50,-40,-30,-20,-20,-30,-40,-50,
+            -30,-20,-10,  0,  0,-10,-20,-30,
+            -30,-10, 20, 30, 30, 20,-10,-30,
+            -30,-10, 30, 40, 40, 30,-10,-30,
+            -30,-10, 30, 40, 40, 30,-10,-30,
+            -30,-10, 20, 30, 30, 20,-10,-30,
+            -30,-30,  0,  0,  0,  0,-30,-30,
+            -50,-30,-30,-30,-30,-30,-30,-50
+        };
+
+        // more coming up for king, including helping it solve k and q versus k endgames
+        const int EndgameThreshold = 10; // When x or fewer pieces remain, consider it the endgame
 
         public struct MoveEvaluation
         {
@@ -187,6 +236,45 @@ namespace Chess
             return piecePositionScore; // Positive values favor white, negative values favor black
         }
 
+        int ConsiderKingPosition(bool whiteToMove)
+        {
+            int piecePositionScore = 0;
+            int pieceCount = CountBits(InternalBoard.AllPieces);
+
+            double middleGameWeight;
+            double endGameWeight;
+
+            if (pieceCount > EndgameThreshold)
+            {
+                // for the most part we are going to be in the early-middle game phase
+                middleGameWeight = 1.0;
+                endGameWeight = 0.0;
+                
+            }
+            else
+            {
+                endGameWeight = (EndgameThreshold - pieceCount + 1) / (double)EndgameThreshold;
+                middleGameWeight = 1.0 - endGameWeight;
+            }
+
+            if (whiteToMove)
+            {
+                int middleGameBias = EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.White, ChessBoard.King], whiteKingMiddleGameBias);
+                int endGameBias = EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.White, ChessBoard.King], whiteKingEndGameBias);
+
+                piecePositionScore += (int)(middleGameBias * middleGameWeight + endGameBias * endGameWeight);
+            } 
+            else
+            {
+                int middleGameBias = EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King], blackKingMiddleGameBias);
+                int endGameBias = EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King], blackKingEndGameBias);
+
+                piecePositionScore -= (int)(middleGameBias * middleGameWeight + endGameBias * endGameWeight);
+            }
+
+            return piecePositionScore;
+        }
+
         public int EvaluatePosition()
         {
             int whiteEvaluation = CountMaterial(ChessBoard.White);
@@ -198,6 +286,8 @@ namespace Chess
             int evaluation = whiteEvaluation - blackEvaluation;
 
             evaluation += ConsiderPiecePositions(whiteToMove);
+
+            evaluation += ConsiderKingPosition(whiteToMove);
 
             int perspective = whiteToMove ? 1 : -1;
             return evaluation * perspective;

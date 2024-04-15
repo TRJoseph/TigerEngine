@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 1981225700097104272}
   m_Layer: 5
   m_Name: Rank1Label
-  m_TagString: Undefined
+  m_TagString: RankLabel
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
