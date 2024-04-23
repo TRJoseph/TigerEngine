@@ -75,6 +75,8 @@ namespace Chess
                 ComputerPlayer1.enginePath = enginePath1Field.text;
                 ComputerPlayer2.enginePath = enginePath2Field.text;
 
+                //Arbiter.StartGame("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", false);
+
                 GameManagement.ComputerVsComputerMatches(numOfMatches);
             }
             else
@@ -157,6 +159,18 @@ namespace Chess
             foreach (var fileLabel in fileLabels)
             {
                 Destroy(fileLabel);
+            }
+        }
+
+        private void Awake()
+        {
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+            else
+            {
+                Destroy(gameObject);
             }
         }
 

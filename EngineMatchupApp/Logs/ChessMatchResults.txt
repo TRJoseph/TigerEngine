@@ -1,0 +1,8 @@
+Starting 1 matches:
+Match 1: Black Wins by Checkmate!
+Matches completed.
+Total Matches: 1
+Total White Wins: 0
+Total Black Wins: 1
+Total Draws: 0
+Starting 1 matches:
