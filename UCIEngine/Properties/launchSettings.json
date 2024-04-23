@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "UCIEngine": {
+      "commandName": "Project",
+      "commandLineArgs": "test"
+    }
+  }
+}
