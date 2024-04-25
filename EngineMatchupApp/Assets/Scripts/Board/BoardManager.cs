@@ -145,7 +145,7 @@ namespace Chess
             }
             else
             {
-                fullMoveAccumulator = int.Parse(halfMoveClockField[0].ToString());
+                fullMoveAccumulator = int.Parse(fullMoveNumberField[0].ToString());
             }
 
             // Initializes the initial physical locations of all the white pieces, black pieces, and every piece on the board

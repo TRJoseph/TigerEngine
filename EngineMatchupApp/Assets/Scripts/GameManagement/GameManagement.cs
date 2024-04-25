@@ -8,6 +8,7 @@ using static Chess.MoveGen;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace Chess
 {
@@ -21,7 +22,7 @@ namespace Chess
         }
 
         // this FENStringList list will hold all 1000 chess matches' fen strings. this will be used in the test suite
-        static List<string> FENStringList = new List<string>();
+        static readonly List<string> FENStringList = new List<string>();
 
         public static void LoadFENStringList()
         {
@@ -36,7 +37,7 @@ namespace Chess
                     {
                         // the FEN String text is separated from the actual FEN String by a colon
                         int positionOfSeparator = line.IndexOf(':');
-                        FENStringList.Add(line.Substring(positionOfSeparator + 1));
+                        FENStringList.Add(line.Substring(positionOfSeparator + 2));
                     }
                 }
             }
