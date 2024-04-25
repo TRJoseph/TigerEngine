@@ -58,7 +58,7 @@ namespace Chess
 
             OnGameCompleted = () =>
             {
-                RecordResult(matchCount, logFilePath, ref totalWhiteWins, ref totalBlackWins, ref totalDraws);
+                RecordResult(matchCount+1, logFilePath, ref totalWhiteWins, ref totalBlackWins, ref totalDraws);
                 if (matchCount < numOfMatches - 1)
                 {
                     matchCount++;
@@ -68,7 +68,7 @@ namespace Chess
                 {
 
                     string summary = "Matches completed.\n" +
-                                           "Total Matches: " + matchCount + "\n" +
+                                           "Total Matches: " + matchCount+1 + "\n" +
                                            "Total White Wins: " + totalWhiteWins + "\n" +
                                            "Total Black Wins: " + totalBlackWins + "\n" +
                                            "Total Draws: " + totalDraws + "\n";
