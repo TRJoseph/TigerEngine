@@ -6,3 +6,13 @@ Total White Wins: 0
 Total Black Wins: 1
 Total Draws: 0
 Starting 1 matches:
+Starting 2 matches:
+Match 1: Black Wins by Checkmate!
+Starting 2 matches:
+Match 1: Black Wins by Checkmate!
+Match 2: Black Wins by Checkmate!
+Matches completed.
+Total Matches: 2
+Total White Wins: 0
+Total Black Wins: 2
+Total Draws: 0
