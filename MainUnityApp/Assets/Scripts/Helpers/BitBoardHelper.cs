@@ -31,6 +31,11 @@ namespace Chess
             return (bitboard & targetSquare) != 0;
         }
 
+        // if only one piece is present in a bitboard array
+        public static bool IsSoloPiece(ulong bitboard)
+        {
+            return (bitboard & (bitboard - 1)) == 0;
+        }
 
     }
 

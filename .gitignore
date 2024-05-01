@@ -25,6 +25,12 @@ Obj/
 Build/
 Builds/
 UserSettings/
+Logs/
+bin/
+
+#unity subdirectory files
+EngineMatchupApp/Logs/*
+MainUnityApp/Logs/*
 
 # =======================================
 # File types to ignore in a Unity project

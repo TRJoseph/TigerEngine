@@ -38,7 +38,7 @@ namespace Chess
         {
             Side = Sides.Black,
             Engine = new MiniMaxEngineV0(),
-            SearchDepth = 4
+            SearchDepth = 6
         };
 
         public static ComputerPlayer ComputerPlayer2 = new()

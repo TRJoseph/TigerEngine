@@ -1,6 +1,8 @@
 using static Chess.PieceValues;
 using static Chess.Board;
 using static Chess.MoveGen;
+using System.Runtime.Serialization;
+using TreeEditor;
 
 namespace Chess
 {
@@ -236,10 +238,9 @@ namespace Chess
             return piecePositionScore; // Positive values favor white, negative values favor black
         }
 
-        int ConsiderKingPosition(bool whiteToMove)
+        int ConsiderKingPosition(bool whiteToMove, int pieceCount)
         {
             int piecePositionScore = 0;
-            int pieceCount = CountBits(InternalBoard.AllPieces);
 
             double middleGameWeight;
             double endGameWeight;
@@ -249,7 +250,7 @@ namespace Chess
                 // for the most part we are going to be in the early-middle game phase
                 middleGameWeight = 1.0;
                 endGameWeight = 0.0;
-                
+
             }
             else
             {
@@ -263,7 +264,7 @@ namespace Chess
                 int endGameBias = EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.White, ChessBoard.King], whiteKingEndGameBias);
 
                 piecePositionScore += (int)(middleGameBias * middleGameWeight + endGameBias * endGameWeight);
-            } 
+            }
             else
             {
                 int middleGameBias = EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King], blackKingMiddleGameBias);
@@ -273,6 +274,44 @@ namespace Chess
             }
 
             return piecePositionScore;
+        }
+
+        int BiasPiecePositionsForEndgames(bool whiteToMove, int pieceCount)
+        {
+            // if endgame check is true, apply Chebyshev Distance to friendly king and opponent king
+
+            return 0;
+        }
+        bool IsKQKorKRKEndgame(bool whiteToMove)
+        {
+            ulong king = InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.King];
+            ulong oppKing = InternalBoard.Pieces[PositionInformation.OpponentColorIndex, ChessBoard.King];
+            ulong queen = InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.Queen];
+
+            ulong friendlyPieces = whiteToMove ? InternalBoard.AllWhitePieces : InternalBoard.AllBlackPieces;
+            ulong oppPieces = whiteToMove ? InternalBoard.AllBlackPieces : InternalBoard.AllWhitePieces;
+
+            // if single queen
+            if (BitBoardHelper.IsSoloPiece(queen))
+            {
+                // KQK endgame
+                if (king + queen == friendlyPieces && oppKing == oppPieces)
+                {
+                    return true;
+                }
+            }
+
+            ulong rook = InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.Rook];
+            // if single rook 
+            if (BitBoardHelper.IsSoloPiece(rook))
+            {
+                // KRK endgame
+                if (king + rook == friendlyPieces && oppKing == oppPieces)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public int EvaluatePosition()
@@ -287,7 +326,12 @@ namespace Chess
 
             evaluation += ConsiderPiecePositions(whiteToMove);
 
-            evaluation += ConsiderKingPosition(whiteToMove);
+            // piece count will be used for king endgame weight and to solve specific endgames
+            int pieceCount = CountBits(InternalBoard.AllPieces);
+
+            evaluation += ConsiderKingPosition(whiteToMove, pieceCount);
+
+            evaluation += BiasPiecePositionsForEndgames(whiteToMove, pieceCount);
 
             int perspective = whiteToMove ? 1 : -1;
             return evaluation * perspective;
