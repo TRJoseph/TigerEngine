@@ -6,6 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  
+  <PropertyGroup>
+    <AssemblyName>TigerEngine</AssemblyName>
+  </PropertyGroup>
 
   <ItemGroup>
     <Folder Include="Core\Engine\AI\" />

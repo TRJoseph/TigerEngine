@@ -4,7 +4,7 @@ using static Chess.MoveGen;
 namespace Chess
 {
 
-    public class UCIEngine 
+    public class UCIEngine
     {
         public static void Main(string[] args)
         {
@@ -71,10 +71,11 @@ namespace Chess
 
             string bestMove;
 
-            if(searchInfo.MoveEvaluationInformation.BestMove.promotionFlag != PromotionFlags.None)
+            if (searchInfo.MoveEvaluationInformation.BestMove.promotionFlag != PromotionFlags.None)
             {
                 bestMove = BoardHelper.GetStringFromSquareBitboard(searchInfo.MoveEvaluationInformation.BestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(searchInfo.MoveEvaluationInformation.BestMove.toSquare) + ConvertPromotionFlagToChar(searchInfo.MoveEvaluationInformation.BestMove.promotionFlag);
-            } else
+            }
+            else
             {
                 bestMove = BoardHelper.GetStringFromSquareBitboard(searchInfo.MoveEvaluationInformation.BestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(searchInfo.MoveEvaluationInformation.BestMove.toSquare);
             }
@@ -100,8 +101,11 @@ namespace Chess
                             ApplyMoves(tokens.Skip(movesIndex + 1).ToArray());
                         }
                     }
+                    Console.WriteLine("readyok");
+
                 }
-                else if (tokens[1] == "fen") {
+                else if (tokens[1] == "fen")
+                {
                     string fen = string.Join(" ", tokens.Skip(2).TakeWhile(token => token != "moves"));
                     Arbiter.InitializeGame(fen);
                     int movesIndex = Array.IndexOf(tokens, "moves");
@@ -109,9 +113,14 @@ namespace Chess
                     {
                         ApplyMoves(tokens.Skip(movesIndex + 1).ToArray());
                     }
+                    Console.WriteLine("readyok");
                 }
-                Console.WriteLine("readyok");
-            } 
+                else
+                {
+                    Console.WriteLine("Please follow this format for inputting a custom position: position [fen <fenstring> | startpos ]  moves <move1> .... <movei>");
+                }
+
+            }
             catch (Exception e)
             {
                 Console.WriteLine("Please follow this format for inputting a custom position: position [fen <fenstring> | startpos ]  moves <move1> .... <movei>");
