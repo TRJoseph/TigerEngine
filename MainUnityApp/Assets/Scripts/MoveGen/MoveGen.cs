@@ -85,7 +85,8 @@ namespace Chess
             if (whiteToMove)
             {
                 if ((MoveTables.PrecomputedWhitePawnCaptures[square] & InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn]) != 0) return true;
-            } else
+            }
+            else
             {
                 if ((MoveTables.PrecomputedBlackPawnCaptures[square] & InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn]) != 0) return true;
             }
@@ -240,13 +241,14 @@ namespace Chess
 
             // grabs the corresponding bitboard representing all legal moves from the given king index on the board
             ulong validKingMoves = MoveTables.PrecomputedKingMoves[kingIndex];
-            
-            if(onlyGenerateCaptures)
+
+            if (onlyGenerateCaptures)
             {
                 // only include captures in movelist if quiescence search
                 validKingMoves &= oppPieces;
 
-            } else
+            }
+            else
             {
                 // valid king moves only include either empty squares or squares the opponent pieces occupy (for now, this will change when check is implemented)
                 validKingMoves &= ~friendlyPieces;
@@ -429,7 +431,7 @@ namespace Chess
                 // gets current pawn position to add to legal move list
                 int currentPawnPos = BitBoardHelper.GetLSB(ref isolatedPawnlsb);
 
-                if(!onlyGenerateCaptures)
+                if (!onlyGenerateCaptures)
                 {
                     ulong oneSquareMove = isolatedPawnlsb << 8;
                     if (WhitePawnsAbleToPushOneSquare(isolatedPawnlsb, ~InternalBoard.AllPieces) == isolatedPawnlsb)
@@ -500,7 +502,8 @@ namespace Chess
                 int currentPawnPos = BitBoardHelper.GetLSB(ref isolatedPawnlsb);
 
 
-                if(!onlyGenerateCaptures) {
+                if (!onlyGenerateCaptures)
+                {
                     // valid pawn moves include pushes, captures, and en passant
                     ulong oneSquareMove = isolatedPawnlsb >> 8;
                     if (BlackPawnsAbleToPushOneSquare(isolatedPawnlsb, ~InternalBoard.AllPieces) == isolatedPawnlsb)
@@ -521,7 +524,7 @@ namespace Chess
                         }
                     }
                 }
-                
+
                 // handle a potential en passant capture
                 if (CurrentGameState.enPassantFile != 0)
                 {
@@ -722,7 +725,7 @@ namespace Chess
             return square % 8;
         }
 
-        private static int GetRank(int square)
+        public static int GetRank(int square)
         {
             return square / 8;
         }

@@ -182,12 +182,13 @@ namespace Chess
             int eval = evaluation.EvaluatePosition();
             searchInformation.PositionsEvaluated++;
 
-            if(eval >= beta)
+            if (eval >= beta)
             {
                 return beta;
             }
 
-            if(eval > alpha) {
+            if (eval > alpha)
+            {
                 alpha = eval;
             }
 
@@ -195,16 +196,17 @@ namespace Chess
 
             moveSorter.OrderMoveList(ref captureMoves, 0);
 
-            foreach (Move captureMove in captureMoves) {
+            foreach (Move captureMove in captureMoves)
+            {
                 ExecuteMove(captureMove);
                 eval = -QuiescenceSearch(-beta, -alpha);
                 UndoMove(captureMove);
 
-                if(eval >= beta)
+                if (eval >= beta)
                 {
                     return beta;
                 }
-                if(eval > alpha)
+                if (eval > alpha)
                 {
                     alpha = eval;
                 }
