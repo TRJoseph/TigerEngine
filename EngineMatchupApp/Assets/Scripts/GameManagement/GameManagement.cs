@@ -21,35 +21,34 @@ namespace Chess
             OnGameCompleted?.Invoke();
         }
 
-        // this FENStringList list will hold all 1000 chess matches' fen strings. this will be used in the test suite
-        static readonly List<string> FENStringList = new List<string>();
-
-        public static void LoadFENStringList()
-        {
-            string path = @"../EngineMatchupApp/Assets/Scripts/GameManagement/lichessGameResults.txt";
-            using (StreamReader reader = new StreamReader(path))
-            {
-                string line;
-                while ((line = reader.ReadLine()) != null)
-                {
-                    // gets FENString from log
-                    if (line.Contains("FENString"))
-                    {
-                        // the FEN String text is separated from the actual FEN String by a colon
-                        int positionOfSeparator = line.IndexOf(':');
-                        FENStringList.Add(line.Substring(positionOfSeparator + 2));
-                    }
-                }
-            }
-        }
-
         public static void ComputerVsComputerMatches(int numOfMatches)
         {
-            // first load in the test game list from the test result log
-            LoadFENStringList();
+            // Format current date and time for the filename
+            DateTime startDateTime = DateTime.Now;
 
-            string logFilePath = Path.Combine(Application.dataPath, "../Logs/ChessMatchResults.txt");
-            File.AppendAllText(logFilePath, $"Starting {numOfMatches} matches:\n");
+            string dateTimeFormat = startDateTime.ToString("yyyyMMdd_HHmmss");
+
+            // Construct the relative path to the logs directory
+            string relativeLogsPath = "../Logs";
+            string logFileName = $"ChessMatchResults_{dateTimeFormat}.txt";
+
+            // Convert the relative path to an absolute path
+            string logDirectory = Path.Combine(Application.persistentDataPath, relativeLogsPath);
+            string logFilePath = Path.Combine(logDirectory, logFileName);
+            logFilePath = logFilePath.Replace("\\", "/");
+
+            // Ensure the directory exists
+            if (!Directory.Exists(logDirectory))
+            {
+                Directory.CreateDirectory(logDirectory);
+            }
+
+            // Log start of matches with start time
+            File.AppendAllText(logFilePath, $"Starting {numOfMatches} matches at {startDateTime.ToString("yyyy-MM-dd HH:mm:ss")}\n");
+
+            // set UI appropriately
+            UIController.Instance.UpdateGameStatusInformation(1, numOfMatches);
+            UIController.Instance.SetSuiteRunStatus("Running...");
 
             int matchCount = 0;
             int totalWhiteWins = 0;
@@ -58,27 +57,39 @@ namespace Chess
 
             OnGameCompleted = () =>
             {
-                RecordResult(matchCount+1, logFilePath, ref totalWhiteWins, ref totalBlackWins, ref totalDraws);
-                if (matchCount < numOfMatches - 1)
+                RecordResult(matchCount, logFilePath, ref totalWhiteWins, ref totalBlackWins, ref totalDraws);
+                if (matchCount < numOfMatches)
                 {
+                    Arbiter.StartGame(LichessGameResults.FENStringArray[matchCount]);
                     matchCount++;
-                    Arbiter.StartGame(FENStringList[matchCount], true);
+
+                    MainThreadDispatcher.Enqueue(() =>
+                    {
+                        UIController.Instance.UpdateGameStatusInformation(matchCount, numOfMatches);
+                    });
                 }
                 else
                 {
+                    DateTime endDateTime = DateTime.Now;
+                    TimeSpan duration = endDateTime - startDateTime;
 
-                    string summary = "Matches completed.\n" +
-                                           "Total Matches: " + matchCount+1 + "\n" +
-                                           "Total White Wins: " + totalWhiteWins + "\n" +
-                                           "Total Black Wins: " + totalBlackWins + "\n" +
-                                           "Total Draws: " + totalDraws + "\n";
+                    string summary = $"Matches completed at {endDateTime.ToString("yyyy-MM-dd HH:mm:ss")}\n" +
+                                     $"Total Matches: {matchCount}\n" +
+                                     $"Total White Wins: {totalWhiteWins}\n" +
+                                     $"Total Black Wins: {totalBlackWins}\n" +
+                                     $"Total Draws: {totalDraws}\n" +
+                                     $"Elapsed Time: {duration.ToString(@"hh\:mm\:ss")}\n";
 
                     File.AppendAllText(logFilePath, summary);
+                    UIController.Instance.SetSuiteRunStatus("Waiting To Start...");
                 }
             };
 
-            Arbiter.StartGame(FENStringList[matchCount], true);
+            // is logging will default be false, all this means is that the game will be played out in front of the user
+            Arbiter.StartGame(LichessGameResults.FENStringArray[matchCount]);
+            matchCount++;
         }
+
 
 
         private static void RecordResult(int matchCount, string logFilePath, ref int totalWhiteWins, ref int totalBlackWins, ref int totalDraws)

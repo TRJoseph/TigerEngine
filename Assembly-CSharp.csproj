@@ -13,7 +13,8 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <AssemblyName>Assembly-CSharp</AssemblyName>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <BaseDirectory>.</BaseDirectory>
+	 <TargetFramework>net471</TargetFramework>
+	  <BaseDirectory>.</BaseDirectory>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>

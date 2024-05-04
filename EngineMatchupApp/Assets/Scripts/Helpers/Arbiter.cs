@@ -67,11 +67,12 @@ namespace Chess
 
             if(!isLogging)
             {
-                UIController.Instance.GenerateGrid();
-                UIController.Instance.GenerateFileAndRankLabels();
-                UIController.Instance.SetGamePerspective();
-                UIController.Instance.RenderPiecesOnBoard();
-                UIController.Instance.UpdateToMoveText();
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    UIController.Instance.ClearExistingPieces();
+                    UIController.Instance.RenderPiecesOnBoard();
+                    UIController.Instance.UpdateToMoveText();
+                });
             }
 
             // generates zobrist hash key

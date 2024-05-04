@@ -36,9 +36,9 @@ namespace Chess
          make sure that they are playing as opposite sides!! */
         public static ComputerPlayer ComputerPlayer1 = new()
         {
-            Side = Sides.Black,
+            Side = Sides.White,
             Engine = new MiniMaxEngineV0(),
-            SearchDepth = 6
+            SearchDepth = 4
         };
 
         public static ComputerPlayer ComputerPlayer2 = new()

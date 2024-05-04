@@ -10,6 +10,7 @@ using static Chess.PositionInformation;
 using static Chess.MoveGen;
 using static Chess.Arbiter;
 using System.Runtime.CompilerServices;
+using Unity.VisualScripting;
 
 namespace Chess
 {
@@ -27,8 +28,10 @@ namespace Chess
 
         private static bool isWhitePerspective = true;
 
-        // Panel for useful display informatio
+        // Panel for displaying game status information
+        public TextMeshProUGUI GameNumberInfo;
         public TextMeshProUGUI WhichPlayerMoveText;
+        
 
         public GameObject PromotionPanel;
 
@@ -38,6 +41,8 @@ namespace Chess
         public TMP_InputField numberOfMatchesField;
         public TMP_InputField enginePath1Field;
         public TMP_InputField enginePath2Field;
+
+        public TextMeshProUGUI SuiteRunStatus;
 
         public Button StartGameSuiteButton;
         public Toggle perspectiveToggle;
@@ -61,6 +66,10 @@ namespace Chess
                 isWhitePerspective = perspectiveToggle.isOn;
                 TogglePerspective();
             });
+
+            GenerateGrid();
+            GenerateFileAndRankLabels();
+            SetGamePerspective();
         }
 
         // this function gets triggered by the "Start Test Suite" button 
@@ -68,6 +77,11 @@ namespace Chess
         {
             if (int.TryParse(numberOfMatchesField.text, out int numOfMatches) && !string.IsNullOrWhiteSpace(enginePath1Field.text) && !string.IsNullOrWhiteSpace(enginePath2Field.text))
             {
+                if(numOfMatches > 1000)
+                {
+                    SetSuiteRunStatus("Too Many Matches! Max: 1000");
+                    return;
+                }
                 Debug.Log("Starting " + numOfMatches + " matches...");
                 Debug.Log("Engine 1 Path: " + enginePath1Field.text);
                 Debug.Log("Engine 2 Path: " + enginePath2Field.text);
@@ -75,7 +89,6 @@ namespace Chess
                 ComputerPlayer1.enginePath = enginePath1Field.text;
                 ComputerPlayer2.enginePath = enginePath2Field.text;
 
-                //Arbiter.StartGame("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", false);
 
                 GameManagement.ComputerVsComputerMatches(numOfMatches);
             }
@@ -120,7 +133,16 @@ namespace Chess
             {
                 WhichPlayerMoveText.text = "Black to move";
             }
+        }
 
+        public void UpdateGameStatusInformation(int currentMatch, int totalMatches)
+        {
+            GameNumberInfo.text = "Current Game: " + currentMatch + "/" + totalMatches;
+        }
+
+        public void SetSuiteRunStatus(string status)
+        {
+            SuiteRunStatus.text = status;
         }
 
         public void GenerateGrid()

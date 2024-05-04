@@ -2,7 +2,6 @@ using static Chess.PieceValues;
 using static Chess.Board;
 using static Chess.MoveGen;
 using System.Runtime.Serialization;
-using TreeEditor;
 using System;
 
 namespace Chess
@@ -211,36 +210,81 @@ namespace Chess
 
         int ConsiderPiecePositions(bool whiteToMove)
         {
-            /* Set initial position score, this will change based on various planned future factors.
-            For example, passed pawns will be worth more, pawns on the 7th rank (from whites perspective) about to
-            promote will be worth more, king safety, etc.
-            */
+            // Set initial position score, this will change based on various planned future factors.
+            // For example, passed pawns will be worth more, pawns on the 7th rank (from whites perspective) about to
+            // promote will be worth more, king safety, etc.
             int piecePositionScore = 0;
 
-            if (whiteToMove)
-            {
-                // Evaluate white piece positions
-                piecePositionScore += EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn], whitePawnPushBias);
-                piecePositionScore += EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight], whiteKnightBias);
-                piecePositionScore += EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Bishop], whiteBishopBias);
-                piecePositionScore += EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook], whiteRookBias);
-                piecePositionScore += EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Queen], whiteQueenBias);
-            }
-            else
-            {
-                // Evaluate black piece positions
-                piecePositionScore -= EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn], blackPawnPushBias);
-                piecePositionScore -= EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight], blackKnightBias);
-                piecePositionScore -= EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop], blackBishopBias);
-                piecePositionScore -= EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook], blackRookBias);
-                piecePositionScore -= EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Queen], blackQueenBias);
-            }
+            int colorIndex = PositionInformation.MoveColorIndex;
+            int[] pawnBias = whiteToMove ? whitePawnPushBias : blackPawnPushBias;
+            int[] knightBias = whiteToMove ? whiteKnightBias : blackKnightBias;
+            int[] bishopBias = whiteToMove ? whiteBishopBias : blackBishopBias;
+            int[] rookBias = whiteToMove ? whiteRookBias : blackRookBias;
+            int[] queenBias = whiteToMove ? whiteQueenBias : blackQueenBias;
 
-            return piecePositionScore; // Positive values favor white, negative values favor black
+            // Evaluate piece positions
+            piecePositionScore += EvaluatePiecePositions(InternalBoard.Pieces[colorIndex, ChessBoard.Pawn], pawnBias);
+            piecePositionScore += EvaluatePiecePositions(InternalBoard.Pieces[colorIndex, ChessBoard.Knight], knightBias);
+            piecePositionScore += EvaluatePiecePositions(InternalBoard.Pieces[colorIndex, ChessBoard.Bishop], bishopBias);
+            piecePositionScore += EvaluatePiecePositions(InternalBoard.Pieces[colorIndex, ChessBoard.Rook], rookBias);
+            piecePositionScore += EvaluatePiecePositions(InternalBoard.Pieces[colorIndex, ChessBoard.Queen], queenBias);
+
+            return piecePositionScore; // Always return positive scores
         }
 
-        int ConsiderKingPosition(bool whiteToMove, int pieceCount)
+        int ConsiderKingPosition(bool whiteToMove, double middleGameWeight, double endGameWeight)
         {
+            int[] middleGameBiasArray = whiteToMove ? whiteKingMiddleGameBias : blackKingMiddleGameBias;
+            int[] endGameBiasArray = whiteToMove ? whiteKingEndGameBias : blackKingEndGameBias;
+
+            int middleGameBias = EvaluatePiecePositions(InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.King], middleGameBiasArray);
+            int endGameBias = EvaluatePiecePositions(InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.King], endGameBiasArray);
+
+            return (int)(middleGameBias * middleGameWeight + endGameBias * endGameWeight);
+        }
+
+        int ChebyshevDistance(int file1, int rank1, int file2, int rank2)
+        {
+            int rankDistance = Math.Abs(rank2 - rank1);
+            int fileDistance = Math.Abs(file2 - file1);
+
+            return Math.Max(rankDistance, fileDistance);
+        }
+
+        int BiasKingPositionForEndgames(double endGameWeight)
+        {
+            int eval = 0;
+
+            int friendlyKingSquare = BitBoardHelper.GetLSB(ref InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.King]);
+            int oppKingSquare = BitBoardHelper.GetLSB(ref InternalBoard.Pieces[PositionInformation.OpponentColorIndex, ChessBoard.King]);
+
+            // Calculate edge distance for opponent king to encourage pushing to the edge of the board
+            int oppKingFile = GetFile(oppKingSquare);
+            int oppKingRank = GetRank(oppKingSquare);
+
+            int oppKingDstToCenterFile = Math.Max(3 - oppKingFile, oppKingFile - 4);
+            int oppKingDstToCenterRank = Math.Max(3 - oppKingRank, oppKingRank - 4);
+
+            int oppKingDstFromCenter = oppKingDstToCenterFile + oppKingDstToCenterRank;
+            eval += oppKingDstFromCenter;
+
+            // get friendly piece 
+            int friendlyKingFile = GetFile(friendlyKingSquare);
+            int friendlyKingRank = GetRank(friendlyKingSquare);
+
+            // this prioritizes the friendly king moving closer to an enemy king, biases the distance between the king to favor short distances
+            int chebyshevDistance = ChebyshevDistance(friendlyKingFile, friendlyKingRank, oppKingFile, oppKingRank);
+
+            eval += 14 - chebyshevDistance;
+            return (int)(10 * eval * endGameWeight);
+        }
+
+        int ConsiderKing()
+        {
+            int eval = 0;
+            // piece count will be used for king endgame weight and to solve specific endgames
+            int pieceCount = CountBits(InternalBoard.AllPieces);
+
             double middleGameWeight;
             double endGameWeight;
 
@@ -257,72 +301,12 @@ namespace Chess
                 middleGameWeight = 1.0 - endGameWeight;
             }
 
-            if (whiteToMove)
-            {
-                int middleGameBias = EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.White, ChessBoard.King], whiteKingMiddleGameBias);
-                int endGameBias = EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.White, ChessBoard.King], whiteKingEndGameBias);
+            eval += ConsiderKingPosition(PositionInformation.whiteToMove, middleGameWeight, endGameWeight);
+            eval += BiasKingPositionForEndgames(endGameWeight);
 
-                return (int)(middleGameBias * middleGameWeight + endGameBias * endGameWeight);
-            }
-            else
-            {
-                int middleGameBias = EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King], blackKingMiddleGameBias);
-                int endGameBias = EvaluatePiecePositions(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King], blackKingEndGameBias);
+            return eval;
+        } 
 
-                return -(int)((middleGameBias * middleGameWeight) + (endGameBias * endGameWeight));
-            }
-        }
-
-        int ChebyshevDistance(int square1, int square2)
-        {
-            int file1 = GetFile(square1);
-            int file2 = GetFile(square2);
-
-            int rank1 = GetRank(square1);
-            int rank2 = GetRank(square2);
-
-            int rankDistance = Math.Abs(rank2 - rank1);
-            int fileDistance = Math.Abs(file2 - file1);
-
-            return Math.Max(rankDistance, fileDistance);
-        }
-
-        int BiasPiecePositionsForEndgames(bool whiteToMove, int pieceCount)
-        {
-            if (pieceCount <= 3)
-            {
-                ulong friendlyPieces = whiteToMove ? InternalBoard.AllWhitePieces : InternalBoard.AllBlackPieces;
-                ulong oppPieces = whiteToMove ? InternalBoard.AllBlackPieces : InternalBoard.AllWhitePieces;
-
-                // if endgame check is true, apply Chebyshev Distance to friendly king and opponent king
-                if (IsKQKorKRKEndgame(friendlyPieces, oppPieces))
-                {
-                    int friendlyKingSquare = BitBoardHelper.GetLSB(ref InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.King]);
-                    int oppKingSquare = BitBoardHelper.GetLSB(ref InternalBoard.Pieces[PositionInformation.OpponentColorIndex, ChessBoard.King]);
-
-                    int ChebyShevDistanceWeight = 10 * (10 - ChebyshevDistance(friendlyKingSquare, oppKingSquare));
-
-                    return whiteToMove ? ChebyShevDistanceWeight : -ChebyShevDistanceWeight;
-                }
-            }
-            return 0;
-        }
-        bool IsKQKorKRKEndgame(ulong friendlyPieces, ulong oppPieces)
-        {
-            ulong king = InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.King];
-            ulong oppKing = InternalBoard.Pieces[PositionInformation.OpponentColorIndex, ChessBoard.King];
-            ulong queen = InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.Queen];
-            ulong rook = InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.Rook];
-
-            // KQK endgame where friendly has a queen
-            if (queen != 0 && (king | queen) == friendlyPieces && oppKing == oppPieces)
-                return true;
-
-            // KRK endgame where friendly has a rook
-            if (rook != 0 && (king | rook) == friendlyPieces && oppKing == oppPieces)
-                return true;
-            return false;
-        }
 
         public int EvaluatePosition()
         {
@@ -334,15 +318,15 @@ namespace Chess
             // large values favor white, small values favor black
             int evaluation = whiteEvaluation - blackEvaluation;
 
-            evaluation += ConsiderPiecePositions(whiteToMove);
-
-            // piece count will be used for king endgame weight and to solve specific endgames
-            int pieceCount = CountBits(InternalBoard.AllPieces);
-
-            evaluation += ConsiderKingPosition(whiteToMove, pieceCount);
-
-            // detects KQK or KRK endgames and biases accordingly
-            evaluation += BiasPiecePositionsForEndgames(whiteToMove, pieceCount);
+            if (whiteToMove)
+            {
+                evaluation += ConsiderPiecePositions(whiteToMove);
+                evaluation += ConsiderKing();
+            } else
+            {
+                evaluation -= ConsiderPiecePositions(whiteToMove);
+                evaluation -= ConsiderKing();
+            }
 
             int perspective = whiteToMove ? 1 : -1;
             return evaluation * perspective;

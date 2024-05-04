@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "com.unity.2d.animation": {
-      "version": "9.0.4",
+      "version": "9.0.3",
       "depth": 1,
       "source": "registry",
       "dependencies": {
@@ -83,7 +83,7 @@
       }
     },
     "com.unity.2d.tilemap.extras": {
-      "version": "3.1.2",
+      "version": "3.1.1",
       "depth": 1,
       "source": "registry",
       "dependencies": {
@@ -95,7 +95,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.burst": {
-      "version": "1.8.9",
+      "version": "1.8.8",
       "depth": 3,
       "source": "registry",
       "dependencies": {
@@ -132,13 +132,13 @@
       "depth": 0,
       "source": "builtin",
       "dependencies": {
-        "com.unity.2d.animation": "9.0.4",
+        "com.unity.2d.animation": "9.0.3",
         "com.unity.2d.pixel-perfect": "5.0.3",
         "com.unity.2d.psdimporter": "8.0.2",
         "com.unity.2d.sprite": "1.0.0",
         "com.unity.2d.spriteshape": "9.0.2",
         "com.unity.2d.tilemap": "1.0.0",
-        "com.unity.2d.tilemap.extras": "3.1.2",
+        "com.unity.2d.tilemap.extras": "3.1.1",
         "com.unity.2d.aseprite": "1.0.1"
       }
     },

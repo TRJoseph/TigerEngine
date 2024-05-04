@@ -722,7 +722,7 @@ namespace Chess
             return square % 8;
         }
 
-        private static int GetRank(int square)
+        public static int GetRank(int square)
         {
             return square / 8;
         }
