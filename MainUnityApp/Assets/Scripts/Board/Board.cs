@@ -62,7 +62,7 @@ namespace Chess
         {
             InProgress,
             Stalemate,
-            CheckMate,
+            Checkmate,
             ThreeFold,
             FiftyMoveRule,
             InsufficientMaterial

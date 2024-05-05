@@ -4,6 +4,7 @@ using static Chess.PositionInformation;
 using static Chess.MoveGen;
 using System.Diagnostics;
 using System.Collections;
+using System.Xml.Serialization;
 
 namespace Chess
 {
@@ -84,8 +85,9 @@ namespace Chess
 
             legalMoves = GenerateMoves();
 
+            bool playerInCheck = IsPlayerInCheck();
             // check for game over rules
-            currentStatus = CheckForGameOverRules();
+            currentStatus = CheckForGameOverRules(playerInCheck);
 
             //UICLI.PrintBoard(InternalBoard, whiteToMove);
 
@@ -207,9 +209,8 @@ namespace Chess
         }
 
 
-        public static GameResult CheckForGameOverRules()
+        public static GameResult CheckForGameOverRules(bool playerInCheck, bool inSearch = false)
         {
-            bool playerInCheck = IsPlayerInCheck();
 
             if (legalMoveCount == 0 && playerInCheck)
             {
@@ -222,17 +223,27 @@ namespace Chess
             }
 
             // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence checking when this reaches 100, 50 moves have been made
-            if (CurrentGameState.fiftyMoveCounter == 100)
+            if (CurrentGameState.fiftyMoveCounter >= 100)
             {
                 return GameResult.FiftyMoveRule;
             }
 
-            // threefold repetition rule (position repeats three times is a draw)
-            if (PositionInformation.PositionHashes.Count(x => x == ZobristHashKey) >= 3)
+            if(inSearch)
             {
-                return GameResult.ThreeFold;
-            }
+                // if engine search, consider a single repeat of the position to be a draw for simplicity, this helps to avoid repeating positions over and over
+                if (PositionHashes.Count(x => x == ZobristHashKey) >= 2)
+                {
+                    return GameResult.ThreeFold;
+                }
 
+            } else
+            {
+                // threefold repetition rule (position repeats three times is a draw)
+                if (PositionHashes.Count(x => x == ZobristHashKey) >= 3)
+                {
+                    return GameResult.ThreeFold;
+                }
+            }
             // draw by insufficient material rule, for example: knight and king cannot deliver checkmate
             if (CheckForInsufficientMaterial())
             {

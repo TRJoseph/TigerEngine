@@ -54,6 +54,7 @@ namespace Chess
         const int infinity = 9999999;
         const int negativeInfinity = -infinity;
         const int mateScore = 100000;
+        const int maxExtensions = 256;
 
         public void IterativeDeepeningSearch()
         {
@@ -119,7 +120,7 @@ namespace Chess
         }
 
 
-        public int NegaMax(int depth, int alpha, int beta)
+        public int NegaMax(int depth, int alpha, int beta, int searchExtensions = 0)
         {
 
             if (depth == 0)
@@ -132,13 +133,14 @@ namespace Chess
             // order move list to place good moves at top of list
             moveSorter.OrderMoveList(ref moves, depth);
 
-            GameResult gameResult = Arbiter.CheckForGameOverRules();
+            bool playerInCheck = Arbiter.IsPlayerInCheck();
+            GameResult gameResult = Arbiter.CheckForGameOverRules(playerInCheck, inSearch: true);
             if (gameResult == GameResult.Stalemate || gameResult == GameResult.ThreeFold || gameResult == GameResult.FiftyMoveRule || gameResult == GameResult.InsufficientMaterial)
             {
                 return 0;
             }
 
-            if (gameResult == GameResult.CheckMate)
+            if (gameResult == GameResult.Checkmate)
             {
                 searchInformation.NumOfCheckMates++;
 
@@ -146,11 +148,21 @@ namespace Chess
                 return -mateScore - depth;
             }
 
+            int searchExtension = 0;
+
+            // extend the search if the player is in check
+            if (playerInCheck && searchExtensions < maxExtensions)
+            {
+                searchExtensions++;
+                searchExtension = 1;
+            }
+
+
             foreach (Move move in moves)
             {
                 ExecuteMove(move);
                 // maintains symmetry; -beta is new alpha value for swapped perspective and likewise with -alpha; (upper and lower score safeguards)
-                int eval = -NegaMax(depth - 1, -beta, -alpha);
+                int eval = -NegaMax(depth - 1 + searchExtension, -beta, -alpha, searchExtensions);
                 UndoMove(move);
 
                 if (eval >= beta)
