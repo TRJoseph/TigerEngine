@@ -127,6 +127,9 @@ namespace Chess
             {
                 ApplyMove(move, isLogging: true);
                 StartTurn();
+            } else
+            {
+                GameManagement.TriggerCheckGameCompletion();
             }
         }
 
@@ -139,6 +142,9 @@ namespace Chess
                 {
                     ApplyMove(move, isLogging: false);
                     StartTurn();
+                } else
+                {
+                    GameManagement.TriggerCheckGameCompletion();
                 }
             });
         }

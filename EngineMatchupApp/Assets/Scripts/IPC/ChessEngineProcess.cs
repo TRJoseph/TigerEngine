@@ -20,11 +20,6 @@ namespace Chess
                 var move = data.Split(' ')[1];
                 OnMoveReady?.Invoke(move);
             }
-
-            if(data.StartsWith("Checkmate") || data.StartsWith("Stalemate") || data.StartsWith("Draw"))
-            {
-                GameManagement.TriggerGameCompletion();
-            }
         }
 
         public void StartEngine(string enginePath)

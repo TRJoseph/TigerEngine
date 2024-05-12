@@ -16,7 +16,7 @@ namespace Chess
     {
         public static Action OnGameCompleted;
 
-        public static void TriggerGameCompletion()
+        public static void TriggerCheckGameCompletion()
         {
             OnGameCompleted?.Invoke();
         }
