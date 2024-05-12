@@ -127,9 +127,6 @@ namespace Chess
             {
                 ApplyMove(move, isLogging: true);
                 StartTurn();
-            } else
-            {
-                GameManagement.TriggerCheckGameCompletion();
             }
         }
 
@@ -142,9 +139,6 @@ namespace Chess
                 {
                     ApplyMove(move, isLogging: false);
                     StartTurn();
-                } else
-                {
-                    GameManagement.TriggerCheckGameCompletion();
                 }
             });
         }
@@ -161,41 +155,20 @@ namespace Chess
         public static void StartTurn()
         {
             string moveString = FormatAppliedMoves();
+            ChessEngineProcess targetEngine = GetTargetEngine();
 
-            if (whiteToMove)
-            {
-                if (ComputerPlayer1.Side == Sides.White)
-                {
-                    // engine 1
-                    ComputerPlayer1.ChessEngineProcess.SendCommand("position fen " + GameStartFENString + " " + moveString);
-                    ComputerPlayer1.ChessEngineProcess.SendCommand("go");
+            targetEngine.SendCommand("position fen " + GameStartFENString + " " + moveString);
+            targetEngine.SendCommand("go");
 
-                }
-                else
-                {
-                    // engine 2
-                    ComputerPlayer2.ChessEngineProcess.SendCommand("position fen " + GameStartFENString + " " + moveString);
-                    ComputerPlayer2.ChessEngineProcess.SendCommand("go");
-
-                }
+            if(currentStatus != GameResult.InProgress) {
+                GameManagement.TriggerCheckGameCompletion();
             }
-            else
-            {
-                if (ComputerPlayer1.Side == Sides.Black)
-                {
-                    // engine 1
-                    ComputerPlayer1.ChessEngineProcess.SendCommand("position fen " + GameStartFENString + " " + moveString);
-                    ComputerPlayer1.ChessEngineProcess.SendCommand("go");
-
-                }
-                else
-                {
-                    // engine 2
-                    ComputerPlayer2.ChessEngineProcess.SendCommand("position fen " + GameStartFENString + " " + moveString);
-                    ComputerPlayer2.ChessEngineProcess.SendCommand("go");
-
-                }
-            }
+        }
+        private static ChessEngineProcess GetTargetEngine()
+        {
+            return (whiteToMove ? ComputerPlayer1.Side == Sides.White : ComputerPlayer1.Side == Sides.Black)
+                ? ComputerPlayer1.ChessEngineProcess
+                : ComputerPlayer2.ChessEngineProcess;
         }
 
         public static string FormatAppliedMoves()

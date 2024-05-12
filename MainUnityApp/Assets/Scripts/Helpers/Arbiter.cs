@@ -62,7 +62,7 @@ namespace Chess
 
 
         // set for the desired game type
-        public static GameType gameType = GameType.ComputerVersusComputer;
+        public static GameType gameType = GameType.HumanVersusComputer;
 
         public static Sides currentTurn = whiteToMove ? Sides.White : Sides.Black;
 
