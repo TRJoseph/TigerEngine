@@ -184,18 +184,6 @@ namespace Chess
         // more coming up for king, including helping it solve k and q versus k endgames
         const int EndgameThreshold = 10; // When x or fewer pieces remain, consider it the endgame
 
-        public struct MoveEvaluation
-        {
-            public Move BestMove;
-            public int Evaluation;
-
-            public MoveEvaluation(Move bestMove, int evaluation)
-            {
-                BestMove = bestMove;
-                Evaluation = evaluation;
-            }
-        }
-
         private int EvaluatePiecePositions(ulong pieces, int[] biasArray)
         {
             int score = 0;

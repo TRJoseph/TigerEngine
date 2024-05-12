@@ -67,20 +67,26 @@ namespace Chess
 
         public static void StartEngine()
         {
-            SearchInformation searchInfo = Arbiter.ComputerPlayer1.Engine.FixedDepthSearch(4);
-
-            string bestMove;
-
-            if (searchInfo.MoveEvaluationInformation.BestMove.promotionFlag != PromotionFlags.None)
+            if(Arbiter.positionLoaded)
             {
-                bestMove = BoardHelper.GetStringFromSquareBitboard(searchInfo.MoveEvaluationInformation.BestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(searchInfo.MoveEvaluationInformation.BestMove.toSquare) + ConvertPromotionFlagToChar(searchInfo.MoveEvaluationInformation.BestMove.promotionFlag);
-            }
-            else
-            {
-                bestMove = BoardHelper.GetStringFromSquareBitboard(searchInfo.MoveEvaluationInformation.BestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(searchInfo.MoveEvaluationInformation.BestMove.toSquare);
-            }
+                Arbiter.ComputerPlayer1.Engine.StartSearch();
 
-            Console.WriteLine("bestmove " + bestMove);
+                string bestMove;
+
+                if (Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag != PromotionFlags.None)
+                {
+                    bestMove = BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.toSquare) + ConvertPromotionFlagToChar(Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag);
+                }
+                else
+                {
+                    bestMove = BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.toSquare);
+                }
+
+                Console.WriteLine("bestmove " + bestMove);
+            } else
+            {
+                Console.WriteLine("Please set a position first by executing the commands: ucinewgame or position");
+            }
         }
 
         public static void SetPosition(string[] tokens)
@@ -215,6 +221,23 @@ namespace Chess
             // here we will need to set a variety of options
             // hash - represents the maximum allowable size of the transposition table for this version of the engine
             // TODO: implement the transposition table
+            try
+            {
+                if (tokens[0] == "searchtype")
+                {
+                    if (tokens[1].Contains("iterative"))
+                    {
+                       
+                    } else if (tokens[1].Contains("fixed")) {
+
+                    }
+                }
+            } catch
+            {
+
+                Console.WriteLine("Please follow this format for setting custom options: setoption name <id> [value <x>]");
+            }
+
         }
 
     }

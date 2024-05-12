@@ -5,6 +5,8 @@ using static Chess.MoveGen;
 using System.Diagnostics;
 using UnityEngine;
 using System.Collections;
+using System;
+using System.Threading.Tasks;
 
 namespace Chess
 {
@@ -28,8 +30,8 @@ namespace Chess
         public struct ComputerPlayer
         {
             public Sides Side;
-            public IChessEngine Engine;
-            public int SearchDepth;
+            public Engine Engine;
+            public SearchSettings SearchSettings;
         }
 
         /* when setting multiple computer players for a computer versus computer matchup,
@@ -37,18 +39,32 @@ namespace Chess
         public static ComputerPlayer ComputerPlayer1 = new()
         {
             Side = Sides.White,
-            Engine = new MiniMaxEngineV0(),
-            SearchDepth = 4
+            Engine = new Engine(),
+            SearchSettings = new SearchSettings()
+            {
+                Depth = 4,
+                SearchTime = TimeSpan.FromSeconds(3),
+                SearchType = SearchType.IterativeDeepening,
+            }
         };
 
         public static ComputerPlayer ComputerPlayer2 = new()
         {
             Side = Sides.Black,
-            Engine = new RandomMoveEngine(),
-            SearchDepth = 4
+            Engine = new Engine(),
+            SearchSettings = new SearchSettings()
+            {
+                Depth = 4,
+                SearchTime = TimeSpan.FromSeconds(3),
+                SearchType = SearchType.IterativeDeepening,
+            }
         };
+
+
         // set for the desired game type
-        public static GameType gameType = GameType.HumanVersusComputer;
+        public static GameType gameType = GameType.ComputerVersusComputer;
+
+        public static Sides currentTurn = whiteToMove ? Sides.White : Sides.Black;
 
         public static void MatchUpConfiguration()
         {
@@ -109,16 +125,8 @@ namespace Chess
 
                 case GameType.ComputerVersusComputer:
                     InitializeGame();
-                    if (isLogging)
-                    {
-                        // run this line to simply executer a computer versus computer game
-                        ComputerVsComputerGame();
-                    }
-                    else
-                    {
-                        // run this to watch a game between two computers be played
-                        UIController.Instance.StartComputerVsComputerGame();
-                    }
+                    // run this to watch a game between two computers be played
+                    ComputerVsComputerGame();
 
                     break;
                 default:
@@ -129,65 +137,30 @@ namespace Chess
         // human versus computer game 
         private static void HvsCGame()
         {
-            //SwapTurn();
 
             if (ComputerPlayer1.Side == Sides.White && whiteToMove)
             {
-                SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(ComputerPlayer1.SearchDepth);
-
-                DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
-
-                UIController.Instance.UpdateSearchUIInfo(ref searchInformation);
+                ComputerPlayer1.Engine.StartSearchAsync(ComputerPlayer1.SearchSettings);
             }
 
             if (ComputerPlayer1.Side == Sides.Black && !whiteToMove)
             {
-                SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(ComputerPlayer1.SearchDepth);
-
-                DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
-
-                UIController.Instance.UpdateSearchUIInfo(ref searchInformation);
+                ComputerPlayer1.Engine.StartSearchAsync(ComputerPlayer1.SearchSettings);
             }
         }
 
         // Verification.cs essentially calls this over and over to log engine performance versus previous iterations
-        private static void ComputerVsComputerGame()
+        private static async Task ComputerVsComputerGame()
         {
             while (currentStatus == GameResult.InProgress)
             {
-                // if white to move
-                if (whiteToMove)
-                {
-                    if (ComputerPlayer1.Side == Sides.White)
-                    {
-                        // engine 1 
-                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(ComputerPlayer1.SearchDepth);
 
-                        DoTurn(bestMoveAndEval.BestMove);
-                    }
-                    else
-                    {
-                        // engine 2
-                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer2.Engine.FindBestMove(ComputerPlayer2.SearchDepth);
+                Engine currentEngine = (currentTurn == ComputerPlayer1.Side) ? ComputerPlayer1.Engine : ComputerPlayer2.Engine;
 
-                        DoTurn(bestMoveAndEval.BestMove);
-                    }
-                }
-                else
-                {
-                    if (ComputerPlayer1.Side == Sides.Black)
-                    {
-                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer1.Engine.FindBestMove(ComputerPlayer1.SearchDepth);
+                await currentEngine.StartSearchAsync(ComputerPlayer1.SearchSettings);
 
-                        DoTurn(bestMoveAndEval.BestMove);
-                    }
-                    else
-                    {
-                        Evaluation.MoveEvaluation bestMoveAndEval = ComputerPlayer2.Engine.FindBestMove(ComputerPlayer2.SearchDepth);
-
-                        DoTurn(bestMoveAndEval.BestMove);
-                    }
-                }
+                // toggle the current turn to the other side
+                ToggleTurn();
             }
         }
 
@@ -209,6 +182,11 @@ namespace Chess
             {
                 HvsCGame();
             }
+        }
+
+        public static void ToggleTurn()
+        {
+            currentTurn = currentTurn == Sides.White ? Sides.Black : Sides.White;
         }
 
         public static bool IsPlayerInCheck()

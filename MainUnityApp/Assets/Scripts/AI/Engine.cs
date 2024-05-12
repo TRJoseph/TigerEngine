@@ -3,47 +3,25 @@ using System.Linq;
 using System.Diagnostics;
 using static Chess.Board;
 using static Chess.MoveGen;
+using System.Threading.Tasks;
+using static Chess.Arbiter;
 
 namespace Chess
 {
 
-    public interface IChessEngine
-    {
-        Evaluation.MoveEvaluation FindBestMove(int depth);
-
-        SearchInformation FixedDepthSearch(int searchDepth);
-
-    }
-
-    public class RandomMoveEngine : IChessEngine
-    {
-        readonly SearchInformation SearchInformation = new();
-        public SearchInformation FixedDepthSearch(int searchDepth)
-        {
-            SearchInformation.MoveEvaluationInformation = FindBestMove(searchDepth);
-
-            return SearchInformation;
-        }
-        public Evaluation.MoveEvaluation FindBestMove(int depth)
-        {
-
-            var random = new System.Random();
-
-            return new Evaluation.MoveEvaluation(legalMoves[random.Next(legalMoves.Count())], 0);
-        }
-    }
-
-    public class MiniMaxEngineV0 : IChessEngine
+    public class Engine
     {
 
         // engine references so these can be easily swapped our for testing different versions
         readonly Evaluation evaluation;
         readonly MoveSorting moveSorter;
-        readonly SearchInformation searchInformation;
+
+        SearchInformation searchInformation;
+        SearchSettings searchSettings;
 
         readonly TranspositionTable transpositionTable;
 
-        public MiniMaxEngineV0()
+        public Engine()
         {
             evaluation = new();
             searchInformation = new();
@@ -56,29 +34,100 @@ namespace Chess
         const int mateScore = 100000;
         const int maxExtensions = 256;
 
-        public void IterativeDeepeningSearch()
+
+        public Move bestMoveThisIteration;
+        public int bestEvalThisIteration;
+
+        public Move bestMove;
+        public int bestEval;
+
+        public bool searchCancelled = false;
+
+        public async Task StartSearchAsync(SearchSettings searchSettings)
         {
-            // this is for the future, lol
+            this.searchSettings = searchSettings;
+
+            searchCancelled = false;
+            var searchTask = Task.Run(() => StartSearch());
+            var timerTask = Task.Delay(searchSettings.SearchTime);
+
+            await Task.WhenAny(searchTask, timerTask);
+
+            if (timerTask.IsCompleted)
+            {
+                searchCancelled = true;
+            }
+
+            await searchTask; // ensure the search task completes after cancellation if it hasn't already.
+
+            DoTurn(bestMove);
+
+            return;
         }
 
-        public SearchInformation FixedDepthSearch(int searchDepth)
+        public async void StartSearch()
+        {
+
+            if (searchSettings.SearchType == SearchType.IterativeDeepening)
+            {
+                IterativeDeepeningSearch();
+            } else // fixed depth
+            {
+                FixedDepthSearch(searchSettings.Depth);
+            }
+        }
+
+        public void IterativeDeepeningSearch()
+        {
+
+            // start depth at 1 then increase until time runs out
+            int depth = 1;
+
+            bestMove = new Move();
+            bestEval = 0;
+
+            while(!searchCancelled)
+            {
+                searchInformation.PositionsEvaluated = 0;
+                searchInformation.NumOfCheckMates = 0;
+                searchInformation.DepthSearched = depth;
+                NegaMax(depth, depthFromRoot: 0, negativeInfinity, infinity);
+                searchInformation.MoveEvaluationInformation.BestMove = bestMove;
+                searchInformation.MoveEvaluationInformation.Evaluation = bestEval;
+
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    UIController.Instance.UpdateSearchUIInfo(ref searchInformation);
+                });
+
+                if (!searchCancelled)
+                {
+                    bestMove = bestMoveThisIteration;
+                    bestEval = bestEvalThisIteration;
+                }
+                depth++;
+            }
+
+            return;
+        }
+
+        public void FixedDepthSearch(int searchDepth)
         {
             searchInformation.PositionsEvaluated = 0;
             searchInformation.NumOfCheckMates = 0;
             searchInformation.DepthSearched = searchDepth;
+            NegaMax(searchDepth, depthFromRoot: 0, negativeInfinity, infinity);
+            searchInformation.MoveEvaluationInformation.BestMove = bestMove;
+            searchInformation.MoveEvaluationInformation.Evaluation = bestEval;
 
-            searchInformation.searchDiagnostics.stopwatch = Stopwatch.StartNew();
 
-            searchInformation.MoveEvaluationInformation = FindBestMove(searchDepth);
+            bestMove = bestMoveThisIteration;
+            bestEval = bestEvalThisIteration;
 
-            searchInformation.searchDiagnostics.stopwatch.Stop();
-            searchInformation.searchDiagnostics.timeSpan = searchInformation.searchDiagnostics.stopwatch.Elapsed;
-            searchInformation.searchDiagnostics.FormatElapsedTime();
-
-            // this logs how long the fixed depth search took
-            searchInformation.searchDiagnostics.LogElapsedTime();
-
-            return searchInformation;
+            MainThreadDispatcher.Enqueue(() =>
+            {
+                UIController.Instance.UpdateSearchUIInfo(ref searchInformation);
+            });
         }
 
         public Evaluation.MoveEvaluation FindBestMove(int depth)
@@ -93,7 +142,7 @@ namespace Chess
             foreach (Move move in moves)
             {
                 ExecuteMove(move);
-                int eval = -NegaMax(depth - 1, -beta, -alpha); // Note the switch and use of alpha-beta here
+                int eval = -NegaMax(depth - 1, 0, -beta, -alpha); // Note the switch and use of alpha-beta here
                 UndoMove(move);
 
                 // intially thought pruning here would be unnecessary (I was being a schmuck), turns out its incredible effective at reducing node search count, lol
@@ -120,21 +169,25 @@ namespace Chess
         }
 
 
-        public int NegaMax(int depth, int alpha, int beta, int searchExtensions = 0)
+        public int NegaMax(int depth, int depthFromRoot, int alpha, int beta, int searchExtensions = 0)
         {
+            if (searchCancelled)
+            {
+                return alpha;
+            }
 
             if (depth == 0)
             {
                 return QuiescenceSearch(alpha, beta);
             }
 
-            Span<Move> moves = MoveGen.GenerateMoves();
+            Span<Move> moves = GenerateMoves();
 
             // order move list to place good moves at top of list
             moveSorter.OrderMoveList(ref moves, depth);
 
-            bool playerInCheck = Arbiter.IsPlayerInCheck();
-            GameResult gameResult = Arbiter.CheckForGameOverRules(playerInCheck, inSearch: true);
+            bool playerInCheck = IsPlayerInCheck();
+            GameResult gameResult = CheckForGameOverRules(playerInCheck, inSearch: true);
             if (gameResult == GameResult.Stalemate || gameResult == GameResult.ThreeFold || gameResult == GameResult.FiftyMoveRule || gameResult == GameResult.InsufficientMaterial)
             {
                 return 0;
@@ -157,13 +210,17 @@ namespace Chess
                 searchExtension = 1;
             }
 
-
             foreach (Move move in moves)
             {
                 ExecuteMove(move);
                 // maintains symmetry; -beta is new alpha value for swapped perspective and likewise with -alpha; (upper and lower score safeguards)
-                int eval = -NegaMax(depth - 1 + searchExtension, -beta, -alpha, searchExtensions);
+                int eval = -NegaMax(depth - 1 + searchExtension, depthFromRoot + 1, -beta, -alpha, searchExtensions);
                 UndoMove(move);
+
+                if(searchCancelled)
+                {
+                    return alpha;
+                }
 
                 if (eval >= beta)
                 {
@@ -183,6 +240,11 @@ namespace Chess
                 if (eval > alpha)
                 {
                     alpha = eval;
+                    if(depthFromRoot == 0)
+                    {
+                        bestMoveThisIteration = move;
+                        bestEvalThisIteration = alpha;
+                    }
                 }
             }
             return alpha;
@@ -191,6 +253,11 @@ namespace Chess
         // https://www.chessprogramming.org/Quiescence_Search
         public int QuiescenceSearch(int alpha, int beta)
         {
+            if (searchCancelled)
+            {
+                return alpha;
+            }
+
             int eval = evaluation.EvaluatePosition();
             searchInformation.PositionsEvaluated++;
 
@@ -213,6 +280,11 @@ namespace Chess
                 ExecuteMove(captureMove);
                 eval = -QuiescenceSearch(-beta, -alpha);
                 UndoMove(captureMove);
+
+                if (searchCancelled)
+                {
+                    return alpha;
+                }
 
                 if (eval >= beta)
                 {

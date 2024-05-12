@@ -156,9 +156,10 @@ namespace Chess
             }
 
         }
-
+         
         public void UpdateSearchUIInfo(ref SearchInformation searchInformation)
         {
+
             SearchDepthText.text = "Search Depth: " + searchInformation.DepthSearched;
             PositionsEvaluatedText.text = "Positions Evaluated: " + searchInformation.PositionsEvaluated;
             NumCheckMatesText.text = "CheckMates Found: " + searchInformation.NumOfCheckMates;
@@ -313,13 +314,13 @@ namespace Chess
 
 
 
-        public void StartComputerVsComputerGame()
+        public void StartComputerVsComputerGame(SearchSettings searchSettings)
         {
-            StartCoroutine(ComputerVsComputerGameCoroutine());
+            StartCoroutine(ComputerVsComputerGameCoroutine(searchSettings));
         }
 
 
-        private IEnumerator ComputerVsComputerGameCoroutine()
+        private IEnumerator ComputerVsComputerGameCoroutine(SearchSettings searchSettings)
         {
             while (currentStatus == GameResult.InProgress)
             {
@@ -329,39 +330,23 @@ namespace Chess
                     if (ComputerPlayer1.Side == Sides.White)
                     {
                         // engine 1
-                        SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(ComputerPlayer1.SearchDepth);
-
-                        DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
-
-                        Instance.UpdateSearchUIInfo(ref searchInformation);
+                        ComputerPlayer1.Engine.StartSearchAsync(searchSettings);
                     }
                     else
                     {
                         // engine 2 
-                        SearchInformation searchInformation = ComputerPlayer2.Engine.FixedDepthSearch(ComputerPlayer2.SearchDepth);
-
-                        DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
-
-                        Instance.UpdateSearchUIInfo(ref searchInformation);
+                        ComputerPlayer2.Engine.StartSearchAsync(searchSettings);
                     }
                 }
                 else
                 {
                     if (ComputerPlayer1.Side == Sides.Black)
                     {
-                        SearchInformation searchInformation = ComputerPlayer1.Engine.FixedDepthSearch(ComputerPlayer1.SearchDepth);
-
-                        DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
-
-                        Instance.UpdateSearchUIInfo(ref searchInformation);
+                        ComputerPlayer1.Engine.StartSearchAsync(searchSettings);
                     }
                     else
                     {
-                        SearchInformation searchInformation = ComputerPlayer2.Engine.FixedDepthSearch(ComputerPlayer2.SearchDepth);
-
-                        DoTurn(searchInformation.MoveEvaluationInformation.BestMove);
-
-                        Instance.UpdateSearchUIInfo(ref searchInformation);
+                        ComputerPlayer2.Engine.StartSearchAsync(searchSettings);
                     }
                 }
 

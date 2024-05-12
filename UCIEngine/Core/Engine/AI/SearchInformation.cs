@@ -13,8 +13,6 @@ namespace Chess
 
         public int MoveNumber;
 
-        public Evaluation.MoveEvaluation MoveEvaluationInformation;
-
         public SearchDiagnostics searchDiagnostics = new();
     }
 

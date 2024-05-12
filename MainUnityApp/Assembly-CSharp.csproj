@@ -73,6 +73,7 @@
     <Compile Include="Assets\Scripts\Board\BoardManager.cs" />
     <Compile Include="Assets\Scripts\AI\MoveSorting.cs" />
     <Compile Include="Assets\Scripts\Misc\Piece.cs" />
+    <Compile Include="Assets\Scripts\AI\SearchSettings.cs" />
     <Compile Include="Assets\Scripts\Helpers\MainThreadDispatcher.cs" />
     <Compile Include="Assets\Scripts\AI\Engine.cs" />
     <Compile Include="Assets\Scripts\UI\UIController.cs" />

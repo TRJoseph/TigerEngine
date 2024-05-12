@@ -12,35 +12,29 @@ namespace Chess
     public class Arbiter
     {
         public static readonly string StartFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-        public enum Sides
-        {
-            White = 0,
-            Black = 1
-        }
-
-        public enum GameType
-        {
-            HumanVersusHuman,
-            HumanVersusComputer,
-            ComputerVersusComputer
-        }
 
         // this struct holds what engine version the computer will play using as well as the side it will play on (white or black)
         public struct ComputerPlayer
         {
-            public Sides Side;
             public Engine Engine;
-            public int SearchDepth;
         }
+
+        // these will be the default search settings
+        public static SearchSettings SearchSettings = new()
+        {
+            Depth = 4,
+            SearchTime = TimeSpan.FromMilliseconds(100),
+            SearchType = SearchType.IterativeDeepening
+        };
 
         /* when setting multiple computer players for a computer versus computer matchup,
          make sure that they are playing as opposite sides!! */
         public static ComputerPlayer ComputerPlayer1 = new()
         {
-            Side = Sides.Black,
-            Engine = new Engine(),
-            SearchDepth = 4
+            Engine = new Engine(SearchSettings),
         };
+
+        public static bool positionLoaded = false;
 
 
         public static void InitializeGame(string FENString)
@@ -56,12 +50,6 @@ namespace Chess
 
             BoardManager.InitializeBoard(FENString);
 
-            //UIController.Instance.GenerateGrid();
-            //UIController.Instance.GenerateFileAndRankLabels();
-            //UIController.Instance.SetGamePerspective();
-            //UIController.Instance.RenderPiecesOnBoard();
-            //UIController.Instance.UpdateToMoveText();
-
             // generates zobrist hash key
             ZobristHashing.GenerateZobristHashes();
 
@@ -71,12 +59,11 @@ namespace Chess
             CurrentGameState = new GameState(0, PositionInformation.EnPassantFile, PositionInformation.CastlingRights, PositionInformation.halfMoveAccumulator, zobristHashKey);
             GameStateHistory.Push(CurrentGameState);
 
-            // run performance tests
-            //Verification.RunPerformanceTests(5);
-
             legalMoves = GenerateMoves();
 
             //UICLI.PrintBoard(InternalBoard, whiteToMove);
+
+            positionLoaded = true;
         }
 
         public static void DoTurn(Move move)
