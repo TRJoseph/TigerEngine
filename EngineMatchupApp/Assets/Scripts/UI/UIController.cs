@@ -39,8 +39,8 @@ namespace Chess
 
 
         public TMP_InputField numberOfMatchesField;
-        public TMP_InputField enginePath1Field;
-        public TMP_InputField enginePath2Field;
+        public TextMeshProUGUI engine1Status;
+        public TextMeshProUGUI engine2Status;
 
         public TextMeshProUGUI SuiteRunStatus;
 
@@ -70,25 +70,21 @@ namespace Chess
             GenerateGrid();
             GenerateFileAndRankLabels();
             SetGamePerspective();
+
+            ChessEngineServer.StartServer();
         }
 
         // this function gets triggered by the "Start Test Suite" button 
         public void StartMatches()
         {
-            if (int.TryParse(numberOfMatchesField.text, out int numOfMatches) && !string.IsNullOrWhiteSpace(enginePath1Field.text) && !string.IsNullOrWhiteSpace(enginePath2Field.text))
+            if (int.TryParse(numberOfMatchesField.text, out int numOfMatches))
             {
-                if(numOfMatches > 1000)
+                if (numOfMatches > 1000)
                 {
                     SetSuiteRunStatus("Too Many Matches! Max: 1000");
                     return;
                 }
                 Debug.Log("Starting " + numOfMatches + " matches...");
-                Debug.Log("Engine 1 Path: " + enginePath1Field.text);
-                Debug.Log("Engine 2 Path: " + enginePath2Field.text);
-
-                ComputerPlayer1.enginePath = enginePath1Field.text;
-                ComputerPlayer2.enginePath = enginePath2Field.text;
-
 
                 GameManagement.ComputerVsComputerMatches(numOfMatches);
             }
@@ -98,14 +94,14 @@ namespace Chess
             }
         }
 
-        public void StartComputerVersusComputerGame()
-        {
-            // replace these directories with the desired engines
-            ComputerPlayer1.ChessEngineProcess.StartEngine(ComputerPlayer1.enginePath);
-            ComputerPlayer2.ChessEngineProcess.StartEngine(ComputerPlayer2.enginePath);
+        //public void StartComputerVersusComputerGame()
+        //{
+        //    // replace these directories with the desired engines
+        //    //ComputerPlayer1.ChessEngineProcess.StartEngine(ComputerPlayer1.enginePath);
+        //    //ComputerPlayer2.ChessEngineProcess.StartEngine(ComputerPlayer2.enginePath);
 
-            StartTurn();
-        }
+        //    StartTurn();
+        //}
 
         // this adjusts the camera rotation and the currently placed pieces to provide a nicer experience for the user.
         // usually the human player wants to see the board where the pieces they are in control of are on their side of the screen
@@ -132,6 +128,22 @@ namespace Chess
             else
             {
                 WhichPlayerMoveText.text = "Black to move";
+            }
+        }
+
+        // connected will be true if this was called on connect, else it will have been called on engine disconnect
+        public void UpdateEngineStatus(bool connected, string clientKey)
+        {
+            TextMeshProUGUI statusField = clientKey == "Engine1" ? engine1Status : engine2Status;
+            if (connected)
+            {
+                statusField.text = "Connected";
+                statusField.color = Color.green; 
+            }
+            else
+            {
+                statusField.text = "Disconnected";
+                statusField.color = Color.red;
             }
         }
 

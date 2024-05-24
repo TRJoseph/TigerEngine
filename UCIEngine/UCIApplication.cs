@@ -1,4 +1,8 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.IO.Pipes;
+using System.Net.Sockets;
+using System.Reflection.PortableExecutable;
+using System.Runtime.InteropServices;
+using System.Threading;
 using static Chess.MoveGen;
 
 namespace Chess
@@ -11,6 +15,7 @@ namespace Chess
 
             Console.WriteLine("TigerEngine Running...");
             Console.WriteLine("Enter A Command To Continue.");
+            SendUCIResponse();
 
 
             string command;
@@ -59,11 +64,116 @@ namespace Chess
                     Console.WriteLine("TigerEngine shutting down...");
                     Environment.Exit(0);
                     break;
+                // extra commands for working with the matchmaking manager
+                case "connect":
+                    ConnectToServer();
+                    break;
+                case "disconnect":
+                    Disconnect();
+                    break;
                 default:
                     Console.WriteLine("Unknown command");
                     break;
             }
         }
+
+        private static TcpClient client;
+        private static StreamReader reader;
+        private static StreamWriter writer;
+        private static string serverIp = "127.0.0.1";
+        private static int serverPort = 49152;
+
+
+        public static void ConnectToServer()
+        {
+
+            client = new TcpClient(serverIp, serverPort);
+            Console.WriteLine("Connected to server.");
+
+            var networkStream = client.GetStream();
+            reader = new StreamReader(networkStream);
+            writer = new StreamWriter(networkStream) { AutoFlush = true };
+
+            // Start listening to the server messages asynchronously
+            Task.Run(() => ListenToServerAsync());
+        }
+
+        private static async Task ListenToServerAsync()
+        {
+            try
+            {
+                string serverMessage;
+                while ((serverMessage = await reader.ReadLineAsync()) != null)
+                {
+                    Console.WriteLine($"Received from server: {serverMessage}");
+
+                    if(serverMessage.StartsWith("position")) {
+                        SetPosition(serverMessage.Split(" "));
+                    }
+
+                    if(serverMessage.StartsWith("go"))
+                    {
+                        StartEngine();
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("Operation was canceled gracefully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error occurred: {ex.Message}");
+            }
+            finally
+            {
+                Disconnect();
+            }
+        }
+        public static void Disconnect()
+        {
+            reader?.Dispose();
+            writer?.Dispose();
+            client?.Close();
+            Console.WriteLine("Disconnected from server.");
+        }
+
+        public static async Task SendCommandToServerAsync(string command)
+        {
+            if (client != null && client.Connected)
+            {
+                await writer.WriteLineAsync(command);
+                Console.WriteLine($"Sent to server: {command}");
+            }
+            else
+            {
+                Console.WriteLine("Client is not connected.");
+            }
+        }
+
+
+        private static void CommunicateWithServer()
+        {
+            using (client)
+            using (var networkStream = client.GetStream())
+            using (var reader = new StreamReader(networkStream))
+            using (var writer = new StreamWriter(networkStream))
+            {
+                // Initial communication or keep-alive message
+                SendCommand("uci", writer, reader);
+            }
+        }
+
+        private static void SendCommand(string command, StreamWriter writer, StreamReader reader)
+        {
+            writer.WriteLine(command);
+            writer.Flush();
+
+            // Optionally wait for a response immediately after sending
+            string response = reader.ReadLine();
+            Console.WriteLine($"Received from server: {response}");
+        }
+
 
         public static void StartEngine()
         {
@@ -83,6 +193,7 @@ namespace Chess
                 }
 
                 Console.WriteLine("bestmove " + bestMove);
+                SendCommandToServerAsync("bestmove " + bestMove);
             } else
             {
                 Console.WriteLine("Please set a position first by executing the commands: ucinewgame or position");
@@ -156,6 +267,7 @@ namespace Chess
                 // Find a matching move, considering promotion if applicable
                 Move selectedMove = FindMatchingMove(fromBitboard, toBitboard, promotionChar);
 
+ 
                 // Execute the move
                 Arbiter.DoTurn(selectedMove);
             }
@@ -210,7 +322,7 @@ namespace Chess
 
         public static void SendUCIResponse()
         {
-            Console.WriteLine("id name TigerEngine - Version 0");
+            Console.WriteLine("id name TigerEngine - Version 5 200ms Think Time");
             Console.WriteLine("id author Thomas R. Joseph");
             Console.WriteLine("option name Hash type spin default 64 min 1 max 2048");
             Console.WriteLine("uciok");
@@ -223,18 +335,24 @@ namespace Chess
             // TODO: implement the transposition table
             try
             {
-                if (tokens[0] == "searchtype")
+                switch(tokens[1])
                 {
-                    if (tokens[1].Contains("iterative"))
-                    {
-                       
-                    } else if (tokens[1].Contains("fixed")) {
+                    case "searchtype":
+                        if (tokens[1].Contains("iterative"))
+                        {
 
-                    }
+                        }
+                        else if (tokens[1].Contains("fixed"))
+                        {
+
+                        }
+                        break;
+                    default:
+                        Console.WriteLine("Please follow this format for setting custom options: setoption name <id> [value <x>]");
+                        break;
                 }
             } catch
             {
-
                 Console.WriteLine("Please follow this format for setting custom options: setoption name <id> [value <x>]");
             }
 

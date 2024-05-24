@@ -7,6 +7,7 @@ using UnityEngine;
 using System.Collections;
 using System;
 using System.Collections.Generic;
+using System.Net.Sockets;
 
 namespace Chess
 {
@@ -30,7 +31,7 @@ namespace Chess
         public struct ComputerPlayer
         {
             public Sides Side;
-            public ChessEngineProcess ChessEngineProcess;
+            //public ChessEngineProcess ChessEngineProcess;
             public string enginePath;
         }
 
@@ -39,13 +40,13 @@ namespace Chess
         public static ComputerPlayer ComputerPlayer1 = new()
         {
             Side = Sides.White,
-            ChessEngineProcess = new()
+            //ChessEngineProcess = new()
         };
 
         public static ComputerPlayer ComputerPlayer2 = new()
         {
             Side = Sides.Black,
-            ChessEngineProcess = new()
+            //ChessEngineProcess = new()
         };
 
         // set for the desired game type
@@ -92,32 +93,34 @@ namespace Chess
 
         public static void StartGame(string FENString, bool isLogging = false)
         {
-            // Unsubscribe previous event handlers to ensure a clean state
-            ComputerPlayer1.ChessEngineProcess.OnMoveReady -= HandleMoveReadyForLogging;
-            ComputerPlayer1.ChessEngineProcess.OnMoveReady -= HandleMoveReadyWithUI;
-            ComputerPlayer2.ChessEngineProcess.OnMoveReady -= HandleMoveReadyForLogging;
-            ComputerPlayer2.ChessEngineProcess.OnMoveReady -= HandleMoveReadyWithUI;
+            //// Unsubscribe previous event handlers to ensure a clean state
+            //ComputerPlayer1.ChessEngineProcess.OnMoveReady -= HandleMoveReadyForLogging;
+            //ComputerPlayer1.ChessEngineProcess.OnMoveReady -= HandleMoveReadyWithUI;
+            //ComputerPlayer2.ChessEngineProcess.OnMoveReady -= HandleMoveReadyForLogging;
+            //ComputerPlayer2.ChessEngineProcess.OnMoveReady -= HandleMoveReadyWithUI;
 
             InitializeGame(FENString, isLogging);
 
-            if (isLogging)
-            {
-                // Subscribe to a simplified version of event handling that does not involve UI updates
-                ComputerPlayer1.ChessEngineProcess.OnMoveReady += HandleMoveReadyForLogging;
-                ComputerPlayer2.ChessEngineProcess.OnMoveReady += HandleMoveReadyForLogging;
+            StartComputerVersusComputerGame();
 
-                // Start the game in a logging or automated mode
-                StartComputerVersusComputerGame();
-            }
-            else
-            {
-                // Subscribe to the full event handling that updates the UI
-                ComputerPlayer1.ChessEngineProcess.OnMoveReady += HandleMoveReadyWithUI;
-                ComputerPlayer2.ChessEngineProcess.OnMoveReady += HandleMoveReadyWithUI;
+            //if (isLogging)
+            //{
+            //    //// Subscribe to a simplified version of event handling that does not involve UI updates
+            //    //ComputerPlayer1.ChessEngineProcess.OnMoveReady += HandleMoveReadyForLogging;
+            //    //ComputerPlayer2.ChessEngineProcess.OnMoveReady += HandleMoveReadyForLogging;
 
-                // Start the game with UI updates and interactions
-                UIController.Instance.StartComputerVersusComputerGame();
-            }
+            //    // Start the game in a logging or automated mode
+            //    StartComputerVersusComputerGame();
+            //}
+            //else
+            //{
+            //    //// Subscribe to the full event handling that updates the UI
+            //    //ComputerPlayer1.ChessEngineProcess.OnMoveReady += HandleMoveReadyWithUI;
+            //    //ComputerPlayer2.ChessEngineProcess.OnMoveReady += HandleMoveReadyWithUI;
+
+            //    // Start the game with UI updates and interactions
+            //    UIController.Instance.StartComputerVersusComputerGame();
+            //}
         }
 
         private static void HandleMoveReadyForLogging(string move)
@@ -132,22 +135,26 @@ namespace Chess
 
         public static void HandleMoveReadyWithUI(string move)
         {
+
+            MoveHistory.Add(move);
+            if (currentStatus == GameResult.InProgress) // Make sure the game is still ongoing
+            {
+                ApplyMove(move, isLogging: false);
+                StartTurn();
+            }
+
             MainThreadDispatcher.Enqueue(() =>
             {
-                MoveHistory.Add(move);
-                if (currentStatus == GameResult.InProgress) // Make sure the game is still ongoing
-                {
-                    ApplyMove(move, isLogging: false);
-                    StartTurn();
-                }
+                UIController.Instance.UpdatePieceRenders();
+                UIController.Instance.UpdateToMoveText();
             });
         }
 
         private static void StartComputerVersusComputerGame()
         {
             // replace these directories with the desired engines
-            ComputerPlayer1.ChessEngineProcess.StartEngine(ComputerPlayer1.enginePath);
-            ComputerPlayer2.ChessEngineProcess.StartEngine(ComputerPlayer2.enginePath);
+            //ComputerPlayer1.ChessEngineProcess.StartEngine(ComputerPlayer1.enginePath);
+            //ComputerPlayer2.ChessEngineProcess.StartEngine(ComputerPlayer2.enginePath);
 
             StartTurn();
         }
@@ -155,20 +162,30 @@ namespace Chess
         public static void StartTurn()
         {
             string moveString = FormatAppliedMoves();
-            ChessEngineProcess targetEngine = GetTargetEngine();
+            string targetEngineKey = GetTargetEngine();
 
-            targetEngine.SendCommand("position fen " + GameStartFENString + " " + moveString);
-            targetEngine.SendCommand("go");
+            if(moveString.Length > 0)
+            {
+                ChessEngineServer.SendCommandToClient(targetEngineKey, "position fen " + GameStartFENString + " " + moveString);
+            } else
+            {
+                ChessEngineServer.SendCommandToClient(targetEngineKey, "position fen " + GameStartFENString);
+            }
 
-            if(currentStatus != GameResult.InProgress) {
-                GameManagement.TriggerCheckGameCompletion();
+            if(currentStatus == GameResult.InProgress)
+            {
+                ChessEngineServer.SendCommandToClient(targetEngineKey, "go");
+            } else
+            {
+                GameManagement.TriggerGameCompletion();
+               // GameManagement.TriggerCheckGameCompletion();
             }
         }
-        private static ChessEngineProcess GetTargetEngine()
+        private static string GetTargetEngine()
         {
-            return (whiteToMove ? ComputerPlayer1.Side == Sides.White : ComputerPlayer1.Side == Sides.Black)
-                ? ComputerPlayer1.ChessEngineProcess
-                : ComputerPlayer2.ChessEngineProcess;
+            return (whiteToMove)
+                ? "Engine1"
+                : "Engine2";
         }
 
         public static string FormatAppliedMoves()
@@ -255,12 +272,6 @@ namespace Chess
         {
             ExecuteMove(move);
 
-            // if we are not logging, update the UI so user can watch the game
-            if(!isLogging)
-            {
-                UIController.Instance.UpdatePieceRenders();
-                UIController.Instance.UpdateToMoveText();
-            }
 
             legalMoves = GenerateMoves();
             // check for game over rules

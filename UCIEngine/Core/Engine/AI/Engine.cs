@@ -5,6 +5,7 @@ using static Chess.Board;
 using static Chess.MoveGen;
 using System.Threading.Tasks;
 using static Chess.Arbiter;
+using static Chess.MoveSorting;
 
 namespace Chess
 {
@@ -35,7 +36,7 @@ namespace Chess
         const int infinity = 9999999;
         const int negativeInfinity = -infinity;
         const int mateScore = 100000;
-        const int maxExtensions = 256;
+        const int maxExtensions = 10;
 
 
         public Move bestMoveThisIteration;
@@ -45,29 +46,34 @@ namespace Chess
         public int bestEval;
 
         public bool searchCancelled = false;
+        public bool searchedOneDepth = false;
+
+        public void StartTimer(int timeout)
+        {
+            // create a new thread that will wait for a specified timeout and then cancel the search
+            new Thread(() =>
+            {
+                Thread.Sleep(timeout); // wait for the timeout period
+                searchCancelled = true;
+            })
+            { IsBackground = true }.Start();
+        }
+
 
         public void StartSearch()
         {
             searchCancelled = false;
+            searchedOneDepth = false;
 
-            var searchTask = Task.Run(() => ChooseSearchType());
-
-            var timerTask = Task.Delay(searchSettings.SearchTime);
-
-            // wait for either task to complete
-            int completedTaskIndex = Task.WaitAny(searchTask, timerTask);
-
-            // index 1 here is the timer task, checking if its completed before moving on
-            if (completedTaskIndex == 1)
+            // if we are using iterative deepening then we are concerned about the time
+            if(searchSettings.SearchType == SearchType.IterativeDeepening)
             {
-                searchCancelled = true; // cancels the search
+                StartTimer((int)searchSettings.SearchTime.TotalMilliseconds);
             }
 
-            // ensure the search task is completed if it wasn't cancelled or if still running
-            if (!searchTask.IsCompleted)
-                searchTask.Wait();
+            ChooseSearchType();
 
-            DoTurn(bestMove);
+            //DoTurn(bestMove);
             return;
         }
 
@@ -82,6 +88,16 @@ namespace Chess
             {
                 FixedDepthSearch(searchSettings.Depth);
             }
+
+            // in the rare case that the move does not get updated choose a random move
+            if (bestMove.IsDefault() || bestMove.toSquare == 0 || bestMove.fromSquare == 0)
+            {
+                Random rand = new();
+                int moveIndex = rand.Next(legalMoves.Length); // Select a random index from the list
+                bestMove = legalMoves[moveIndex];
+                bestEval = 0;
+            }
+
         }
 
         public void IterativeDeepeningSearch()
@@ -93,7 +109,7 @@ namespace Chess
             bestMove = new Move();
             bestEval = 0;
 
-            while (!searchCancelled)
+            while (!searchCancelled && depth <= maxDepth)
             {
                 searchInformation.PositionsEvaluated = 0;
                 searchInformation.NumOfCheckMates = 0;
@@ -129,7 +145,7 @@ namespace Chess
 
         public int NegaMax(int depth, int depthFromRoot, int alpha, int beta, int searchExtensions = 0)
         {
-            if (searchCancelled)
+            if (searchedOneDepth && searchCancelled)
             {
                 return alpha;
             }
@@ -146,9 +162,13 @@ namespace Chess
 
             bool playerInCheck = IsPlayerInCheck();
             GameResult gameResult = CheckForGameOverRules(playerInCheck, inSearch: true);
-            if (gameResult == GameResult.Stalemate || gameResult == GameResult.ThreeFold || gameResult == GameResult.FiftyMoveRule || gameResult == GameResult.InsufficientMaterial)
+
+            if(depthFromRoot > 1)
             {
-                return 0;
+                if(gameResult == GameResult.ThreeFold || gameResult == GameResult.FiftyMoveRule)
+                {
+                    return 0;
+                }
             }
 
             if (gameResult == GameResult.Checkmate)
@@ -158,6 +178,15 @@ namespace Chess
                 // prioritize the fastest mate
                 return -mateScore - depth;
             }
+
+            if (gameResult == GameResult.Stalemate || gameResult == GameResult.InsufficientMaterial)
+            {
+                return 0;
+            }
+            //if (gameResult == GameResult.Stalemate || gameResult == GameResult.InsufficientMaterial)
+            //{
+            //    return 0;
+            //}
 
             int searchExtension = 0;
 
@@ -175,7 +204,7 @@ namespace Chess
                 int eval = -NegaMax(depth - 1 + searchExtension, depthFromRoot + 1, -beta, -alpha, searchExtensions);
                 UndoMove(move);
 
-                if (searchCancelled)
+                if (searchedOneDepth && searchCancelled)
                 {
                     return alpha;
                 }
@@ -197,6 +226,7 @@ namespace Chess
                 }
                 if (eval > alpha)
                 {
+                    searchedOneDepth = true;
                     alpha = eval;
                     if (depthFromRoot == 0)
                     {
@@ -211,7 +241,7 @@ namespace Chess
         // https://www.chessprogramming.org/Quiescence_Search
         public int QuiescenceSearch(int alpha, int beta)
         {
-            if (searchCancelled)
+            if (searchedOneDepth && searchCancelled)
             {
                 return alpha;
             }
@@ -239,7 +269,7 @@ namespace Chess
                 eval = -QuiescenceSearch(-beta, -alpha);
                 UndoMove(captureMove);
 
-                if (searchCancelled)
+                if (searchedOneDepth && searchCancelled)
                 {
                     return alpha;
                 }
@@ -250,6 +280,7 @@ namespace Chess
                 }
                 if (eval > alpha)
                 {
+                    searchedOneDepth = true;
                     alpha = eval;
                 }
             }

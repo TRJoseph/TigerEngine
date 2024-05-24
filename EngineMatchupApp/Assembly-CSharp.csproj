@@ -67,7 +67,7 @@
     <Compile Include="Assets\Scripts\Board\GameState.cs" />
     <Compile Include="Assets\Scripts\Helpers\BitBoardHelper.cs" />
     <Compile Include="Assets\Scripts\GameManagement\GameManagement.cs" />
-    <Compile Include="Assets\Scripts\IPC\ChessEngineProcess.cs" />
+    <Compile Include="Assets\Scripts\IPC\ChessEngineServer.cs" />
     <Compile Include="Assets\Scripts\GameManagement\LichessGameResults.cs" />
     <Compile Include="Assets\Scripts\Board\BoardManager.cs" />
     <Compile Include="Assets\Scripts\Misc\Piece.cs" />

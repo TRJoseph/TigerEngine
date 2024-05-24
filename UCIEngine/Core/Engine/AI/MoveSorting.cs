@@ -8,7 +8,7 @@ namespace Chess
     public class MoveSorting
     {
 
-        const int maxDepth = 10;
+        public const int maxDepth = 10;
 
         const int million = 1000000;
         const int winningCaptureBias = 8 * million;
@@ -34,6 +34,12 @@ namespace Chess
 
         public bool IsKillerMove(Move move, int currentDepth)
         {
+            if (currentDepth < 0 || currentDepth >= maxDepth)
+            {
+                Console.WriteLine($"Invalid depth access: {currentDepth}");
+                return false;  // Safely handle out-of-bounds access
+            }
+
             if (MatchingMove(move, killerMoves[currentDepth, 0]) || MatchingMove(move, killerMoves[currentDepth, 1]))
             {
                 return true;

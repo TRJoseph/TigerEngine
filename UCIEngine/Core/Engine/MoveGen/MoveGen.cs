@@ -650,7 +650,7 @@ namespace Chess
 
             for (int i = 0; i < currentMoveIndex; i++)
             {
-                ExecuteMove(pseudoLegalMoves[i]);
+                ExecuteMove(pseudoLegalMoves[i], true);
 
                 int currentKingSquare = whiteToMove ? BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]) : BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]);
 
@@ -659,7 +659,7 @@ namespace Chess
                     pseudoLegalMoves[legalMoveCount++] = pseudoLegalMoves[i];
                 }
 
-                UndoMove(pseudoLegalMoves[i]);
+                UndoMove(pseudoLegalMoves[i], true);
             }
             return legalMoveCount; // Returning the count of legal moves
         }

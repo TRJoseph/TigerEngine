@@ -16,15 +16,26 @@ namespace Chess
     {
         public static Action OnGameCompleted;
 
-        public static void TriggerCheckGameCompletion()
-        {
-            OnGameCompleted?.Invoke();
-        }
+        //public static void TriggerCheckGameCompletion()
+        //{
+        //    OnGameCompleted?.Invoke();
+        //}
 
-        public static void ComputerVsComputerMatches(int numOfMatches)
+        public static int matchCount = 0;
+        public static int totalWhiteWins = 0;
+        public static int totalBlackWins = 0;
+        public static int totalDraws = 0;
+
+        public static int numOfMatches = 0;
+
+        public static string logFilePath = string.Empty;
+        public static DateTime startDateTime;
+
+        public static void ComputerVsComputerMatches(int numMatches)
         {
+            numOfMatches = numMatches;
             // Format current date and time for the filename
-            DateTime startDateTime = DateTime.Now;
+            startDateTime = DateTime.Now;
 
             string dateTimeFormat = startDateTime.ToString("yyyyMMdd_HHmmss");
 
@@ -34,7 +45,7 @@ namespace Chess
 
             // Convert the relative path to an absolute path
             string logDirectory = Path.Combine(Application.persistentDataPath, relativeLogsPath);
-            string logFilePath = Path.Combine(logDirectory, logFileName);
+            logFilePath = Path.Combine(logDirectory, logFileName);
             logFilePath = logFilePath.Replace("\\", "/");
 
             // Ensure the directory exists
@@ -44,52 +55,51 @@ namespace Chess
             }
 
             // Log start of matches with start time
-            File.AppendAllText(logFilePath, $"Starting {numOfMatches} matches at {startDateTime.ToString("yyyy-MM-dd HH:mm:ss")}\n");
+            File.AppendAllText(logFilePath, $"Starting {numMatches} matches at {startDateTime.ToString("yyyy-MM-dd HH:mm:ss")}\n");
 
             // set UI appropriately
-            UIController.Instance.UpdateGameStatusInformation(1, numOfMatches);
+            UIController.Instance.UpdateGameStatusInformation(1, numMatches);
             UIController.Instance.SetSuiteRunStatus("Running...");
 
-            int matchCount = 0;
-            int totalWhiteWins = 0;
-            int totalBlackWins = 0;
-            int totalDraws = 0;
-
-            OnGameCompleted = () =>
-            {
-                RecordResult(matchCount, logFilePath, ref totalWhiteWins, ref totalBlackWins, ref totalDraws);
-                if (matchCount < numOfMatches)
-                {
-                    Arbiter.StartGame(LichessGameResults.FENStringArray[matchCount]);
-                    matchCount++;
-
-                    MainThreadDispatcher.Enqueue(() =>
-                    {
-                        UIController.Instance.UpdateGameStatusInformation(matchCount, numOfMatches);
-                    });
-                }
-                else
-                {
-                    DateTime endDateTime = DateTime.Now;
-                    TimeSpan duration = endDateTime - startDateTime;
-
-                    string summary = $"Matches completed at {endDateTime.ToString("yyyy-MM-dd HH:mm:ss")}\n" +
-                                     $"Total Matches: {matchCount}\n" +
-                                     $"Total White Wins: {totalWhiteWins}\n" +
-                                     $"Total Black Wins: {totalBlackWins}\n" +
-                                     $"Total Draws: {totalDraws}\n" +
-                                     $"Elapsed Time: {duration.ToString(@"hh\:mm\:ss")}\n";
-
-                    File.AppendAllText(logFilePath, summary);
-                    UIController.Instance.SetSuiteRunStatus("Waiting To Start...");
-                }
-            };
+            matchCount = 0;
+            totalWhiteWins = 0;
+            totalBlackWins = 0;
+            totalDraws = 0;
 
             // is logging will default be false, all this means is that the game will be played out in front of the user
             Arbiter.StartGame(LichessGameResults.FENStringArray[matchCount]);
             matchCount++;
         }
 
+        public static void TriggerGameCompletion()
+        {
+            RecordResult(matchCount, logFilePath, ref totalWhiteWins, ref totalBlackWins, ref totalDraws);
+            if (matchCount < numOfMatches)
+            {
+                Arbiter.StartGame(LichessGameResults.FENStringArray[matchCount]);
+                matchCount++;
+
+                MainThreadDispatcher.Enqueue(() =>
+                {
+                    UIController.Instance.UpdateGameStatusInformation(matchCount, numOfMatches);
+                });
+            }
+            else
+            {
+                DateTime endDateTime = DateTime.Now;
+                TimeSpan duration = endDateTime - startDateTime;
+
+                string summary = $"Matches completed at {endDateTime.ToString("yyyy-MM-dd HH:mm:ss")}\n" +
+                                 $"Total Matches: {matchCount}\n" +
+                                 $"Total White Wins: {totalWhiteWins}\n" +
+                                 $"Total Black Wins: {totalBlackWins}\n" +
+                                 $"Total Draws: {totalDraws}\n" +
+                                 $"Elapsed Time: {duration.ToString(@"hh\:mm\:ss")}\n";
+
+                File.AppendAllText(logFilePath, summary);
+                UIController.Instance.SetSuiteRunStatus("Waiting To Start...");
+            }
+        }
 
 
         private static void RecordResult(int matchCount, string logFilePath, ref int totalWhiteWins, ref int totalBlackWins, ref int totalDraws)
