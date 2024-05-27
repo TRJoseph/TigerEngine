@@ -29,12 +29,12 @@ namespace Chess
         public MoveSorting()
         {
             // max depth x number of moves stored
-            killerMoves = new Move[maxDepth, 2];
+            killerMoves = new Move[maxDepth+1, 2];
         }
 
         public bool IsKillerMove(Move move, int currentDepth)
         {
-            if (currentDepth < 0 || currentDepth >= maxDepth)
+            if (currentDepth < 0 || currentDepth > maxDepth)
             {
                 Console.WriteLine($"Invalid depth access: {currentDepth}");
                 return false;  // Safely handle out-of-bounds access

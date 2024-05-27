@@ -228,6 +228,8 @@ namespace Chess
                 {
                     searchedOneDepth = true;
                     alpha = eval;
+
+                    
                     if (depthFromRoot == 0)
                     {
                         bestMoveThisIteration = move;
