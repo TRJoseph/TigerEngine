@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Threading;
+using static Chess.Arbiter;
 using static Chess.MoveGen;
 
 namespace Chess
@@ -10,6 +11,15 @@ namespace Chess
 
     public class UCIEngine
     {
+
+        // These facilitate interaction with the Engine Matchup Application when debugging/testing engine strength
+        private static TcpClient client;
+        private static StreamReader reader;
+        private static StreamWriter writer;
+        private static string serverIp = "127.0.0.1";
+        private static int serverPort = 49152;
+        //
+
         public static void Main(string[] args)
         {
 
@@ -58,7 +68,8 @@ namespace Chess
                     StartEngine();
                     break;
                 case "stop":
-                    // implement function to stop search early
+                    ComputerPlayer1.Engine.searchCancelled = true;
+                    ComputerPlayer1.Engine.searchedOneDepth = true;
                     break;
                 case "quit":
                     Console.WriteLine("TigerEngine shutting down...");
@@ -76,13 +87,6 @@ namespace Chess
                     break;
             }
         }
-
-        private static TcpClient client;
-        private static StreamReader reader;
-        private static StreamWriter writer;
-        private static string serverIp = "127.0.0.1";
-        private static int serverPort = 49152;
-
 
         public static void ConnectToServer()
         {
@@ -179,7 +183,10 @@ namespace Chess
         {
             if(Arbiter.positionLoaded)
             {
-                Arbiter.ComputerPlayer1.Engine.StartSearch();
+                // starts thread to keep UI responsive
+                new Thread(() =>
+                {
+                    Arbiter.ComputerPlayer1.Engine.StartSearch();
 
                 string bestMove;
 
@@ -194,7 +201,10 @@ namespace Chess
 
                 Console.WriteLine("bestmove " + bestMove);
                 SendCommandToServerAsync("bestmove " + bestMove);
-            } else
+                })
+                { IsBackground = true }.Start();
+            }
+            else
             {
                 Console.WriteLine("Please set a position first by executing the commands: ucinewgame or position");
             }
@@ -322,9 +332,21 @@ namespace Chess
 
         public static void SendUCIResponse()
         {
-            Console.WriteLine("id name TigerEngine - Version 5 200ms Think Time");
+            if(Arbiter.SearchSettings.SearchType == SearchType.IterativeDeepening)
+            {
+                Console.WriteLine("id name TigerEngine - Version 5 " + Arbiter.SearchSettings.SearchTime.TotalMilliseconds.ToString() + " ms Think Time");
+
+            } else
+            {
+                Console.WriteLine("id name TigerEngine - Version 5 Fixed Depth Search");
+            }
+
             Console.WriteLine("id author Thomas R. Joseph");
-            Console.WriteLine("option name Hash type spin default 64 min 1 max 2048");
+            Console.WriteLine("option name Depth: " + Arbiter.SearchSettings.Depth);
+            Console.WriteLine("option name SearchType type: " + Arbiter.SearchSettings.SearchType);
+            Console.WriteLine("option name SearchTime time: " + Arbiter.SearchSettings.SearchTime.TotalMilliseconds.ToString() + " ms");
+
+
             Console.WriteLine("uciok");
         }
 
@@ -335,18 +357,32 @@ namespace Chess
             // TODO: implement the transposition table
             try
             {
-                switch(tokens[1])
+                switch(tokens[1].ToLower())
                 {
                     case "searchtype":
-                        if (tokens[1].Contains("iterative"))
+                        if (tokens[2].Contains("iterative"))
                         {
-
+                            Arbiter.SearchSettings.SearchType = SearchType.IterativeDeepening;
                         }
-                        else if (tokens[1].Contains("fixed"))
+                        else if (tokens[2].Contains("fixed"))
                         {
-
+                            Arbiter.SearchSettings.SearchType = SearchType.FixedDepth;
+                        } else
+                        {
+                            Console.WriteLine("Please input a search type: iterative or fixed depth");
                         }
                         break;
+                    case "searchtime":
+                        try
+                        {
+                            Arbiter.SearchSettings.SearchTime = TimeSpan.FromMilliseconds(double.Parse(tokens[2]));
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("Please input the search time in milliseconds!");
+                        }
+                        break;
+
                     default:
                         Console.WriteLine("Please follow this format for setting custom options: setoption name <id> [value <x>]");
                         break;

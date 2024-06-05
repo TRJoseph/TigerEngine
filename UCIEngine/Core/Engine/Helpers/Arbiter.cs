@@ -23,7 +23,7 @@ namespace Chess
         public static SearchSettings SearchSettings = new()
         {
             Depth = 4,
-            SearchTime = TimeSpan.FromMilliseconds(200),
+            SearchTime = TimeSpan.FromMilliseconds(1000),
             SearchType = SearchType.IterativeDeepening
         };
 

@@ -72,8 +72,6 @@ namespace Chess
             }
 
             ChooseSearchType();
-
-            //DoTurn(bestMove);
             return;
         }
 
@@ -183,10 +181,6 @@ namespace Chess
             {
                 return 0;
             }
-            //if (gameResult == GameResult.Stalemate || gameResult == GameResult.InsufficientMaterial)
-            //{
-            //    return 0;
-            //}
 
             int searchExtension = 0;
 
