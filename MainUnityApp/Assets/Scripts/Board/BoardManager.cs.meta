@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3bb97f67fb12a4600bf5fec988e5d670
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - tilePrefab: {instanceID: 0}
+  - _cam: {instanceID: 0}
+  - Canvas: {instanceID: 0}
+  - chessPiecePrefab: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
