@@ -111,11 +111,12 @@ namespace Chess
                 {
                     Console.WriteLine($"Received from server: {serverMessage}");
 
-                    if(serverMessage.StartsWith("position")) {
+                    if (serverMessage.StartsWith("position"))
+                    {
                         SetPosition(serverMessage.Split(" "));
                     }
 
-                    if(serverMessage.StartsWith("go"))
+                    if (serverMessage.StartsWith("go"))
                     {
                         StartEngine();
                     }
@@ -181,26 +182,26 @@ namespace Chess
 
         public static void StartEngine()
         {
-            if(Arbiter.positionLoaded)
+            if (Arbiter.positionLoaded)
             {
                 // starts thread to keep UI responsive
                 new Thread(() =>
                 {
                     Arbiter.ComputerPlayer1.Engine.StartSearch();
 
-                string bestMove;
+                    string bestMove;
 
-                if (Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag != PromotionFlags.None)
-                {
-                    bestMove = BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.toSquare) + ConvertPromotionFlagToChar(Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag);
-                }
-                else
-                {
-                    bestMove = BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.toSquare);
-                }
+                    if (Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag != PromotionFlags.None)
+                    {
+                        bestMove = BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.toSquare) + ConvertPromotionFlagToChar(Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag);
+                    }
+                    else
+                    {
+                        bestMove = BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.toSquare);
+                    }
 
-                Console.WriteLine("bestmove " + bestMove);
-                SendCommandToServerAsync("bestmove " + bestMove);
+                    Console.WriteLine("bestmove " + bestMove);
+                    SendCommandToServerAsync("bestmove " + bestMove);
                 })
                 { IsBackground = true }.Start();
             }
@@ -277,7 +278,7 @@ namespace Chess
                 // Find a matching move, considering promotion if applicable
                 Move selectedMove = FindMatchingMove(fromBitboard, toBitboard, promotionChar);
 
- 
+
                 // Execute the move
                 Arbiter.DoTurn(selectedMove);
             }
@@ -332,19 +333,19 @@ namespace Chess
 
         public static void SendUCIResponse()
         {
-            if(Arbiter.SearchSettings.SearchType == SearchType.IterativeDeepening)
-            {
-                Console.WriteLine("id name TigerEngine - Version 5 " + Arbiter.SearchSettings.SearchTime.TotalMilliseconds.ToString() + " ms Think Time");
-
-            } else
-            {
-                Console.WriteLine("id name TigerEngine - Version 5 Fixed Depth Search");
-            }
-
+            Console.WriteLine("id name TigerEngine - Version 5");
             Console.WriteLine("id author Thomas R. Joseph");
-            Console.WriteLine("option name Depth: " + Arbiter.SearchSettings.Depth);
-            Console.WriteLine("option name SearchType type: " + Arbiter.SearchSettings.SearchType);
-            Console.WriteLine("option name SearchTime time: " + Arbiter.SearchSettings.SearchTime.TotalMilliseconds.ToString() + " ms");
+
+            // TODO: Actually implement these options 
+            // Console.WriteLine("option name Debug Log File type string default");
+            // Console.WriteLine("option name Threads type spin default 1 min 3 max 1024");
+            // Console.WriteLine("option name Clear Hash type button");
+            // Console.WriteLine("option name Ponder type check default false");
+
+            // These are 'go' options as stated by the UCI
+            // Console.WriteLine("option name Depth " + Arbiter.SearchSettings.Depth);
+            // Console.WriteLine("option name SearchType type " + Arbiter.SearchSettings.SearchType);
+            // Console.WriteLine("option name SearchTime time " + Arbiter.SearchSettings.SearchTime.TotalMilliseconds.ToString() + " ms");
 
 
             Console.WriteLine("uciok");
@@ -357,7 +358,7 @@ namespace Chess
             // TODO: implement the transposition table
             try
             {
-                switch(tokens[1].ToLower())
+                switch (tokens[1].ToLower())
                 {
                     case "searchtype":
                         if (tokens[2].Contains("iterative"))
@@ -367,7 +368,8 @@ namespace Chess
                         else if (tokens[2].Contains("fixed"))
                         {
                             Arbiter.SearchSettings.SearchType = SearchType.FixedDepth;
-                        } else
+                        }
+                        else
                         {
                             Console.WriteLine("Please input a search type: iterative or fixed depth");
                         }
@@ -387,7 +389,8 @@ namespace Chess
                         Console.WriteLine("Please follow this format for setting custom options: setoption name <id> [value <x>]");
                         break;
                 }
-            } catch
+            }
+            catch
             {
                 Console.WriteLine("Please follow this format for setting custom options: setoption name <id> [value <x>]");
             }
