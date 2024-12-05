@@ -82,10 +82,29 @@ namespace Chess
                 case "disconnect":
                     Disconnect();
                     break;
+                case "help":
+                    PrintHelpSection();
+                    break;
                 default:
-                    Console.WriteLine("Unknown command");
+                    Console.WriteLine("Unrecognized Command, please refer to the help section below:");
+                    PrintHelpSection();
                     break;
             }
+        }
+
+        public static void PrintHelpSection()
+        {
+            Console.WriteLine("--------------------------------");
+            Console.WriteLine("Command List:");
+            Console.Write("\nuci - Prints author and current version information about the engine.\nUsage: uci\n\n" +
+                "isready - Replies letting the user know if the engine is responsive.\nUsage: isready\n\n" +
+                "setoption - User can tweak configuration parameters of the engine such as the search type, depth, etc\nUsage: setoption <option> <extra parameters>\n\n" +
+                "ucinewgame - Initializes a fresh board state and begins a new game from the default chess starting position.\nUsage: ucinewgame\n\n" +
+                "position - Lets the user initialize a custom position with a FEN string and can also optionally provide a move history from said position\nUsage: position [fen <fenstring> | startpos ]  moves <move1> .... <movei>\n\n" +
+                "go - Starts engine analysis on the current position and replies with the best move\nUsage: go\n\n" +
+                "quit - Stops the TigerEngine executable\nUsage: quit\n\n" +
+                "help - Displays this help section\nUsage: help\n\n"); 
+            Console.WriteLine("--------------------------------");
         }
 
         public static void ConnectToServer()
@@ -260,26 +279,33 @@ namespace Chess
         {
             foreach (string move in moves)
             {
-                // Validate the move format: e.g., "e2e4" or "e7e8q" for promotion
+                // validates the move format: e.g., "e2e4" or "e7e8q" for promotion
                 if (move.Length < 4)
                 {
                     Console.WriteLine("Invalid move format, moves were not applied: " + move);
-                    continue; // Skip this iteration
+                    continue; 
                 }
 
                 string fromSquare = move[..2];
-                string toSquare = move[2..4]; // Use range expression for clarity
-                char? promotionChar = move.Length > 4 ? move[4] : null; // Promotion character if present
+                string toSquare = move[2..4]; // use range expression for clarity
+                char? promotionChar = move.Length > 4 ? move[4] : null; // promotion character if present
 
-                // Retrieve the bitboard positions from square names
+                // retrieve the bitboard positions from square names
                 ulong fromBitboard = BoardHelper.GetSquareBitboard(fromSquare);
                 ulong toBitboard = BoardHelper.GetSquareBitboard(toSquare);
 
-                // Find a matching move, considering promotion if applicable
+                // find a matching move, considering promotion if applicable
                 Move selectedMove = FindMatchingMove(fromBitboard, toBitboard, promotionChar);
 
+                // if the move is illegal, throw error
+                if (selectedMove.IsDefault())
+                {
+                    Console.WriteLine("ERROR: AN INVALID OR ILLEGAL MOVE WAS PLAYED");
+                    Console.WriteLine("Please try again.");
+                    return;
+                }
 
-                // Execute the move
+                // executes the move if a valid move was found
                 Arbiter.DoTurn(selectedMove);
             }
         }
