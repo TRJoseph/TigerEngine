@@ -138,8 +138,8 @@ namespace Chess
             int friendlyPieceColor = PositionInformation.MoveColorIndex;
             int opponentPieceColor = PositionInformation.OpponentColorIndex;
 
-            // -1 signifies no piece was captured
-            int capturedPieceType = isEnPassant ? ChessBoard.Pawn : GetPieceAtSquare(opponentPieceColor, toSquare);
+            // ChessBoard.None (-1) indicates that no piece was captured
+            int capturedPieceType = move.capturedPieceType;
 
             int prevCastleState = CurrentGameState.castlingRights;
             int prevEnPassantFile = CurrentGameState.enPassantFile;

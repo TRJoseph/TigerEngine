@@ -65,7 +65,8 @@ namespace Chess
                     SetPosition(tokens);
                     break;
                 case "go":
-                    StartEngine();
+                    bool verbose = tokens.Length > 1 && (tokens[1].ToLower() == "verbose" || tokens[1].ToLower() == "-v");
+                    StartEngine(verbose);
                     break;
                 case "stop":
                     ComputerPlayer1.Engine.searchCancelled = true;
@@ -75,12 +76,15 @@ namespace Chess
                     Console.WriteLine("TigerEngine shutting down...");
                     Environment.Exit(0);
                     break;
-                // extra commands for working with the matchmaking manager
+                // extra commands for working with the matchmaking manager, and other benchmarking
                 case "connect":
                     ConnectToServer();
                     break;
                 case "disconnect":
                     Disconnect();
+                    break;
+                case "runbenchmark":
+                    Verification.RunBenchmark(tokens);
                     break;
                 case "help":
                     PrintHelpSection();
@@ -101,7 +105,8 @@ namespace Chess
                 "setoption - User can tweak configuration parameters of the engine such as the search type, depth, etc\nUsage: setoption <option> <extra parameters>\n\n" +
                 "ucinewgame - Initializes a fresh board state and begins a new game from the default chess starting position.\nUsage: ucinewgame\n\n" +
                 "position - Lets the user initialize a custom position with a FEN string and can also optionally provide a move history from said position\nUsage: position [fen <fenstring> | startpos ]  moves <move1> .... <movei>\n\n" +
-                "go - Starts engine analysis on the current position and replies with the best move\nUsage: go\n\n" +
+                "go - Starts engine analysis on the current position and replies with the best move\nUsage: go <-v | verbose>\n\n" +
+                "runbenchmark - runs perft to a certain depth to determine engine performance\nUsage: runbenchmark <depth>\n\n" +
                 "quit - Stops the TigerEngine executable\nUsage: quit\n\n" +
                 "help - Displays this help section\nUsage: help\n\n"); 
             Console.WriteLine("--------------------------------");
@@ -199,7 +204,7 @@ namespace Chess
         }
 
 
-        public static void StartEngine()
+        public static void StartEngine(bool verbose = false)
         {
             if (Arbiter.positionLoaded)
             {
@@ -208,19 +213,73 @@ namespace Chess
                 {
                     Arbiter.ComputerPlayer1.Engine.StartSearch();
 
-                    string bestMove;
+                    Move bestMove = ComputerPlayer1.Engine.bestMove;
+
+                    string bestMoveString = BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.toSquare);
 
                     if (Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag != PromotionFlags.None)
                     {
-                        bestMove = BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.toSquare) + ConvertPromotionFlagToChar(Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag);
-                    }
-                    else
-                    {
-                        bestMove = BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.toSquare);
+                        bestMoveString += ConvertPromotionFlagToChar(Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag);
                     }
 
-                    Console.WriteLine("bestmove " + bestMove);
-                    SendCommandToServerAsync("bestmove " + bestMove);
+                    // if the engine is operating in verbose mode, provide extra detail to the move
+                    if (verbose)
+                    {
+                        string unalteredBestMoveString = bestMoveString;
+                        bestMoveString += $"|movedPiece:{bestMove.movedPiece}";
+
+                        if (bestMove.capturedPieceType != -1)
+                        {
+                            bestMoveString += $"|capturedPiece:{bestMove.capturedPieceType}";
+                        }
+                        
+                        // append a special move flag if applicable
+                        switch (bestMove.specialMove)
+                        {
+                            case SpecialMove.KingSideCastleMove:
+                                bestMoveString += "|specialMove:KingSideCastle";
+                                break;
+                            case SpecialMove.QueenSideCastleMove:
+                                bestMoveString += "|specialMove:QueenSideCastle";
+                                break;
+                            case SpecialMove.EnPassant:
+                                bestMoveString += "|specialMove:EnPassant";
+                                break;
+                            case SpecialMove.None:
+                            default:
+                                // no special move; do nothing
+                                break;
+                        }
+
+                        if(bestMove.IsPawnPromotion)
+                        {
+                            bestMoveString += "|promotion:";
+                            switch (bestMove.promotionFlag)
+                            {
+                                case PromotionFlags.PromoteToQueenFlag:
+                                    bestMoveString += "queen";
+                                    break;
+                                case PromotionFlags.PromoteToRookFlag:
+                                    bestMoveString += "rook";
+                                    break;
+                                case PromotionFlags.PromoteToKnightFlag:
+                                    bestMoveString += "knight";
+                                    break;
+                                case PromotionFlags.PromoteToBishopFlag:
+                                    bestMoveString += "bishop";
+                                    break;
+                                case PromotionFlags.None:
+                                default:
+                                    break;
+                            }
+                        }
+                        Console.WriteLine("bestmove " + bestMoveString);
+                        SendCommandToServerAsync("bestmove " + unalteredBestMoveString);
+                    } else
+                    {
+                        Console.WriteLine("bestmove " + bestMoveString);
+                        SendCommandToServerAsync("bestmove " + bestMoveString);
+                    }
                 })
                 { IsBackground = true }.Start();
             }

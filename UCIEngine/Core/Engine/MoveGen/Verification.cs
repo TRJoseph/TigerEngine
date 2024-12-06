@@ -11,6 +11,27 @@ namespace Chess
     public static class Verification
     {
 
+        public static void RunBenchmark(string[] tokens)
+        {
+            if (Arbiter.positionLoaded == true)
+            {
+    
+                Console.WriteLine("Executing Benchmark...");
+                if (tokens.Length > 1)
+                {
+                    RunPerformanceTests(int.Parse(tokens[1]));
+                } else
+                {
+                    RunPerformanceTests(5);
+                }
+                
+            } else
+            {
+                Console.WriteLine("No position has been loaded, please run the ucinewgame or position command to load a custom position");
+            }
+
+        }
+
         /* This function will run perft over and over again to a specified depth, clocking in time and node values along the way */
         public static void RunPerformanceTests(int depth)
         {
