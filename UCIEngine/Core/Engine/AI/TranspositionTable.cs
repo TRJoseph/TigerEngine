@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using static Chess.Board;
 using static Chess.MoveGen;
@@ -13,6 +14,8 @@ namespace Chess
             CutNode = 2, // Score is Lower Bound
         }
 
+        private const int TableSize = 1 << 20; // 2^20 = 1,048,576 entries
+        public TranspositionEntry[] TTable = new TranspositionEntry[TableSize];
 
         public struct TranspositionEntry
         {
@@ -33,12 +36,21 @@ namespace Chess
             }
         }
 
-        public Dictionary<ulong, TranspositionEntry> TranspositionEntries;
-
-        public TranspositionTable()
+        public void Store(ulong zobristHash, Move bestMove, int depthOfSearch, int evaluationScore, NodeType typeOfNode)
         {
-            TranspositionEntries = new Dictionary<ulong, TranspositionEntry>();
+            TTable[(int)(zobristHash % TableSize)] = new TranspositionEntry(zobristHash, bestMove, depthOfSearch, evaluationScore, typeOfNode);
+        }
+
+        public bool TryGetValue(ulong zobristKey, out TranspositionEntry entry)
+        {
+            int index = (int)(zobristKey % TableSize);
+            entry = TTable[index];
+            return entry.ZobristHash == zobristKey;
+        }
+
+        public void Reset()
+        {
+            Array.Clear(TTable, 0, TTable.Length);
         }
     }
-
 }

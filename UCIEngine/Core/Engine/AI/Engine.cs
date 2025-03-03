@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Diagnostics;
 using static Chess.Board;
@@ -6,6 +5,7 @@ using static Chess.MoveGen;
 using System.Threading.Tasks;
 using static Chess.Arbiter;
 using static Chess.MoveSorting;
+using static Chess.TranspositionTable;
 
 namespace Chess
 {
@@ -64,9 +64,10 @@ namespace Chess
         {
             searchCancelled = false;
             searchedOneDepth = false;
+            transpositionTable.Reset();
 
             // if we are using iterative deepening then we are concerned about the time
-            if(searchSettings.SearchType == SearchType.IterativeDeepening)
+            if (searchSettings.SearchType == SearchType.IterativeDeepening)
             {
                 StartTimer((int)searchSettings.SearchTime.TotalMilliseconds);
             }
@@ -143,6 +144,8 @@ namespace Chess
 
         public int NegaMax(int depth, int depthFromRoot, int alpha, int beta, int searchExtensions = 0)
         {
+
+            // base cases: cancellation due to lack of computation time remaining or depth == 0
             if (searchedOneDepth && searchCancelled)
             {
                 return alpha;
@@ -151,6 +154,16 @@ namespace Chess
             if (depth == 0)
             {
                 return QuiescenceSearch(alpha, beta);
+            }
+            
+            if (transpositionTable.TryGetValue(PositionInformation.CurrentGameState.zobristHashKey, out TranspositionEntry entry) && entry.DepthOfSearch >= depth)
+            {
+                if (entry.TypeOfNode == NodeType.PVNode)
+                    return entry.EvaluationScore;
+                if (entry.TypeOfNode == NodeType.CutNode && entry.EvaluationScore >= beta)
+                    return entry.EvaluationScore;
+                if (entry.TypeOfNode == NodeType.AllNode && entry.EvaluationScore <= alpha)
+                    return entry.EvaluationScore;
             }
 
             Span<Move> moves = GenerateMoves();
@@ -161,9 +174,9 @@ namespace Chess
             bool playerInCheck = IsPlayerInCheck();
             GameResult gameResult = CheckForGameOverRules(playerInCheck, inSearch: true);
 
-            if(depthFromRoot > 1)
+            if (depthFromRoot >= 1)
             {
-                if(gameResult == GameResult.ThreeFold || gameResult == GameResult.FiftyMoveRule)
+                if (gameResult == GameResult.ThreeFold || gameResult == GameResult.FiftyMoveRule)
                 {
                     return 0;
                 }
@@ -191,6 +204,10 @@ namespace Chess
                 searchExtension = 1;
             }
 
+            // keeps track of boundaries for fail-low nodes
+            int originalAlpha = alpha;
+            Move tempBestMove = default;
+
             foreach (Move move in moves)
             {
                 ExecuteMove(move);
@@ -216,20 +233,29 @@ namespace Chess
                     }
 
                     // prune branch, black or white had a better path earlier on in the tree
+                    transpositionTable.Store(PositionInformation.CurrentGameState.zobristHashKey, move, depth, beta, NodeType.CutNode);
                     return beta;
                 }
                 if (eval > alpha)
                 {
                     searchedOneDepth = true;
                     alpha = eval;
-
-                    
+                    tempBestMove = move;
                     if (depthFromRoot == 0)
                     {
                         bestMoveThisIteration = move;
                         bestEvalThisIteration = alpha;
                     }
                 }
+            }
+
+            if (alpha > originalAlpha)
+            {
+                transpositionTable.Store(PositionInformation.CurrentGameState.zobristHashKey, tempBestMove, depth, alpha, NodeType.PVNode);
+            }
+            else
+            {
+                transpositionTable.Store(PositionInformation.CurrentGameState.zobristHashKey, tempBestMove, depth, alpha, NodeType.AllNode);
             }
             return alpha;
         }
@@ -242,11 +268,23 @@ namespace Chess
                 return alpha;
             }
 
+            if (transpositionTable.TryGetValue(PositionInformation.CurrentGameState.zobristHashKey, out TranspositionTable.TranspositionEntry entry) && entry.DepthOfSearch >= 0)
+            {
+                if (entry.TypeOfNode == NodeType.PVNode)
+                    return entry.EvaluationScore;
+                if (entry.TypeOfNode == NodeType.CutNode && entry.EvaluationScore >= beta)
+                    return entry.EvaluationScore;
+                if (entry.TypeOfNode == NodeType.AllNode && entry.EvaluationScore <= alpha)
+                    return entry.EvaluationScore;
+            }
+
             int eval = evaluation.EvaluatePosition();
             searchInformation.PositionsEvaluated++;
 
+
             if (eval >= beta)
             {
+                transpositionTable.Store(PositionInformation.CurrentGameState.zobristHashKey, default(Move), 0, beta, NodeType.CutNode);
                 return beta;
             }
 
@@ -258,6 +296,8 @@ namespace Chess
             Span<Move> captureMoves = MoveGen.GenerateMoves(true);
 
             moveSorter.OrderMoveList(ref captureMoves, 0);
+            Move tempBestMove = default;
+            int originalAlpha = alpha;
 
             foreach (Move captureMove in captureMoves)
             {
@@ -272,13 +312,24 @@ namespace Chess
 
                 if (eval >= beta)
                 {
+                    transpositionTable.Store(PositionInformation.CurrentGameState.zobristHashKey, captureMove, 0, beta, NodeType.CutNode);
                     return beta;
                 }
                 if (eval > alpha)
                 {
                     searchedOneDepth = true;
                     alpha = eval;
+                    tempBestMove = captureMove;
                 }
+            }
+
+            if (alpha > originalAlpha)
+            {
+                transpositionTable.Store(PositionInformation.CurrentGameState.zobristHashKey, tempBestMove, 0, alpha, NodeType.PVNode);
+            }
+            else
+            {
+                transpositionTable.Store(PositionInformation.CurrentGameState.zobristHashKey, tempBestMove, 0, alpha, NodeType.AllNode);
             }
             return alpha;
         }

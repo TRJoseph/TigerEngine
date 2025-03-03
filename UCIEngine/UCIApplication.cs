@@ -418,7 +418,7 @@ namespace Chess
 
         public static void SendUCIResponse()
         {
-            Console.WriteLine("id name TigerEngine - Version 5");
+            Console.WriteLine("id name TigerEngine - Version 6 with second TT implementation");
             Console.WriteLine("id author Thomas R. Joseph");
 
             // TODO: Actually implement these options 
