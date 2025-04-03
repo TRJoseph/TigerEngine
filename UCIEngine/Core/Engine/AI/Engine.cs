@@ -15,6 +15,7 @@ namespace Chess
 
         // engine references so these can be easily swapped our for testing different versions
         readonly Evaluation evaluation;
+        readonly NNUE nnueEvaluator;
         readonly MoveSorting moveSorter;
 
         readonly SearchInformation searchInformation;
@@ -22,12 +23,14 @@ namespace Chess
 
         readonly TranspositionTable transpositionTable;
 
+
         public Engine(SearchSettings searchSettings)
         {
             evaluation = new();
             searchInformation = new();
             moveSorter = new();
             transpositionTable = new();
+            nnueEvaluator = new();
 
             // initialize the engine's search settings
             this.searchSettings = searchSettings;

@@ -22,6 +22,8 @@ namespace Chess
 
         public static void Main(string[] args)
         {
+            //NNUE nNUE = new NNUE();
+            //nNUE.EvaluateFromFEN("8/7p/6p1/5k2/7P/5KP1/8/b7 b - - 2 54");
 
             Console.WriteLine("TigerEngine Running...");
             Console.WriteLine("Enter A Command To Continue.");
