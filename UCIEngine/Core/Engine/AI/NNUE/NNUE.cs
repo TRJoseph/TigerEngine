@@ -77,10 +77,6 @@ namespace Chess
             int[] biasShapes = { ftWeightCols, l1WeightCols, l2WeightCols, l3WeightCols };
 
             // Read binary file
-            short[] data = ReadBinaryFile(filePath);
-
-            int index = 0;
-
             byte[] bytes = File.ReadAllBytes(filePath);
             int byteIndex = 0;
 
@@ -95,7 +91,7 @@ namespace Chess
             network.accumulator_biases_quantized = ExtractArrayInt16(bytes, ref byteIndex, ftWeightCols);
             network.hiddenLayer1_biases_quantized = ExtractArrayInt32(bytes, ref byteIndex, l1WeightCols);
             network.hiddenLayer2_biases_quantized = ExtractArrayInt32(bytes, ref byteIndex, l2WeightCols);
-            network.output_bias_quantized = BitConverter.ToInt32(bytes, byteIndex); // Single int32
+            network.output_bias_quantized = ExtractArrayInt32(bytes, ref byteIndex, l3WeightCols);
             byteIndex += 4;
 
             // After loading weights/biases:
@@ -204,6 +200,14 @@ namespace Chess
                 this.values = new float[Network.hlSize];
             }
         }
+        public struct QuantizedAccumulator
+        {
+            public short[] values;
+            public QuantizedAccumulator()
+            {
+                this.values = new short[Network.hlSize];
+            }
+        }
 
         public struct AccumulatorPair
         {
@@ -245,6 +249,37 @@ namespace Chess
             return output;
         }
 
+        public struct QuantizedLinearLayer
+        {
+            public int NumInputs;
+            public int NumOutputs;
+            public sbyte[,] Weights;
+            public int[] Biases;
+        }
+
+        public static int[] QuantizedLinear(
+            QuantizedLinearLayer layer,
+            short[] input,
+            int[] output)
+        {
+            // Initialize output with biases
+            Array.Copy(layer.Biases, output, layer.NumOutputs);
+
+            // Perform matrix multiplication
+            for (int i = 0; i < layer.NumInputs; i++)
+            {
+                for (int j = 0; j < layer.NumOutputs; j++)
+                {
+                    output[j] += (int)input[i] * (int)layer.Weights[i, j];
+                }
+            }
+
+            for (int i = 0; i < layer.NumOutputs; i++)
+                output[i] /= 64;
+
+            return output;
+        }
+
         public struct Network
         {
             public short[] whiteFeatures;
@@ -278,7 +313,7 @@ namespace Chess
             public short[] accumulator_biases_quantized;    // int16 [1024]
             public int[] hiddenLayer1_biases_quantized;     // int32 [8]
             public int[] hiddenLayer2_biases_quantized;     // int32 [32]
-            public int output_bias_quantized;               // int32 [1]
+            public int[] output_bias_quantized;               // int32 [1]
 
             public Network()
             {
@@ -304,17 +339,26 @@ namespace Chess
                 this.accumulator_biases_quantized = new short[hlSize];
                 this.hiddenLayer1_biases_quantized = new int[8];
                 this.hiddenLayer2_biases_quantized = new int[32];
-                this.output_bias_quantized = 0;
+                this.output_bias_quantized = new int[1];
             }
         }
         
-        public void AccumulatorAdd(ref Network network, ref Accumulator accumulator, int index)
+        public void AccumulatorAddNormal(ref Network network, ref Accumulator accumulator, int index)
         {
             for(int i = 0; i < Network.hlSize; i++)
             {
                 accumulator.values[i] += network.accumulator_weights[index, i];
             }
         }
+
+        public void AccumulatorAddQuantized(ref Network network, ref QuantizedAccumulator accumulator, int index)
+        {
+            for (int i = 0; i < Network.hlSize; i++)
+            {
+                accumulator.values[i] += network.accumulator_weights_quantized[index, i];
+            }
+        }
+
 
         public void AccumulatorSub(ref Network network, ref Accumulator accumulator, int index)
         {
@@ -324,8 +368,8 @@ namespace Chess
             }
         }
 
-        // QA is the quantization factor, QA = 1 for floating point inference for now
-        public static float[] CReLU(int size, ref float[] output, ref float[] input, int QA = 1)
+        // QA is the quantization factor, QA = 127 for floating point inference for now
+        public static float[] CReLU(int size, ref float[] output, ref float[] input, float QA = 127.0f)
         {
             for(int i = 0; i < size ; i++)
             {
@@ -335,6 +379,38 @@ namespace Chess
             return output;
         }
 
+        // QA is the quantization factor, clips to 255 for now, honestly have no idea why this fixes the quantization, I need to be clipping to 127 without losing massive amounts of precision
+        public static short[] QuantizedCReLU(int size, ref short[] output, ref int[] input, int QA = 255)
+        {
+            for (int i = 0; i < size; i++)
+            {
+                if (input[i] <= 0)
+                {
+                    output[i] = 0;
+                }
+                else
+                {
+                    output[i] = (short)Math.Min(input[i], QA);
+                }
+            }
+            return output;
+        }
+
+
+        //public static short[] QuantizedCReLU(int size, ref short[] output, ref int[] input, int scale_prev,sbyte QA = 127)
+        //{
+        //    for (int i = 0; i < size; i++)
+        //    {
+        //        int scaled_value = input[i] / scale_prev; // Apply previous layer's scaling
+        //        if (scaled_value <= 0)
+        //            output[i] = 0;
+        //        else if (scaled_value >= QA)
+        //            output[i] = QA;
+        //        else
+        //            output[i] = (sbyte)scaled_value;
+        //    }
+        //    return output;
+        //}
         public static float NNUE_Evaluate(ref Network network, ref Accumulator sideToMoveAcc, ref Accumulator notSideToMoveAcc)
         {
             float[] l1_x = new float[2 * Network.hlSize];
@@ -397,7 +473,7 @@ namespace Chess
             return scaled_output;
         }
 
-        public void InitializeAccumulators(ref Network network, ref Accumulator sideToMoveAcc, ref Accumulator notSideToMoveAcc)
+        public void InitializeNormalAccumulators(ref Network network, ref Accumulator sideToMoveAcc, ref Accumulator notSideToMoveAcc)
         {
             // Initialize with biases
             for (int i = 0; i < Network.hlSize; i++)
@@ -429,11 +505,113 @@ namespace Chess
             {
                 if (network.whiteFeatures[i] == 1)
                 {
-                    AccumulatorAdd(ref network, ref sideToMoveAcc, i);
+                    AccumulatorAddNormal(ref network, ref sideToMoveAcc, i);
                 }
                 if (network.blackFeatures[i] == 1)
                 {
-                    AccumulatorAdd(ref network, ref notSideToMoveAcc, i);
+                    AccumulatorAddNormal(ref network, ref notSideToMoveAcc, i);
+                }
+            }
+        }
+
+        public static int Forward(ref Network network, ref QuantizedAccumulator sideToMoveAcc, ref QuantizedAccumulator notSideToMoveAcc)
+        {
+            int[] l1_x = new int[2 * Network.hlSize];
+            short[] l1_x_clamped = new short[2 * Network.hlSize];
+
+            int[] l2_x = new int[Network.hl2Size];
+            short[] l2_x_clamped = new short[Network.hl2Size];
+
+            int[] l3_x = new int[Network.hl3Size];
+            short[] l3_x_clamped = new short[Network.hl3Size];
+
+            int[] eval = new int[1];
+
+            // feature transformer
+            for (int i = 0; i < Network.hlSize; i++)
+            {
+                l1_x[i] = sideToMoveAcc.values[i];
+                l1_x[i + Network.hlSize] = notSideToMoveAcc.values[i];
+            }
+
+            QuantizedCReLU(2 * Network.hlSize, ref l1_x_clamped, ref l1_x);
+
+            // hidden layer 1
+            var HiddenLayer1 = new QuantizedLinearLayer
+            {
+                NumInputs = 2 * Network.hlSize,
+                NumOutputs = Network.hl2Size,
+                Weights = network.hiddenLayer1_weights_quantized,
+                Biases = network.hiddenLayer1_biases_quantized,
+            };
+            l2_x = QuantizedLinear(HiddenLayer1, l1_x_clamped, l2_x);
+            QuantizedCReLU(Network.hl2Size, ref l2_x_clamped, ref l2_x);
+
+            // hidden layer 2
+            var HiddenLayer2 = new QuantizedLinearLayer
+            {
+                NumInputs = Network.hl2Size,
+                NumOutputs = Network.hl3Size,
+                Weights = network.hiddenLayer2_weights_quantized,
+                Biases = network.hiddenLayer2_biases_quantized,
+            };
+            l3_x = QuantizedLinear(HiddenLayer2, l2_x_clamped, l3_x);
+            QuantizedCReLU(Network.hl3Size, ref l3_x_clamped, ref l3_x);
+
+            // output layer
+            var OutputLayer = new QuantizedLinearLayer
+            {
+                NumInputs = Network.hl3Size,
+                NumOutputs = Network.outSize,
+                Weights = network.output_weights_quantized,
+                Biases = network.output_bias_quantized,
+            };
+
+            // non scaled output
+            eval = QuantizedLinear(OutputLayer, l3_x_clamped, eval);
+
+            // scale with stockfish scaling factor (~400)
+            int scaled_output = eval[0];
+
+            return scaled_output;
+        }
+        public void InitializeQuantizedAccumulators(ref Network network, ref QuantizedAccumulator sideToMoveAcc, ref QuantizedAccumulator notSideToMoveAcc)
+        {
+            // Initialize with biases
+            for (int i = 0; i < Network.hlSize; i++)
+            {
+                sideToMoveAcc.values[i] = network.accumulator_biases_quantized[i];
+                notSideToMoveAcc.values[i] = network.accumulator_biases_quantized[i];
+            }
+
+            // Debug information
+            // Print bias value for neuron 0
+            Console.WriteLine($"Initial accumulator[0] (bias): {sideToMoveAcc.values[0]}");
+
+            // Count active features
+            int activeWhiteFeatures = network.whiteFeatures.Count(f => f == 1);
+            int activeBlackFeatures = network.blackFeatures.Count(f => f == 1);
+            Console.WriteLine($"Active white features: {activeWhiteFeatures}, Active black features: {activeBlackFeatures}");
+
+            // Debug first few active features
+            for (int i = 0; i < Math.Min(5, Network.inputSize); i++)
+            {
+                if (network.whiteFeatures[i] == 1)
+                {
+                    Console.WriteLine($"Active white feature {i}, weight[{i},0]: {network.accumulator_weights_quantized[i, 0]}");
+                }
+            }
+
+
+            for (int i = 0; i < Network.inputSize; i++)
+            {
+                if (network.whiteFeatures[i] == 1)
+                {
+                    AccumulatorAddQuantized(ref network, ref sideToMoveAcc, i);
+                }
+                if (network.blackFeatures[i] == 1)
+                {
+                    AccumulatorAddQuantized(ref network, ref notSideToMoveAcc, i);
                 }
             }
         }
@@ -503,6 +681,25 @@ namespace Chess
             };
         }
 
+
+        public void EvaluateFromFENQuantized(string fen)
+        {
+            bool whiteToMove = ParseFEN(fen, ref network.whiteFeatures, ref network.blackFeatures);
+            ExtractQuantizedWeightsAndBiases();
+            QuantizedAccumulator whiteAcc = new QuantizedAccumulator();
+            QuantizedAccumulator blackAcc = new QuantizedAccumulator();
+            InitializeQuantizedAccumulators(ref network, ref whiteAcc, ref blackAcc);
+
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            int eval = Forward(ref network, ref whiteToMove ? ref whiteAcc : ref blackAcc, ref whiteToMove ? ref blackAcc : ref whiteAcc);
+            watch.Stop();
+            Console.WriteLine($"Time elapsed in ms: {watch.Elapsed.TotalMilliseconds}");
+
+            // print evaluation for now
+            Console.WriteLine($"QUANTIZED Evaluation: {eval}");
+
+        }
+
         public void EvaluateFromFEN(string fen)
         {
             // I guess eventually when implementing this into my chess engine itself, I will get the move from the position information instead of the fen string
@@ -515,7 +712,7 @@ namespace Chess
             // initialize accumulators, will likely just initialize an accumulator pair instead and pass that struct around
             Accumulator whiteAcc = new Accumulator();
             Accumulator blackAcc = new Accumulator();
-            InitializeAccumulators(ref network, ref whiteAcc, ref blackAcc);
+            InitializeNormalAccumulators(ref network, ref whiteAcc, ref blackAcc);
 
             // Run forward pass
             //int eval = Forward(
@@ -525,7 +722,10 @@ namespace Chess
             //    whiteToMove
             //);
 
+            var watch = System.Diagnostics.Stopwatch.StartNew();
             float eval = NNUE_Evaluate(ref network, ref whiteToMove ? ref whiteAcc : ref blackAcc, ref whiteToMove ? ref blackAcc : ref whiteAcc);
+            watch.Stop();
+            Console.WriteLine($"Time elapsed in ms: {watch.Elapsed.TotalMilliseconds}");
 
             // print evaluation for now
             Console.WriteLine($"Evaluation: {eval}");
