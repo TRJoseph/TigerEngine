@@ -208,12 +208,12 @@ namespace Chess
             int originalAlpha = alpha;
             Move tempBestMove = default;
 
-            foreach (Move move in moves)
+            for(int i = 0; i < moves.Length; i ++)
             {
-                ExecuteMove(move);
+                ExecuteMove(ref moves[i]);
                 // maintains symmetry; -beta is new alpha value for swapped perspective and likewise with -alpha; (upper and lower score safeguards)
                 int eval = -NegaMax(depth - 1 + searchExtension, depthFromRoot + 1, -beta, -alpha, searchExtensions);
-                UndoMove(move);
+                UndoMove(ref moves[i]);
 
                 if (searchedOneDepth && searchCancelled)
                 {
@@ -222,31 +222,35 @@ namespace Chess
 
                 if (eval >= beta)
                 {
-                    int capturedPieceType = GetPieceAtSquare(PositionInformation.OpponentColorIndex, move.toSquare);
+                    int capturedPieceType = GetPieceAtSquare(PositionInformation.OpponentColorIndex, moves[i].toSquare);
                     bool isCapture = capturedPieceType != ChessBoard.None;
                     // for quiet moves, we have a potential killer move
 
                     if (!isCapture)
                     {
                         moveSorter.killerMoves[depth, 1] = moveSorter.killerMoves[depth, 0];
-                        moveSorter.killerMoves[depth, 0] = move;
+                        moveSorter.killerMoves[depth, 0] = moves[i];
                     }
 
                     // prune branch, black or white had a better path earlier on in the tree
-                    transpositionTable.Store(PositionInformation.CurrentGameState.zobristHashKey, move, depth, beta, NodeType.CutNode);
+                    transpositionTable.Store(PositionInformation.CurrentGameState.zobristHashKey, moves[i], depth, beta, NodeType.CutNode);
                     return beta;
                 }
                 if (eval > alpha)
                 {
                     searchedOneDepth = true;
                     alpha = eval;
-                    tempBestMove = move;
+                    tempBestMove = moves[i];
                     if (depthFromRoot == 0)
                     {
-                        bestMoveThisIteration = move;
+                        bestMoveThisIteration = moves[i];
                         bestEvalThisIteration = alpha;
                     }
                 }
+            }
+            foreach (Move move in moves)
+            {
+                
             }
 
             if (alpha > originalAlpha)
@@ -299,11 +303,11 @@ namespace Chess
             Move tempBestMove = default;
             int originalAlpha = alpha;
 
-            foreach (Move captureMove in captureMoves)
+            for (int i = 0; i < captureMoves.Length; i ++)
             {
-                ExecuteMove(captureMove);
+                ExecuteMove(ref captureMoves[i]);
                 eval = -QuiescenceSearch(-beta, -alpha);
-                UndoMove(captureMove);
+                UndoMove(ref captureMoves[i]);
 
                 if (searchedOneDepth && searchCancelled)
                 {
@@ -312,14 +316,14 @@ namespace Chess
 
                 if (eval >= beta)
                 {
-                    transpositionTable.Store(PositionInformation.CurrentGameState.zobristHashKey, captureMove, 0, beta, NodeType.CutNode);
+                    transpositionTable.Store(PositionInformation.CurrentGameState.zobristHashKey, captureMoves[i], 0, beta, NodeType.CutNode);
                     return beta;
                 }
                 if (eval > alpha)
                 {
                     searchedOneDepth = true;
                     alpha = eval;
-                    tempBestMove = captureMove;
+                    tempBestMove = captureMoves[i];
                 }
             }
 

@@ -54,9 +54,9 @@ namespace Chess
             ZobristHashing.GenerateZobristHashes();
 
             // Set game state (note: calculating zobrist key relies on current game state)
-            CurrentGameState = new GameState(0, PositionInformation.EnPassantFile, PositionInformation.CastlingRights, PositionInformation.halfMoveAccumulator, 0);
+            CurrentGameState = new GameState(0, (byte)PositionInformation.EnPassantFile, (byte)PositionInformation.CastlingRights, (byte)PositionInformation.halfMoveAccumulator, 0);
             ulong zobristHashKey = ZobristHashing.InitializeHashKey();
-            CurrentGameState = new GameState(0, PositionInformation.EnPassantFile, PositionInformation.CastlingRights, PositionInformation.halfMoveAccumulator, zobristHashKey);
+            CurrentGameState = new GameState(0, (byte)PositionInformation.EnPassantFile, (byte)PositionInformation.CastlingRights, (byte)PositionInformation.halfMoveAccumulator, zobristHashKey);
             GameStateHistory.Push(CurrentGameState);
 
             legalMoves = GenerateMoves();
@@ -68,7 +68,7 @@ namespace Chess
 
         public static void DoTurn(Move move)
         {
-            ExecuteMove(move);
+            ExecuteMove(ref move);
 
             legalMoves = GenerateMoves();
 

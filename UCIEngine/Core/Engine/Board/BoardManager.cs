@@ -144,7 +144,7 @@ namespace Chess
             }
             else
             {
-                EnPassantFile = enPassantTargetsField[0] - 'a';
+                EnPassantFile = enPassantTargetsField[0] - 'a' + 1;
             }
 
             if (halfMoveClockField[0] == '-')

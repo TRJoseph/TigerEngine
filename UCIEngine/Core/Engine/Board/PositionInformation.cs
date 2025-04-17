@@ -11,10 +11,10 @@ namespace Chess
 
         public enum CastlingRightsFlags
         {
-            WhiteKingSide = 0b0010,
-            WhiteQueenSide = 0b0001,
-            BlackKingSide = 0b1000,
-            BlackQueenSide = 0b0100
+            WhiteKingSide = 0b0001,
+            WhiteQueenSide = 0b0010,
+            BlackKingSide = 0b0100,
+            BlackQueenSide = 0b1000
         }
 
         public static int CastlingRights;
@@ -38,11 +38,15 @@ namespace Chess
 
         public static GameResult currentStatus;
 
+        public static ulong[] pinMasks = new ulong[64];
+
         /* Side to move information */
         public static bool whiteToMove;
         public static int MoveColorIndex => whiteToMove ? Board.ChessBoard.White : Board.ChessBoard.Black;
         public static int OpponentColorIndex => whiteToMove ? Board.ChessBoard.Black : Board.ChessBoard.White;
 
+        public static ulong MoveColorPieces => whiteToMove ? InternalBoard.AllWhitePieces : InternalBoard.AllBlackPieces;
+        public static ulong OpponentColorPieces => whiteToMove ? InternalBoard.AllBlackPieces : InternalBoard.AllWhitePieces;
 
         /* Move history information */
 
