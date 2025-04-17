@@ -122,7 +122,7 @@ namespace Chess
             return ChessBoard.None;
         }
 
-        public static void ExecuteMove(Move move, bool inSearch = false)
+        public static void ExecuteMove(ref Move move, bool inSearch = false)
         {
             int movedPiece = move.movedPiece;
             ulong toSquare = move.toSquare;
@@ -130,7 +130,10 @@ namespace Chess
 
             int toSquareIndex = BitBoardHelper.GetLSB(ref toSquare);
             int fromSquareIndex = BitBoardHelper.GetLSB(ref fromSquare);
-
+            //if (movedPiece == ChessBoard.Bishop && fromSquareIndex == 5 && toSquareIndex == 40)
+            //{
+            //    Console.WriteLine();
+            //}
             bool isEnPassant = move.specialMove is SpecialMove.EnPassant;
 
             bool isPromotion = move.IsPawnPromotion;
@@ -147,9 +150,20 @@ namespace Chess
             int newCastlingRights = CurrentGameState.castlingRights;
             int newEnPassantFile = 0;
 
-
             // this moves the piece from its old position to its new position
-            RemoveAndAddPieceBitboards(movedPiece, friendlyPieceColor, fromSquare, toSquare);
+            InternalBoard.Pieces[friendlyPieceColor, movedPiece] &= ~fromSquare;
+            InternalBoard.Pieces[friendlyPieceColor, movedPiece] |= toSquare;
+
+            if (friendlyPieceColor == ChessBoard.White)
+            {
+                InternalBoard.AllWhitePieces &= ~fromSquare;
+                InternalBoard.AllWhitePieces |= toSquare;
+            }
+            else
+            {
+                InternalBoard.AllBlackPieces &= ~fromSquare;
+                InternalBoard.AllBlackPieces |= toSquare;
+            }
 
             // a piece was captured
             if (capturedPieceType != ChessBoard.None)
@@ -164,15 +178,26 @@ namespace Chess
 
                     // remove en passant captured piece
                     newZobristKey ^= ZobristHashing.pieceAtEachSquareArray[opponentPieceColor, capturedPieceType, captureSquareIndex];
+                    InternalBoard.Pieces[opponentPieceColor, capturedPieceType] &= ~captureSquare;
+
+                    // Incremental update for en passant capture
+                    InternalBoard.AllPieces &= ~captureSquare;
+                    if (opponentPieceColor == ChessBoard.White)
+                        InternalBoard.AllWhitePieces &= ~captureSquare;
+                    else
+                        InternalBoard.AllBlackPieces &= ~captureSquare;
                 }
                 else
                 {
                     // remove captured piece from zobrist hash
                     newZobristKey ^= ZobristHashing.pieceAtEachSquareArray[opponentPieceColor, capturedPieceType, toSquareIndex];
+                    InternalBoard.Pieces[opponentPieceColor, capturedPieceType] &= ~captureSquare;
+
+                    if (opponentPieceColor == ChessBoard.White)
+                        InternalBoard.AllWhitePieces &= ~captureSquare;
+                    else
+                        InternalBoard.AllBlackPieces &= ~captureSquare;
                 }
-
-                InternalBoard.Pieces[opponentPieceColor, capturedPieceType] &= ~captureSquare;
-
             }
 
             // Handle king
@@ -188,6 +213,17 @@ namespace Chess
 
                     newZobristKey ^= ZobristHashing.pieceAtEachSquareArray[friendlyPieceColor, ChessBoard.Rook, toSquareIndex + 1];
                     newZobristKey ^= ZobristHashing.pieceAtEachSquareArray[friendlyPieceColor, ChessBoard.Rook, toSquareIndex - 1];
+
+                    if (friendlyPieceColor == ChessBoard.White)
+                    {
+                        InternalBoard.AllWhitePieces &= ~(toSquare << 1);
+                        InternalBoard.AllWhitePieces |= toSquare >> 1;
+                    }
+                    else
+                    {
+                        InternalBoard.AllBlackPieces &= ~(toSquare << 1);
+                        InternalBoard.AllBlackPieces |= toSquare >> 1;
+                    }
                 }
 
                 if (move.specialMove == SpecialMove.QueenSideCastleMove)
@@ -197,6 +233,17 @@ namespace Chess
 
                     newZobristKey ^= ZobristHashing.pieceAtEachSquareArray[friendlyPieceColor, ChessBoard.Rook, toSquareIndex - 2];
                     newZobristKey ^= ZobristHashing.pieceAtEachSquareArray[friendlyPieceColor, ChessBoard.Rook, toSquareIndex + 1];
+
+                    if (friendlyPieceColor == ChessBoard.White)
+                    {
+                        InternalBoard.AllWhitePieces &= ~(toSquare >> 2);
+                        InternalBoard.AllWhitePieces |= toSquare << 1;
+                    }
+                    else
+                    {
+                        InternalBoard.AllBlackPieces &= ~(toSquare >> 2);
+                        InternalBoard.AllBlackPieces |= toSquare << 1;
+                    }
                 }
             }
 
@@ -215,6 +262,7 @@ namespace Chess
                 // Remove pawn from promotion square and add promoted piece instead
                 InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Pawn] &= ~toSquare;
                 InternalBoard.Pieces[friendlyPieceColor, promotionPieceType] |= toSquare;
+                // No incremental update needed: toSquare remains set in composites
             }
 
             // Pawn has moved two forwards, mark file with en-passant flag
@@ -264,99 +312,134 @@ namespace Chess
 
             int newFiftyMoveCounter = CurrentGameState.fiftyMoveCounter + 1;
 
-
-            InternalBoard.UpdateCompositeBitboards();
-
             // Pawn moves and captures reset the fifty move counter
             if (movedPiece == ChessBoard.Pawn || capturedPieceType != ChessBoard.None)
             {
                 newFiftyMoveCounter = 0;
             }
+            InternalBoard.AllPieces = InternalBoard.AllBlackPieces | InternalBoard.AllWhitePieces;
 
-            GameState newState = new(capturedPieceType, newEnPassantFile, newCastlingRights, newFiftyMoveCounter, newZobristKey);
+            GameState newState = new((sbyte)capturedPieceType, (byte)newEnPassantFile, (byte)newCastlingRights, (byte)newFiftyMoveCounter, newZobristKey);
 
             GameStateHistory.Push(newState);
             CurrentGameState = newState;
-
             if (!inSearch)
             {
                 PositionHashes.Push(newState.zobristHashKey);
             }
         }
 
-        public static void UndoMove(Move move, bool inSearch = false)
+        public static void UndoMove(ref Move move, bool inSearch=false)
         {
-            whiteToMove = !whiteToMove;
-
+            int movedPiece = move.movedPiece;
             ulong toSquare = move.toSquare;
             ulong fromSquare = move.fromSquare;
-            int movedPiece = move.movedPiece;
+            int toSquareIndex = BitBoardHelper.GetLSB(ref toSquare);
+            int fromSquareIndex = BitBoardHelper.GetLSB(ref fromSquare);
 
-            bool undoingEnPassant = move.specialMove == SpecialMove.EnPassant;
-            bool undoingPromotion = move.IsPawnPromotion;
-            bool undoingCapture = CurrentGameState.capturedPieceType != ChessBoard.None;
+            bool isEnPassant = move.specialMove is SpecialMove.EnPassant;
+            bool isPromotion = move.IsPawnPromotion;
 
-            int capturedPieceType = CurrentGameState.capturedPieceType;
+            int friendlyPieceColor = 1 - PositionInformation.MoveColorIndex; // Opposite of current
+            int opponentPieceColor = PositionInformation.MoveColorIndex;
+        
+            // ChessBoard.None (-1) indicates that no piece was captured
+            int capturedPieceType = move.capturedPieceType;
 
-            //int movedPiece = undoingPromotion ? ChessBoard.Pawn : InternalBoard.Pieces[];
+            // this moves the piece from its old position to its new position
+            InternalBoard.Pieces[friendlyPieceColor, movedPiece] |= fromSquare;
+            InternalBoard.Pieces[friendlyPieceColor, movedPiece] &= ~toSquare;
 
-            int friendlyPieceColor = PositionInformation.MoveColorIndex;
-            int opponentPieceColor = PositionInformation.OpponentColorIndex;
-
-            // undo promotion
-
-            if (undoingPromotion)
+            if (friendlyPieceColor == ChessBoard.White)
             {
-                int promotedPiece = GetPieceAtSquare(friendlyPieceColor, toSquare);
-
-                // places pawn back at promotion square on either 8th or 1st rank and removes promoted piece
-                InternalBoard.Pieces[friendlyPieceColor, promotedPiece] &= ~toSquare;
-                InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Pawn] |= toSquare;
+                InternalBoard.AllWhitePieces |= fromSquare;
+                InternalBoard.AllWhitePieces &= ~toSquare;
+            }
+            else
+            {
+                InternalBoard.AllBlackPieces |= fromSquare;
+                InternalBoard.AllBlackPieces &= ~toSquare;
             }
 
-            RemoveAndAddPieceBitboards(movedPiece, friendlyPieceColor, toSquare, fromSquare);
-
-            // undo any capture move (en passant or normal)
-            if (undoingCapture)
+            // a piece was captured
+            if (capturedPieceType != ChessBoard.None)
             {
                 ulong captureSquare = toSquare;
-
-                if (undoingEnPassant)
-                {
-                    captureSquare = whiteToMove ? captureSquare >> 8 : captureSquare << 8;
-                }
+                if (isEnPassant)
+                    captureSquare = whiteToMove ? captureSquare << 8 : captureSquare >> 8;
 
                 InternalBoard.Pieces[opponentPieceColor, capturedPieceType] |= captureSquare;
 
+                if (opponentPieceColor == ChessBoard.White)
+                    InternalBoard.AllWhitePieces |= captureSquare;
+                else
+                    InternalBoard.AllBlackPieces |= captureSquare;
             }
 
+            // Handle king
             if (movedPiece is ChessBoard.King)
             {
+                // Handle castling
                 if (move.specialMove == SpecialMove.KingSideCastleMove)
                 {
+                    InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Rook] |= toSquare << 1;
                     InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Rook] &= ~(toSquare >> 1);
 
-                    InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Rook] |= toSquare << 1;
+                    if (friendlyPieceColor == ChessBoard.White)
+                    {
+                        InternalBoard.AllWhitePieces |= toSquare << 1;
+                        InternalBoard.AllWhitePieces &= ~(toSquare >> 1);
+                    }
+                    else
+                    {
+                        InternalBoard.AllBlackPieces |= toSquare << 1;
+                        InternalBoard.AllBlackPieces &= ~(toSquare >> 1);
+                    }
                 }
-
                 if (move.specialMove == SpecialMove.QueenSideCastleMove)
                 {
-                    InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Rook] &= ~(toSquare << 1);
                     InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Rook] |= toSquare >> 2;
+                    InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Rook] &= ~(toSquare << 1);
+
+   
+                    if (friendlyPieceColor == ChessBoard.White)
+                    {
+                        InternalBoard.AllWhitePieces |= toSquare >> 2;
+                        InternalBoard.AllWhitePieces &= ~(toSquare << 1);
+                    }
+                    else
+                    {
+                        InternalBoard.AllBlackPieces |= toSquare >> 2;
+                        InternalBoard.AllBlackPieces &= ~(toSquare << 1);
+                    }
                 }
             }
 
-            InternalBoard.UpdateCompositeBitboards();
-
-            if (!inSearch && PositionHashes.Count > 0)
+            // Handle promotion
+            if (isPromotion)
             {
-                PositionHashes.Pop();
+                int promotionPieceType = move.promotionFlag switch
+                {
+                    PromotionFlags.PromoteToQueenFlag => ChessBoard.Queen,
+                    PromotionFlags.PromoteToRookFlag => ChessBoard.Rook,
+                    PromotionFlags.PromoteToBishopFlag => ChessBoard.Bishop,
+                    PromotionFlags.PromoteToKnightFlag => ChessBoard.Knight,
+                    _ => 0
+                };
+                // Remove pawn from promotion square and add promoted piece instead
+                InternalBoard.Pieces[friendlyPieceColor, promotionPieceType] &= ~toSquare;
+                InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Pawn] |= toSquare;
+                // No incremental update needed: toSquare remains set in composites
             }
+            InternalBoard.AllPieces = InternalBoard.AllBlackPieces | InternalBoard.AllWhitePieces;
+            whiteToMove = !whiteToMove;
 
-            // go back to previous game state
+            halfMoveAccumulator--;
+
             GameStateHistory.Pop();
             CurrentGameState = GameStateHistory.Peek();
-            halfMoveAccumulator--;
+            if (!inSearch)
+                PositionHashes.Pop();
         }
     }
 }

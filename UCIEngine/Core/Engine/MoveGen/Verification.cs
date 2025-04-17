@@ -44,6 +44,8 @@ namespace Chess
                 TimeSpan timespan = timer.Elapsed;
                 Console.WriteLine("Depth " + i + " ply: " + numNodes + " nodes found in " + String.Format("{0:00} minutes {1:00} seconds {2:00} milliseconds", timespan.Minutes, timespan.Seconds, timespan.Milliseconds));
             }
+
+            DebugPerft(depth);
         }
 
         /* Perft (performance test, move path enumeration). This function serves a debugging function designed to walk the move generation
@@ -53,17 +55,44 @@ namespace Chess
         {
             if (depth == 0) return 1;
 
-            Span<Move> moves = GenerateMoves();
+            Move[] moves = GenerateMoves();
             int numPositions = 0;
-
-            foreach (Move move in moves)
+            for (int i = 0; i < moves.Length; i ++)
             {
-                ExecuteMove(move);
+                ExecuteMove(ref moves[i]);
                 numPositions += Perft(depth - 1);
-                UndoMove(move);
+                UndoMove(ref moves[i]);
             }
 
             return numPositions;
+        }
+
+        public static void DebugPerft(int depth)
+        {
+            Move[] moves = GenerateMoves();
+            int total = 0;
+
+            for (int i = 0; i < moves.Length; i++)
+            {
+                ExecuteMove(ref moves[i]);
+                int nodes = Perft(depth - 1);
+                total += nodes;
+                Console.WriteLine($"{ToUCI(ref moves[i])}: {nodes}");
+                UndoMove(ref moves[i]);
+            }
+
+            Console.WriteLine($"Total nodes: {total}");
+        }
+
+        public static string ToUCI(ref Move move)
+        {
+            int fromIndex = System.Numerics.BitOperations.TrailingZeroCount(move.fromSquare);
+            int toIndex = System.Numerics.BitOperations.TrailingZeroCount(move.toSquare);
+            char fromFile = (char)('a' + (fromIndex % 8));
+            int fromRank = fromIndex / 8 + 1;
+            char toFile = (char)('a' + (toIndex % 8));
+            int toRank = toIndex / 8 + 1;
+            return $"{fromFile}{fromRank}{toFile}{toRank}";
         }
     }
 }

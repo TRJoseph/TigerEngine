@@ -3,6 +3,10 @@ using System.Linq;
 using System.Collections.Generic;
 using static Chess.Board;
 using static Chess.PositionInformation;
+using System.Numerics;
+using static Chess.MoveTables;
+using System.Formats.Tar;
+using System.Net.NetworkInformation;
 
 
 namespace Chess
@@ -68,7 +72,6 @@ namespace Chess
         // legalMoveCount is a cut down value of the currentMoveIndex representing the actual count of moves within the list
         public static int legalMoveCount;
 
-
         private static Move AddLegalMove(ulong startSquare, ulong endSquare, int movedPiece, int capturedPieceType = ChessBoard.None, SpecialMove specialMove = SpecialMove.None, bool isPawnPromotion = false, PromotionFlags promotionFlag = PromotionFlags.None)
         {
             return
@@ -106,41 +109,116 @@ namespace Chess
              * the white pawn we were originally addressing. Pawns capture opposite ways on opposite sides but in the same manner (diagonally).
              * */
 
+            if ((MoveTables.PrecomputedWhitePawnCaptures[square] & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Pawn]) != 0) return true;
 
-            if (whiteToMove)
-            {
-                if ((MoveTables.PrecomputedWhitePawnCaptures[square] & InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn]) != 0) return true;
+            if ((MoveTables.PrecomputedKnightMoves[square] & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Knight]) != 0) return true;
 
-                if ((MoveTables.PrecomputedKnightMoves[square] & InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight]) != 0) return true;
+            if ((MoveTables.PrecomputedKingMoves[square] & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.King]) != 0) return true;
 
-                if ((MoveTables.PrecomputedKingMoves[square] & InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]) != 0) return true;
+            ulong bishopsAndQueens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen] | InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Bishop];
+            ulong rooksAndQueens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen] | InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Rook];
 
-                ulong bishopsAndQueens = InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Queen] | InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop];
-                ulong rooksAndQueens = InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Queen] | InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook];
+            if ((GetBishopAttacks(InternalBoard.AllPieces, square) & bishopsAndQueens) != 0) return true;
 
-                if ((GetBishopAttacks(InternalBoard.AllPieces, square) & bishopsAndQueens) != 0) return true;
-
-                if ((GetRookAttacks(InternalBoard.AllPieces, square) & rooksAndQueens) != 0) return true;
-
-            }
-            else
-            {
-
-                if ((MoveTables.PrecomputedBlackPawnCaptures[square] & InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn]) != 0) return true;
-
-                if ((MoveTables.PrecomputedKnightMoves[square] & InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight]) != 0) return true;
-
-                if ((MoveTables.PrecomputedKingMoves[square] & InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]) != 0) return true;
-
-                ulong bishopsAndQueens = InternalBoard.Pieces[ChessBoard.White, ChessBoard.Queen] | InternalBoard.Pieces[ChessBoard.White, ChessBoard.Bishop];
-                ulong rooksAndQueens = InternalBoard.Pieces[ChessBoard.White, ChessBoard.Queen] | InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook];
-
-                if ((GetBishopAttacks(InternalBoard.AllPieces, square) & bishopsAndQueens) != 0) return true;
-
-                if ((GetRookAttacks(InternalBoard.AllPieces, square) & rooksAndQueens) != 0) return true;
-            }
+            if ((GetRookAttacks(InternalBoard.AllPieces, square) & rooksAndQueens) != 0) return true;
 
             return false;
+        }
+
+
+        public static int CountAttackersToSquare(int kingIndex)
+        {
+            int count = 0;
+
+            ulong pawnAttacks = OpponentColorIndex == ChessBoard.White ?
+                MoveTables.PrecomputedBlackPawnCaptures[kingIndex] :
+                MoveTables.PrecomputedWhitePawnCaptures[kingIndex];
+            count += CountBits(pawnAttacks & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Pawn]);
+
+            count += CountBits(MoveTables.PrecomputedKnightMoves[kingIndex] &
+                                           InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Knight]);
+
+            count += CountBits(MoveTables.PrecomputedKingMoves[kingIndex] &
+                                           InternalBoard.Pieces[OpponentColorIndex, ChessBoard.King]);
+
+            ulong bishopsAndQueens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen] |
+                                     InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Bishop];
+            count += CountBits(GetBishopAttacks(InternalBoard.AllPieces, kingIndex) & bishopsAndQueens);
+
+            ulong rooksAndQueens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen] |
+                                   InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Rook];
+            count += CountBits(GetRookAttacks(InternalBoard.AllPieces, kingIndex) & rooksAndQueens);
+
+            return count;
+        }
+
+        public static (ulong CheckingPieceBitboard, int CheckingPieceIndex) FindCheckingPiece(int kingIndex)
+        {
+            ulong king = InternalBoard.Pieces[MoveColorIndex, ChessBoard.King];
+
+            ulong pawnAttacks = MoveColorIndex == ChessBoard.White ?
+                MoveTables.PrecomputedWhitePawnCaptures[kingIndex] :
+                MoveTables.PrecomputedBlackPawnCaptures[kingIndex];
+            ulong checkingPawns = pawnAttacks & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Pawn];
+            if (checkingPawns != 0)
+            {
+                ulong checkingPawn = checkingPawns & (~checkingPawns + 1); // Isolate LSB
+                int pawnIndex = BitBoardHelper.GetLSB(ref checkingPawn);
+                return (checkingPawn, pawnIndex);
+            }
+
+            ulong knightAttacks = MoveTables.PrecomputedKnightMoves[kingIndex];
+            ulong checkingKnights = knightAttacks & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Knight];
+            if (checkingKnights != 0)
+            {
+                ulong checkingKnight = checkingKnights & (~checkingKnights + 1);
+                int knightIndex = BitBoardHelper.GetLSB(ref checkingKnight);
+                return (checkingKnight, knightIndex);
+            }
+
+            ulong bishops = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Bishop];
+            while (bishops != 0)
+            {
+                ulong isolatedBishop = bishops & (~bishops + 1);
+                int bishopIndex = BitBoardHelper.GetLSB(ref isolatedBishop);
+                ulong bishopAttacks = GetBishopAttacks(InternalBoard.AllPieces, bishopIndex);
+                if ((bishopAttacks & king) != 0)
+                {
+                    return (isolatedBishop, bishopIndex);
+                }
+                bishops &= bishops - 1;
+            }
+
+            ulong rooks = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Rook];
+            while (rooks != 0)
+            {
+                ulong isolatedRook = rooks & (~rooks + 1);
+                int rookIndex = BitBoardHelper.GetLSB(ref isolatedRook);
+                ulong rookAttacks = GetRookAttacks(InternalBoard.AllPieces, rookIndex);
+                if ((rookAttacks & king) != 0)
+                {
+                    return (isolatedRook, rookIndex);
+                }
+                rooks &= rooks - 1;
+            }
+
+            // Check queens
+            ulong queens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen];
+            while (queens != 0)
+            {
+                ulong isolatedQueen = queens & (~queens + 1);
+                int queenIndex = BitBoardHelper.GetLSB(ref isolatedQueen);
+                ulong queenAttacks = GetBishopAttacks(InternalBoard.AllPieces, queenIndex) |
+                                     GetRookAttacks(InternalBoard.AllPieces, queenIndex);
+                if ((queenAttacks & king) != 0)
+                {
+                    return (isolatedQueen, queenIndex);
+                }
+                queens &= queens - 1;
+            }
+
+            // This should never happen if we correctly detected check beforehand
+            return (0UL, -1);
         }
 
         private static bool CanCastleKingsideWhite()
@@ -161,7 +239,9 @@ namespace Chess
             // from e1 to g1
             for (int i = 4; i < 7; i++)
             {
-                if (SquareAttackedBy(i)) return false;
+                if (((1UL << i) & MoveTables.OpponentAttackMap) != 0) return false;
+
+                //if (SquareAttackedBy(i)) return false;
             }
 
             return true;
@@ -186,7 +266,8 @@ namespace Chess
             // from c1 to e1
             for (int i = 2; i < 5; i++)
             {
-                if (SquareAttackedBy(i)) return false;
+                if (((1UL << i) & MoveTables.OpponentAttackMap) != 0) return false;
+                //if (SquareAttackedBy(i)) return false;
             }
             return true;
         }
@@ -207,7 +288,8 @@ namespace Chess
             // from e8 to g8
             for (int i = 60; i < 63; i++)
             {
-                if (SquareAttackedBy(i)) return false;
+                if (((1UL << i) & MoveTables.OpponentAttackMap) != 0) return false;
+                //if (SquareAttackedBy(i)) return false;
             }
 
             return true;
@@ -229,33 +311,31 @@ namespace Chess
             // from c8 to e8
             for (int i = 58; i < 61; i++)
             {
-                if (SquareAttackedBy(i)) return false;
+                if (((1UL << i) & MoveTables.OpponentAttackMap) != 0) return false;
+                //if (SquareAttackedBy(i)) return false;
             }
 
             return true;
         }
 
-        public static void GenerateKingMoves(ref Span<Move> moves, ulong friendlyPieces, ulong oppPieces, bool onlyGenerateCaptures = false)
+        public static void GenerateKingMoves(ref Span<Move> moves, ulong friendlyPieces, ulong oppPieces, ulong king, int kingIndex, bool onlyGenerateCaptures = false, ulong targetMask = 0xffffffffffffffff, bool kingInCheck = false)
         {
-            ulong king = InternalBoard.Pieces[MoveColorIndex, ChessBoard.King];
-
-            // king index converts the king bitboard 
-            int kingIndex = BitBoardHelper.GetLSB(ref king);
-
             // grabs the corresponding bitboard representing all legal moves from the given king index on the board
             ulong validKingMoves = MoveTables.PrecomputedKingMoves[kingIndex];
-            
-            if(onlyGenerateCaptures)
+
+            if (onlyGenerateCaptures)
             {
                 // only include captures in movelist if quiescence search
                 validKingMoves &= oppPieces;
+            }
 
-            } else
+            validKingMoves &= ~friendlyPieces;
+
+            // ensures the king can only move to squares that are not under attack
+            validKingMoves &= ~MoveTables.OpponentAttackMap;
+
+            if (!kingInCheck)
             {
-                // valid king moves only include either empty squares or squares the opponent pieces occupy (for now, this will change when check is implemented)
-                validKingMoves &= ~friendlyPieces;
-
-                // castling, castling moves are quiet moves 
                 if (whiteToMove)
                 {
                     if (CanCastleKingsideWhite())
@@ -296,6 +376,7 @@ namespace Chess
                 moves[currentMoveIndex] = AddLegalMove(king, movelsb, ChessBoard.King, GetPieceAtSquare(OpponentColorIndex, movelsb));
                 currentMoveIndex++;
             }
+            
         }
 
         /* these functions came from "https://www.chessprogramming.org/Pawn_Pushes_(Bitboards)"
@@ -330,7 +411,7 @@ namespace Chess
 
         //
 
-        public static void GenerateRookMoves(ref Span<Move> moves, ulong friendlyPieces, ulong oppPieces, bool onlyGenerateCaptures = false)
+        public static void GenerateRookMoves(ref Span<Move> moves, ulong friendlyPieces, ulong oppPieces, ref ulong[] pinMasks, bool onlyGenerateCaptures = false, ulong targetMask = 0xffffffffffffffff)
         {
             ulong rooks = InternalBoard.Pieces[MoveColorIndex, ChessBoard.Rook];
 
@@ -338,11 +419,16 @@ namespace Chess
             {
                 // and with twos complement to isolate each rook
                 ulong isolatedRooklsb = rooks & (~rooks + 1);
+                int rookIndex = BitBoardHelper.GetLSB(ref isolatedRooklsb);
 
-                ulong validRookMoves = GetRookAttacks(InternalBoard.AllPieces, BitBoardHelper.GetLSB(ref isolatedRooklsb));
+                ulong validRookMoves = GetRookAttacks(InternalBoard.AllPieces, rookIndex);
 
                 // remove friendly piece blockers from potential captures 
                 validRookMoves &= onlyGenerateCaptures ? oppPieces : ~friendlyPieces;
+
+                validRookMoves &= targetMask;
+
+                validRookMoves &= pinMasks[rookIndex] != 0 ? pinMasks[rookIndex] : 0xffffffffffffffff;
 
                 while (validRookMoves != 0)
                 {
@@ -356,7 +442,7 @@ namespace Chess
             }
         }
 
-        public static void GenerateBishopMoves(ref Span<Move> moves, ulong friendlyPieces, ulong oppPieces, bool onlyGenerateCaptures = false)
+        public static void GenerateBishopMoves(ref Span<Move> moves, ulong friendlyPieces, ulong oppPieces, ref ulong[] pinMasks, bool onlyGenerateCaptures = false, ulong checkBlocksMask = 0xffffffffffffffff)
         {
             ulong bishops = InternalBoard.Pieces[MoveColorIndex, ChessBoard.Bishop];
 
@@ -365,10 +451,16 @@ namespace Chess
                 // and with twos complement to isolate each bishop
                 ulong isolatedBishoplsb = bishops & (~bishops + 1);
 
-                ulong validBishopMoves = GetBishopAttacks(InternalBoard.AllPieces, BitBoardHelper.GetLSB(ref isolatedBishoplsb));
+                int bishopIndex = BitBoardHelper.GetLSB(ref isolatedBishoplsb);
+
+                ulong validBishopMoves = GetBishopAttacks(InternalBoard.AllPieces, bishopIndex);
 
                 // remove friendly piece blockers from potential captures, if Quiescence search, only add capture moves
                 validBishopMoves &= onlyGenerateCaptures ? oppPieces : ~friendlyPieces;
+
+                validBishopMoves &= checkBlocksMask;
+
+                validBishopMoves &= pinMasks[bishopIndex] != 0 ? pinMasks[bishopIndex] : 0xffffffffffffffff;
 
                 while (validBishopMoves != 0)
                 {
@@ -383,7 +475,7 @@ namespace Chess
             }
         }
 
-        public static void GenerateQueenMoves(ref Span<Move> moves, ulong friendlyPieces, ulong oppPieces, bool onlyGenerateCaptures = false)
+        public static void GenerateQueenMoves(ref Span<Move> moves, ulong friendlyPieces, ulong oppPieces, ref ulong[] pinMasks, bool onlyGenerateCaptures = false, ulong checkBlocksMask = 0xffffffffffffffff)
         {
             ulong queens = InternalBoard.Pieces[MoveColorIndex, ChessBoard.Queen];
 
@@ -392,12 +484,16 @@ namespace Chess
                 // and with twos complement to isolate each queen
                 ulong isolatedQueenlsb = queens & (~queens + 1);
 
-                int currentQueenPos = BitBoardHelper.GetLSB(ref isolatedQueenlsb);
-                ulong validQueenMoves = GetBishopAttacks(InternalBoard.AllPieces, currentQueenPos);
-                validQueenMoves |= GetRookAttacks(InternalBoard.AllPieces, currentQueenPos);
+                int queenIndex = BitBoardHelper.GetLSB(ref isolatedQueenlsb);
+                ulong validQueenMoves = GetBishopAttacks(InternalBoard.AllPieces, queenIndex);
+                validQueenMoves |= GetRookAttacks(InternalBoard.AllPieces, queenIndex);
 
                 // remove friendly piece blockers from potential captures, if Quiescence search, only add capture moves
                 validQueenMoves &= onlyGenerateCaptures ? oppPieces : ~friendlyPieces;
+
+                validQueenMoves &= checkBlocksMask;
+
+                validQueenMoves &= pinMasks[queenIndex] != 0 ? pinMasks[queenIndex] : 0xffffffffffffffff;
 
                 while (validQueenMoves != 0)
                 {
@@ -424,7 +520,7 @@ namespace Chess
             currentMoveIndex++;
         }
 
-        public static void GenerateWhitePawnMoves(ref Span<Move> moves, bool onlyGenerateCaptures = false)
+        public static void GenerateWhitePawnMoves(ref Span<Move> moves, ref ulong[] pinMasks, bool onlyGenerateCaptures = false, ulong checkBlockMask = 0xffffffffffffffff)
         {
             ulong whitePawns = InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn];
 
@@ -433,25 +529,53 @@ namespace Chess
                 // isolates each pawn one by one
                 ulong isolatedPawnlsb = whitePawns & (~whitePawns + 1);
                 // gets current pawn position to add to legal move list
-                int currentPawnPos = BitBoardHelper.GetLSB(ref isolatedPawnlsb);
+                int pawnIndex = BitBoardHelper.GetLSB(ref isolatedPawnlsb);
 
                 if(!onlyGenerateCaptures)
                 {
                     ulong oneSquareMove = isolatedPawnlsb << 8;
+
+                    if (pinMasks[pawnIndex] != 0)
+                    {
+                        ulong legalMoveMask = pinMasks[pawnIndex] & checkBlockMask;
+                        oneSquareMove &= legalMoveMask;
+                    }
+                    else
+                    {
+                        oneSquareMove &= checkBlockMask;
+                    }
+
                     if (WhitePawnsAbleToPushOneSquare(isolatedPawnlsb, ~InternalBoard.AllPieces) == isolatedPawnlsb)
                     {
-                        if ((oneSquareMove << 8) == 0)
+                        if ((isolatedPawnlsb << 16) == 0)
                         {
                             BranchForPromotion(ref moves, isolatedPawnlsb, oneSquareMove);
                         }
                         else
                         {
-                            moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, oneSquareMove, ChessBoard.Pawn);
-                            currentMoveIndex++;
+                            if(oneSquareMove != 0)
+                            {
+                                moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, oneSquareMove, ChessBoard.Pawn);
+                                currentMoveIndex++;
+                            }
                             if (WhitePawnsAbleToPushTwoSquares(isolatedPawnlsb, ~InternalBoard.AllPieces) == isolatedPawnlsb)
                             {
-                                moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, isolatedPawnlsb << 16, ChessBoard.Pawn, ChessBoard.None, SpecialMove.TwoSquarePawnMove);
-                                currentMoveIndex++;
+                                ulong twoSquareMove = isolatedPawnlsb << 16;
+
+                                if (pinMasks[pawnIndex] != 0)
+                                {
+                                    ulong legalMoveMask = pinMasks[pawnIndex] & checkBlockMask;
+                                    twoSquareMove &= legalMoveMask;
+                                }
+                                else
+                                {
+                                    twoSquareMove &= checkBlockMask;
+                                }
+                                if (twoSquareMove != 0)
+                                {
+                                    moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, isolatedPawnlsb << 16, ChessBoard.Pawn, ChessBoard.None, SpecialMove.TwoSquarePawnMove);
+                                    currentMoveIndex++;
+                                }
                             }
                         }
                     }
@@ -461,7 +585,7 @@ namespace Chess
                 if (CurrentGameState.enPassantFile != 0)
                 {
                     ulong enPassantTargetSquare = 1UL << (CurrentGameState.enPassantFile - 1 + (5 * 8));
-                    ulong enPassantCapture = MoveTables.PrecomputedWhitePawnCaptures[currentPawnPos] & enPassantTargetSquare;
+                    ulong enPassantCapture = MoveTables.PrecomputedWhitePawnCaptures[pawnIndex] & enPassantTargetSquare;
 
                     // Handle en passant captures
                     if (enPassantCapture != 0)
@@ -471,7 +595,16 @@ namespace Chess
                 }
 
                 // this is for normal piece captures
-                ulong validPawnCaptures = MoveTables.PrecomputedWhitePawnCaptures[currentPawnPos] & InternalBoard.AllBlackPieces;
+                ulong validPawnCaptures = MoveTables.PrecomputedWhitePawnCaptures[pawnIndex] & InternalBoard.AllBlackPieces;
+
+                if (pinMasks[pawnIndex] != 0)
+                {
+                    ulong legalMoveMask = pinMasks[pawnIndex] & checkBlockMask;
+                    validPawnCaptures &= legalMoveMask;
+                } else
+                {
+                    validPawnCaptures &= checkBlockMask;
+                }
 
                 while (validPawnCaptures != 0)
                 {
@@ -494,7 +627,7 @@ namespace Chess
             }
         }
 
-        public static void GenerateBlackPawnMoves(ref Span<Move> moves, bool onlyGenerateCaptures = false)
+        public static void GenerateBlackPawnMoves(ref Span<Move> moves, ref ulong[] pinMasks, bool onlyGenerateCaptures = false, ulong checkBlockMask = 0xffffffffffffffff)
         {
 
             ulong blackPawns = InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn];
@@ -503,26 +636,56 @@ namespace Chess
             {
                 ulong isolatedPawnlsb = blackPawns & (~blackPawns + 1);
 
-                int currentPawnPos = BitBoardHelper.GetLSB(ref isolatedPawnlsb);
+                int pawnIndex = BitBoardHelper.GetLSB(ref isolatedPawnlsb);
 
 
                 if(!onlyGenerateCaptures) {
+
                     // valid pawn moves include pushes, captures, and en passant
                     ulong oneSquareMove = isolatedPawnlsb >> 8;
+
+                    if (pinMasks[pawnIndex] != 0)
+                    {
+                        ulong legalMoveMask = pinMasks[pawnIndex] & checkBlockMask;
+                        oneSquareMove &= legalMoveMask;
+                    }
+                    else
+                    {
+                        oneSquareMove &= checkBlockMask;
+                    }
+
                     if (BlackPawnsAbleToPushOneSquare(isolatedPawnlsb, ~InternalBoard.AllPieces) == isolatedPawnlsb)
                     {
-                        if ((oneSquareMove >> 8) == 0)
+                        // this shifts the bitboard out of the 64-bit range essentially determining if the next move is a promotion (it signals the end of the board)
+                        if ((isolatedPawnlsb >> 16) == 0)
                         {
                             BranchForPromotion(ref moves, isolatedPawnlsb, oneSquareMove);
                         }
                         else
                         {
-                            moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, oneSquareMove, ChessBoard.Pawn);
-                            currentMoveIndex++;
+                            if(oneSquareMove != 0)
+                            {
+                                moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, oneSquareMove, ChessBoard.Pawn);
+                                currentMoveIndex++;
+                            }
+               
                             if (BlackPawnsAbleToPushTwoSquares(isolatedPawnlsb, ~InternalBoard.AllPieces) == isolatedPawnlsb)
                             {
-                                moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, isolatedPawnlsb >> 16, ChessBoard.Pawn, ChessBoard.None, SpecialMove.TwoSquarePawnMove);
-                                currentMoveIndex++;
+                                ulong twoSquareMove = isolatedPawnlsb >> 16;
+                                if (pinMasks[pawnIndex] != 0)
+                                {
+                                    ulong legalMoveMask = pinMasks[pawnIndex] & checkBlockMask;
+                                    twoSquareMove &= legalMoveMask;
+                                }
+                                else
+                                {
+                                    twoSquareMove &= checkBlockMask;
+                                }
+                                if (twoSquareMove != 0)
+                                {
+                                    moves[currentMoveIndex] = AddLegalMove(isolatedPawnlsb, isolatedPawnlsb >> 16, ChessBoard.Pawn, ChessBoard.None, SpecialMove.TwoSquarePawnMove);
+                                    currentMoveIndex++;
+                                }
                             }
                         }
                     }
@@ -532,7 +695,7 @@ namespace Chess
                 if (CurrentGameState.enPassantFile != 0)
                 {
                     ulong enPassantTargetSquare = 1UL << (CurrentGameState.enPassantFile - 1 + (2 * 8));
-                    ulong enPassantCapture = MoveTables.PrecomputedBlackPawnCaptures[currentPawnPos] & enPassantTargetSquare;
+                    ulong enPassantCapture = MoveTables.PrecomputedBlackPawnCaptures[pawnIndex] & enPassantTargetSquare;
 
                     // Handle en passant captures
                     if (enPassantCapture != 0)
@@ -543,7 +706,16 @@ namespace Chess
 
                 // if a pawn can capture any black piece it is a pseudo-legal capture
                 // this is for normal piece captures
-                ulong validPawnCaptures = MoveTables.PrecomputedBlackPawnCaptures[currentPawnPos] & InternalBoard.AllWhitePieces;
+                ulong validPawnCaptures = MoveTables.PrecomputedBlackPawnCaptures[pawnIndex] & InternalBoard.AllWhitePieces;
+
+                if (pinMasks[pawnIndex] != 0)
+                {
+                    ulong legalMoveMask = pinMasks[pawnIndex] & checkBlockMask;
+                    validPawnCaptures &= legalMoveMask;
+                } else
+                {
+                    validPawnCaptures &= checkBlockMask;
+                }
 
                 while (validPawnCaptures != 0)
                 {
@@ -566,7 +738,7 @@ namespace Chess
             }
         }
 
-        public static void GenerateKnightMoves(ref Span<Move> moves, ulong friendlyPieces, ulong oppPieces, bool onlyGenerateCaptures = false)
+        public static void GenerateKnightMoves(ref Span<Move> moves, ulong friendlyPieces, ulong oppPieces, ref ulong[] pinMasks, bool onlyGenerateCaptures = false, ulong targetMask = 0xffffffffffffffff)
         {
 
             ulong knights = InternalBoard.Pieces[MoveColorIndex, ChessBoard.Knight];
@@ -574,11 +746,15 @@ namespace Chess
             {
                 // isolate each knight
                 ulong isolatedKnightlsb = knights & (~knights + 1);
-                int currentKnightPos = BitBoardHelper.GetLSB(ref isolatedKnightlsb);
+                int knightIndex = BitBoardHelper.GetLSB(ref isolatedKnightlsb);
 
                 // valid knight moves only include either empty squares or squares the opponent pieces occupy
-                ulong validKnightMoves = MoveTables.PrecomputedKnightMoves[currentKnightPos];
+                ulong validKnightMoves = MoveTables.PrecomputedKnightMoves[knightIndex];
                 validKnightMoves &= onlyGenerateCaptures ? oppPieces : ~friendlyPieces;
+
+                validKnightMoves &= targetMask;
+
+                validKnightMoves &= pinMasks[knightIndex] != 0 ? pinMasks[knightIndex] : 0xffffffffffffffff;
 
                 while (validKnightMoves != 0)
                 {
@@ -614,20 +790,20 @@ namespace Chess
             ulong pawnAttacks = whiteToMove ?
                 MoveTables.PrecomputedBlackPawnCaptures[currentKingSquare] :
                 MoveTables.PrecomputedWhitePawnCaptures[currentKingSquare];
-            if ((pawnAttacks & InternalBoard.Pieces[MoveColorIndex, ChessBoard.Pawn]) != 0) return true;
+            if ((pawnAttacks & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Pawn]) != 0) return true;
 
             // Check for knight attacks
             ulong knightAttacks = MoveTables.PrecomputedKnightMoves[currentKingSquare];
-            if ((knightAttacks & InternalBoard.Pieces[MoveColorIndex, ChessBoard.Knight]) != 0) return true;
+            if ((knightAttacks & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Knight]) != 0) return true;
 
             // Check for sliding pieces (bishops, rooks, queens)
             ulong bishopQueenAttacks = GetBishopAttacks(InternalBoard.AllPieces, currentKingSquare);
             ulong rookQueenAttacks = GetRookAttacks(InternalBoard.AllPieces, currentKingSquare);
 
-            ulong bishopsQueens = InternalBoard.Pieces[MoveColorIndex, ChessBoard.Bishop] |
-                                  InternalBoard.Pieces[MoveColorIndex, ChessBoard.Queen];
-            ulong rooksQueens = InternalBoard.Pieces[MoveColorIndex, ChessBoard.Rook] |
-                                InternalBoard.Pieces[MoveColorIndex, ChessBoard.Queen];
+            ulong bishopsQueens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Bishop] |
+                                  InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen];
+            ulong rooksQueens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Rook] |
+                                InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen];
 
             if ((bishopQueenAttacks & bishopsQueens) != 0) return true;
             if ((rookQueenAttacks & rooksQueens) != 0) return true;
@@ -642,58 +818,180 @@ namespace Chess
         public static void Initialize()
         {
             currentMoveIndex = 0;
+            for (int i = 0; i < pinMasks.Length; i++)
+            {
+                pinMasks[i] = 0;
+            }
+            // calculate opponent move map data
+            OpponentAttackMap = 0;
+            InitializeAttackMaps();
         }
 
-        public static int GenerateAllLegalMoves(ref Span<Move> pseudoLegalMoves, bool onlyGenerateCaptures = false)
+        //public static int GenerateAllLegalMoves(ref Span<Move> pseudoLegalMoves, bool onlyGenerateCaptures = false)
+        //{
+        //    Initialize();
+
+        //    GenerateLegalMovesBitboard(ref pseudoLegalMoves, onlyGenerateCaptures);
+
+        //    legalMoveCount = 0;
+
+        //    kingInCheck = false;
+
+        //    for (int i = 0; i < currentMoveIndex; i++)
+        //    {
+        //        ExecuteMove(pseudoLegalMoves[i], true);
+
+        //        int currentKingSquare = whiteToMove ? BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]) : BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]);
+
+        //        if (!IsKingInCheck(currentKingSquare))
+        //        {
+        //            pseudoLegalMoves[legalMoveCount++] = pseudoLegalMoves[i];
+        //        }
+
+        //        UndoMove(pseudoLegalMoves[i], true);
+        //    }
+        //    return legalMoveCount; // Returning the count of legal moves
+        //}
+
+        public static int GenerateAllLegalMoves(ref Span<Move> LegalMoves, bool onlyGenerateCaptures = false)
         {
             Initialize();
+            
+            GenerateLegalMovesBitboard(ref LegalMoves, onlyGenerateCaptures);
 
-            GenerateLegalMovesBitboard(ref pseudoLegalMoves, onlyGenerateCaptures);
+            return currentMoveIndex;
+        }
 
-            legalMoveCount = 0;
+        public static void FindPinningPieces(int kingIndex)
+        {
+            ulong pinMask = 0UL;
+            ulong king = InternalBoard.Pieces[MoveColorIndex, ChessBoard.King];
 
-            kingInCheck = false;
+            ulong bishops = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Bishop];
+            ulong rooks = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Rook];
+            ulong queens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen];
 
-            for (int i = 0; i < currentMoveIndex; i++)
+            while (bishops != 0)
             {
-                ExecuteMove(pseudoLegalMoves[i], true);
+                ulong isolatedBishoplsb = bishops & (~bishops + 1);
 
-                int currentKingSquare = whiteToMove ? BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]) : BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]);
+                int bishopIndex = BitBoardHelper.GetLSB(ref isolatedBishoplsb);
 
-                if (!IsKingInCheck(currentKingSquare))
+                ulong twoSquareRay = MoveTables.BishopAttackRays[kingIndex, bishopIndex] & ~king & ~isolatedBishoplsb;
+
+                ulong piecesOnRay = twoSquareRay & InternalBoard.AllPieces;
+
+                // if there is only one piece between a slider and the king, that piece is pinned
+                if (CountBits(piecesOnRay) == 1)
                 {
-                    pseudoLegalMoves[legalMoveCount++] = pseudoLegalMoves[i];
+                    int pinnedPieceIndex = BitBoardHelper.GetLSB(ref piecesOnRay);
+                    pinMasks[pinnedPieceIndex] = twoSquareRay | isolatedBishoplsb;
                 }
 
-                UndoMove(pseudoLegalMoves[i], true);
+                bishops &= bishops - 1;
             }
-            return legalMoveCount; // Returning the count of legal moves
+
+            while (rooks != 0)
+            {
+                ulong isolatedRooklsb = rooks & (~rooks + 1);
+
+                int rookIndex = BitBoardHelper.GetLSB(ref isolatedRooklsb);
+
+                ulong twoSquareRay = MoveTables.RookAttackRays[kingIndex, rookIndex] & ~king & ~isolatedRooklsb;
+
+                ulong piecesOnRay = twoSquareRay & InternalBoard.AllPieces;
+
+                // if there is only one piece between a slider and the king, that piece is pinned
+                if (CountBits(piecesOnRay) == 1)
+                {
+                    int pinnedPieceIndex = BitBoardHelper.GetLSB(ref piecesOnRay);
+                    pinMasks[pinnedPieceIndex] = twoSquareRay | isolatedRooklsb;
+                }
+
+                rooks &= rooks - 1;
+            }
+
+            while (queens != 0)
+            {
+                ulong isolatedQueenlsb = queens & (~queens + 1);
+
+                int queenIndex = BitBoardHelper.GetLSB(ref isolatedQueenlsb);
+
+                ulong twoSquareRay = MoveTables.QueenAttackRays[kingIndex, queenIndex] & ~isolatedQueenlsb & ~king;
+
+                ulong piecesOnRay = twoSquareRay & InternalBoard.AllPieces;
+
+                // if there is only one piece between a slider and the king, that piece is pinned
+                if (CountBits(piecesOnRay) == 1)
+                {
+                    int pinnedPieceIndex = BitBoardHelper.GetLSB(ref piecesOnRay);
+                    pinMasks[pinnedPieceIndex] = twoSquareRay | isolatedQueenlsb;
+                }
+
+                queens &= queens - 1;
+            }
         }
 
         public static void GenerateLegalMovesBitboard(ref Span<Move> moves, bool onlyGenerateCaptures = false)
         {
-            // create list to store legal moves
-            //List<Move> moves = new();
 
-            // TODO edit genbishop, queen, and rook movesets to pass in reference to friendly piece bitboard
+            ulong king = InternalBoard.Pieces[MoveColorIndex, ChessBoard.King];
+ 
+            int kingIndex = BitBoardHelper.GetLSB(ref king);
 
-            if (whiteToMove)
+            bool kingInCheck = (MoveTables.OpponentAttackMap & king) != 0;
+
+            FindPinningPieces(kingIndex);
+
+            if (kingInCheck)
             {
-                GenerateBishopMoves(ref moves, InternalBoard.AllWhitePieces, InternalBoard.AllBlackPieces, onlyGenerateCaptures);
-                GenerateRookMoves(ref moves, InternalBoard.AllWhitePieces, InternalBoard.AllBlackPieces, onlyGenerateCaptures);
-                GenerateQueenMoves(ref moves, InternalBoard.AllWhitePieces, InternalBoard.AllBlackPieces, onlyGenerateCaptures);
-                GenerateWhitePawnMoves(ref moves, onlyGenerateCaptures);
-                GenerateKnightMoves(ref moves, InternalBoard.AllWhitePieces, InternalBoard.AllBlackPieces, onlyGenerateCaptures);
-                GenerateKingMoves(ref moves, InternalBoard.AllWhitePieces, InternalBoard.AllBlackPieces, onlyGenerateCaptures);
-            }
-            else
+                // single check, king can move or another piece can capture/block the checking piece
+                if(CountAttackersToSquare(kingIndex) == 1) {
+                    (ulong checkingPieceBB, int checkingPieceIndex) = FindCheckingPiece(kingIndex);
+
+                    ulong blockMask = 0UL;
+
+                    // had to add an attack rays table because magic bitboards cannot provide me the bitboard of squares between two squares
+                    blockMask = MoveTables.AttackRays[kingIndex, checkingPieceIndex] & ~king;
+
+                    ulong checkBlocksMask = blockMask | checkingPieceBB;
+
+                    GenerateBishopMoves(ref moves, MoveColorPieces, OpponentColorPieces, ref pinMasks, onlyGenerateCaptures, checkBlocksMask);
+                    GenerateRookMoves(ref moves, MoveColorPieces, OpponentColorPieces, ref pinMasks, onlyGenerateCaptures, checkBlocksMask);
+                    GenerateQueenMoves(ref moves, MoveColorPieces, OpponentColorPieces, ref pinMasks, onlyGenerateCaptures, checkBlocksMask);
+                    GenerateKnightMoves(ref moves, MoveColorPieces, OpponentColorPieces, ref pinMasks, onlyGenerateCaptures, checkBlocksMask);
+                    GenerateKingMoves(ref moves, MoveColorPieces, OpponentColorPieces, king, kingIndex, onlyGenerateCaptures, checkBlocksMask, kingInCheck);
+
+                    if (whiteToMove)
+                    {
+                        GenerateWhitePawnMoves(ref moves, ref pinMasks, onlyGenerateCaptures, checkBlocksMask);
+                    }
+                    else
+                    {
+                        GenerateBlackPawnMoves(ref moves, ref pinMasks, onlyGenerateCaptures, checkBlocksMask);
+                    }
+
+                } else // double check, only king moves are legal
+                {
+                    GenerateKingMoves(ref moves, InternalBoard.AllWhitePieces, InternalBoard.AllBlackPieces, king, kingIndex, onlyGenerateCaptures, kingInCheck: kingInCheck);
+                }
+              
+            } else
             {
-                GenerateBishopMoves(ref moves, InternalBoard.AllBlackPieces, InternalBoard.AllWhitePieces, onlyGenerateCaptures);
-                GenerateRookMoves(ref moves, InternalBoard.AllBlackPieces, InternalBoard.AllWhitePieces, onlyGenerateCaptures);
-                GenerateQueenMoves(ref moves, InternalBoard.AllBlackPieces, InternalBoard.AllWhitePieces, onlyGenerateCaptures);
-                GenerateBlackPawnMoves(ref moves, onlyGenerateCaptures);
-                GenerateKnightMoves(ref moves, InternalBoard.AllBlackPieces, InternalBoard.AllWhitePieces, onlyGenerateCaptures);
-                GenerateKingMoves(ref moves, InternalBoard.AllBlackPieces, InternalBoard.AllWhitePieces, onlyGenerateCaptures);
+                // if king is not in check, just address potential pin move complications
+                GenerateBishopMoves(ref moves, MoveColorPieces, OpponentColorPieces, ref pinMasks, onlyGenerateCaptures);
+                GenerateRookMoves(ref moves, MoveColorPieces, OpponentColorPieces, ref pinMasks, onlyGenerateCaptures);
+                GenerateQueenMoves(ref moves, MoveColorPieces, OpponentColorPieces, ref pinMasks, onlyGenerateCaptures);
+                GenerateKnightMoves(ref moves, MoveColorPieces, OpponentColorPieces, ref pinMasks, onlyGenerateCaptures);
+                GenerateKingMoves(ref moves, MoveColorPieces, OpponentColorPieces, king, kingIndex, onlyGenerateCaptures, kingInCheck: kingInCheck);
+                if (whiteToMove)
+                {
+                    GenerateWhitePawnMoves(ref moves, ref pinMasks, onlyGenerateCaptures);
+                }
+                else
+                {
+                    GenerateBlackPawnMoves(ref moves, ref pinMasks, onlyGenerateCaptures);
+                }
             }
         }
 
@@ -910,5 +1208,104 @@ namespace Chess
          * 
          * 
          */
+
+        public static void InitializeAttackMaps()
+        {
+            ulong pawns = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Pawn];
+            ulong knights = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Knight];
+            ulong bishops = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Bishop];
+            ulong rooks = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Rook];
+            ulong queens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen];
+            ulong king = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.King];
+
+            // this is because I want the opponent attack map to show all squares under potential attack, not just attack
+            ulong AllPiecesNoKing = InternalBoard.AllPieces & ~InternalBoard.Pieces[MoveColorIndex, ChessBoard.King];
+
+            while (pawns != 0) {
+                ulong isolatedPawnlsb = pawns & (~pawns + 1);
+                int currentPawnPos = BitBoardHelper.GetLSB(ref isolatedPawnlsb);
+                ulong pawnAttacks = whiteToMove ? MoveTables.PrecomputedBlackPawnCaptures[currentPawnPos] : MoveTables.PrecomputedWhitePawnCaptures[currentPawnPos];
+                MoveTables.OpponentAttackMap |= pawnAttacks;
+                pawns &= pawns - 1;
+            }
+
+            while(knights != 0)
+            {
+                ulong isolatedKnightlsb = knights & (~knights + 1);
+                int currentKnightPos = BitBoardHelper.GetLSB(ref isolatedKnightlsb);
+                ulong knightAttacks = MoveTables.PrecomputedKnightMoves[currentKnightPos];
+                MoveTables.OpponentAttackMap |= knightAttacks;
+                knights &= knights - 1;
+            }
+
+            while (bishops != 0)
+            {
+                ulong isolatedBishoplsb = bishops & (~bishops + 1);
+                int currentBishopPos = BitBoardHelper.GetLSB(ref isolatedBishoplsb);
+
+                ulong bishopAttacks = GetBishopAttacks(AllPiecesNoKing, currentBishopPos);
+
+                MoveTables.OpponentAttackMap |= bishopAttacks;
+                bishops &= bishops - 1;
+            }
+
+            while (rooks != 0)
+            {
+                ulong isolatedRooklsb = rooks & (~rooks + 1);
+                int currentRookPos = BitBoardHelper.GetLSB(ref isolatedRooklsb);
+
+                ulong rookAttacks = GetRookAttacks(AllPiecesNoKing, currentRookPos);
+
+                MoveTables.OpponentAttackMap |= rookAttacks;
+                rooks &= rooks - 1;
+            }
+
+            while (queens != 0)
+            {
+                ulong isolatedQueenlsb = queens & (~queens + 1);
+                int currentQueenPos = BitBoardHelper.GetLSB(ref isolatedQueenlsb);
+
+                ulong rookQueenAttacks = GetRookAttacks(AllPiecesNoKing, currentQueenPos);
+                ulong bishopQueenAttacks = GetBishopAttacks(AllPiecesNoKing, currentQueenPos);
+                ulong queenAttacks = rookQueenAttacks | bishopQueenAttacks;
+                MoveTables.OpponentAttackMap |= queenAttacks;
+                queens &= queens - 1;
+            }
+
+            int kingIndex = BitBoardHelper.GetLSB(ref king);
+            ulong kingAttacks = MoveTables.PrecomputedKingMoves[kingIndex];
+            MoveTables.OpponentAttackMap |= kingAttacks;
+        }
+
+        //public static bool IsKingInCheck(int currentKingSquare)
+        //{
+        //    // Check for pawn attacks
+        //    ulong pawnAttacks = whiteToMove ?
+        //        MoveTables.PrecomputedBlackPawnCaptures[currentKingSquare] :
+        //        MoveTables.PrecomputedWhitePawnCaptures[currentKingSquare];
+        //    if ((pawnAttacks & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Pawn]) != 0) return true;
+
+        //    // Check for knight attacks
+        //    ulong knightAttacks = MoveTables.PrecomputedKnightMoves[currentKingSquare];
+        //    if ((knightAttacks & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Knight]) != 0) return true;
+
+        //    // Check for sliding pieces (bishops, rooks, queens)
+        //    ulong bishopQueenAttacks = GetBishopAttacks(InternalBoard.AllPieces, currentKingSquare);
+        //    ulong rookQueenAttacks = GetRookAttacks(InternalBoard.AllPieces, currentKingSquare);
+
+        //    ulong bishopsQueens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Bishop] |
+        //                          InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen];
+        //    ulong rooksQueens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Rook] |
+        //                        InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen];
+
+        //    if ((bishopQueenAttacks & bishopsQueens) != 0) return true;
+        //    if ((rookQueenAttacks & rooksQueens) != 0) return true;
+
+        //    // Check for king attacks (useful in edge cases and avoids self-check scenarios)
+        //    ulong kingAttacks = MoveTables.PrecomputedKingMoves[currentKingSquare];
+        //    if ((kingAttacks & InternalBoard.Pieces[MoveColorIndex, ChessBoard.King]) != 0) return true;
+
+        //    return false;
+        //}
     }
 }
