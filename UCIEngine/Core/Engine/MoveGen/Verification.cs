@@ -92,7 +92,28 @@ namespace Chess
             int fromRank = fromIndex / 8 + 1;
             char toFile = (char)('a' + (toIndex % 8));
             int toRank = toIndex / 8 + 1;
-            return $"{fromFile}{fromRank}{toFile}{toRank}";
+
+            string uciMove = $"{fromFile}{fromRank}{toFile}{toRank}";
+
+            // Append promotion character if needed
+            switch (move.promotionFlag)
+            {
+                case PromotionFlags.PromoteToQueenFlag:
+                    uciMove += "q";
+                    break;
+                case PromotionFlags.PromoteToRookFlag:
+                    uciMove += "r";
+                    break;
+                case PromotionFlags.PromoteToBishopFlag:
+                    uciMove += "b";
+                    break;
+                case PromotionFlags.PromoteToKnightFlag:
+                    uciMove += "n";
+                    break;
+            }
+
+            return uciMove;
         }
+
     }
 }

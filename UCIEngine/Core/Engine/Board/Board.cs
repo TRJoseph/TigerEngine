@@ -124,16 +124,14 @@ namespace Chess
 
         public static void ExecuteMove(ref Move move, bool inSearch = false)
         {
+
             int movedPiece = move.movedPiece;
             ulong toSquare = move.toSquare;
             ulong fromSquare = move.fromSquare;
 
             int toSquareIndex = BitBoardHelper.GetLSB(ref toSquare);
             int fromSquareIndex = BitBoardHelper.GetLSB(ref fromSquare);
-            //if (movedPiece == ChessBoard.Bishop && fromSquareIndex == 5 && toSquareIndex == 40)
-            //{
-            //    Console.WriteLine();
-            //}
+
             bool isEnPassant = move.specialMove is SpecialMove.EnPassant;
 
             bool isPromotion = move.IsPawnPromotion;
@@ -428,7 +426,7 @@ namespace Chess
                 };
                 // Remove pawn from promotion square and add promoted piece instead
                 InternalBoard.Pieces[friendlyPieceColor, promotionPieceType] &= ~toSquare;
-                InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Pawn] |= toSquare;
+                //InternalBoard.Pieces[friendlyPieceColor, ChessBoard.Pawn] |= toSquare;
                 // No incremental update needed: toSquare remains set in composites
             }
             InternalBoard.AllPieces = InternalBoard.AllBlackPieces | InternalBoard.AllWhitePieces;

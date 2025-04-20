@@ -92,9 +92,12 @@ namespace Chess
             if (bestMove.IsDefault() || bestMove.toSquare == 0 || bestMove.fromSquare == 0)
             {
                 Random rand = new();
-                int moveIndex = rand.Next(legalMoves.Length); // Select a random index from the list
-                bestMove = legalMoves[moveIndex];
-                bestEval = 0;
+                if(legalMoves.Length > 0)
+                {
+                    int moveIndex = rand.Next(legalMoves.Length); // Select a random index from the list
+                    bestMove = legalMoves[moveIndex];
+                    bestEval = 0;
+                }
             }
 
         }

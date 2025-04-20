@@ -215,70 +215,79 @@ namespace Chess
 
                     Move bestMove = ComputerPlayer1.Engine.bestMove;
 
-                    string bestMoveString = BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.toSquare);
-
-                    if (Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag != PromotionFlags.None)
+                    // if the position is a mate or for some other reason a move is failed at being selected (the latter should not happen)
+                    if(bestMove.IsDefault())
                     {
-                        bestMoveString += ConvertPromotionFlagToChar(Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag);
-                    }
-
-                    // if the engine is operating in verbose mode, provide extra detail to the move
-                    if (verbose)
-                    {
-                        string unalteredBestMoveString = bestMoveString;
-                        bestMoveString += $"|movedPiece:{bestMove.movedPiece}";
-
-                        if (bestMove.capturedPieceType != -1)
-                        {
-                            bestMoveString += $"|capturedPiece:{bestMove.capturedPieceType}";
-                        }
-                        
-                        // append a special move flag if applicable
-                        switch (bestMove.specialMove)
-                        {
-                            case SpecialMove.KingSideCastleMove:
-                                bestMoveString += "|specialMove:KingSideCastle";
-                                break;
-                            case SpecialMove.QueenSideCastleMove:
-                                bestMoveString += "|specialMove:QueenSideCastle";
-                                break;
-                            case SpecialMove.EnPassant:
-                                bestMoveString += "|specialMove:EnPassant";
-                                break;
-                            case SpecialMove.None:
-                            default:
-                                // no special move; do nothing
-                                break;
-                        }
-
-                        if(bestMove.IsPawnPromotion)
-                        {
-                            bestMoveString += "|promotion:";
-                            switch (bestMove.promotionFlag)
-                            {
-                                case PromotionFlags.PromoteToQueenFlag:
-                                    bestMoveString += "queen";
-                                    break;
-                                case PromotionFlags.PromoteToRookFlag:
-                                    bestMoveString += "rook";
-                                    break;
-                                case PromotionFlags.PromoteToKnightFlag:
-                                    bestMoveString += "knight";
-                                    break;
-                                case PromotionFlags.PromoteToBishopFlag:
-                                    bestMoveString += "bishop";
-                                    break;
-                                case PromotionFlags.None:
-                                default:
-                                    break;
-                            }
-                        }
-                        Console.WriteLine("bestmove " + bestMoveString);
-                        SendCommandToServerAsync("bestmove " + unalteredBestMoveString);
+                        Console.WriteLine("bestmove (none)");
+                        SendCommandToServerAsync("bestmove (none)");
                     } else
                     {
-                        Console.WriteLine("bestmove " + bestMoveString);
-                        SendCommandToServerAsync("bestmove " + bestMoveString);
+                        string bestMoveString = BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.toSquare);
+
+                        if (Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag != PromotionFlags.None)
+                        {
+                            bestMoveString += ConvertPromotionFlagToChar(Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag);
+                        }
+
+                        // if the engine is operating in verbose mode, provide extra detail to the move
+                        if (verbose)
+                        {
+                            string unalteredBestMoveString = bestMoveString;
+                            bestMoveString += $"|movedPiece:{bestMove.movedPiece}";
+
+                            if (bestMove.capturedPieceType != -1)
+                            {
+                                bestMoveString += $"|capturedPiece:{bestMove.capturedPieceType}";
+                            }
+
+                            // append a special move flag if applicable
+                            switch (bestMove.specialMove)
+                            {
+                                case SpecialMove.KingSideCastleMove:
+                                    bestMoveString += "|specialMove:KingSideCastle";
+                                    break;
+                                case SpecialMove.QueenSideCastleMove:
+                                    bestMoveString += "|specialMove:QueenSideCastle";
+                                    break;
+                                case SpecialMove.EnPassant:
+                                    bestMoveString += "|specialMove:EnPassant";
+                                    break;
+                                case SpecialMove.None:
+                                default:
+                                    // no special move; do nothing
+                                    break;
+                            }
+
+                            if (bestMove.IsPawnPromotion)
+                            {
+                                bestMoveString += "|promotion:";
+                                switch (bestMove.promotionFlag)
+                                {
+                                    case PromotionFlags.PromoteToQueenFlag:
+                                        bestMoveString += "queen";
+                                        break;
+                                    case PromotionFlags.PromoteToRookFlag:
+                                        bestMoveString += "rook";
+                                        break;
+                                    case PromotionFlags.PromoteToKnightFlag:
+                                        bestMoveString += "knight";
+                                        break;
+                                    case PromotionFlags.PromoteToBishopFlag:
+                                        bestMoveString += "bishop";
+                                        break;
+                                    case PromotionFlags.None:
+                                    default:
+                                        break;
+                                }
+                            }
+                            Console.WriteLine("bestmove " + bestMoveString);
+                            SendCommandToServerAsync("bestmove " + unalteredBestMoveString);
+                        }
+                        else
+                        {
+                            Console.WriteLine("bestmove " + bestMoveString);
+                            SendCommandToServerAsync("bestmove " + bestMoveString);
+                        }
                     }
                 })
                 { IsBackground = true }.Start();
