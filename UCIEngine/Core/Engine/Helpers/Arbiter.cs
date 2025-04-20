@@ -11,6 +11,7 @@ namespace Chess
 
     public class Arbiter
     {
+        // Forsyth-Edwards Notation representing the starting position in a chess game
         public static readonly string StartFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
         // this struct holds what engine version the computer will play using as well as the side it will play on (white or black)
@@ -20,16 +21,16 @@ namespace Chess
         }
 
         // these will be the default search settings
-        public static SearchSettings SearchSettings = new()
+        public static readonly SearchSettings SearchSettings = new()
         {
             Depth = 4,
-            SearchTime = TimeSpan.FromMilliseconds(200),
+            SearchTime = TimeSpan.FromMilliseconds(3000),
             SearchType = SearchType.IterativeDeepening
         };
 
         /* when setting multiple computer players for a computer versus computer matchup,
          make sure that they are playing as opposite sides!! */
-        public static ComputerPlayer ComputerPlayer1 = new()
+        public static readonly ComputerPlayer ComputerPlayer1 = new()
         {
             Engine = new Engine(SearchSettings),
         };
@@ -199,12 +200,12 @@ namespace Chess
         public static GameResult CheckForGameOverRules(bool playerInCheck, bool inSearch = false)
         {
 
-            if (legalMoveCount == 0 && playerInCheck)
+            if (currentMoveIndex == 0 && playerInCheck)
             {
                 return GameResult.Checkmate;
             }
 
-            if (legalMoveCount == 0 && !playerInCheck)
+            if (currentMoveIndex == 0 && !playerInCheck)
             {
                 return GameResult.Stalemate;
             }
