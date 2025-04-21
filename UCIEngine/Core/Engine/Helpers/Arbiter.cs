@@ -24,7 +24,7 @@ namespace Chess
         public static readonly SearchSettings SearchSettings = new()
         {
             Depth = 4,
-            SearchTime = TimeSpan.FromMilliseconds(3000),
+            SearchTime = TimeSpan.FromMilliseconds(1000),
             SearchType = SearchType.IterativeDeepening
         };
 
