@@ -429,7 +429,7 @@ namespace Chess
 
         public static void SendUCIResponse()
         {
-            Console.WriteLine("id name TigerEngine - Version 6 with second TT implementation");
+            Console.WriteLine("id name TigerEngine - Version 7 with replaced pseudolegal movegen");
             Console.WriteLine("id author Thomas R. Joseph");
 
             // TODO: Actually implement these options 
