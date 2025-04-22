@@ -17,5 +17,12 @@ namespace Chess
         public TimeSpan SearchTime;
 
         public SearchType SearchType;
+
+        public SearchSettings(int depth, TimeSpan searchTime, SearchType searchType)
+        {
+            Depth = depth;
+            SearchTime = searchTime;
+            SearchType = searchType;
+        }
     }
 }

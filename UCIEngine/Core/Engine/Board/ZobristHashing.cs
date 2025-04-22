@@ -7,23 +7,30 @@ using static Chess.PositionInformation;
 
 namespace Chess
 {
-    public static class ZobristHashing
+    public class ZobristHashing
     {
+        public Board board;
+        public ZobristHashing(Board board)
+        {
+            this.board = board;
+        }
+
+        // Zobrist hashing is a way to represent a chess position as a single number
         // https://www.chessprogramming.org/Zobrist_Hashing
         // one number for each color (2), for each piece (6), at each square (64)
-        public static readonly ulong[,,] pieceAtEachSquareArray = new ulong[2, 6, 64];
+        public readonly ulong[,,] pieceAtEachSquareArray = new ulong[2, 6, 64];
 
-        public static ulong sideToMove;
+        public ulong sideToMove;
 
         // no castling, kingside, queenside, both
         // TODO: this may need to be changed to an array of 4 long
-        public static readonly ulong[] castlingRightsArray = new ulong[16];
+        public readonly ulong[] castlingRightsArray = new ulong[16];
 
         // 1 is a file, 8 is h file, 0 is none
-        public static readonly ulong[] enPassantFile = new ulong[9];
+        public readonly ulong[] enPassantFile = new ulong[9];
 
 
-        public static void GenerateZobristHashes()
+        public void GenerateZobristHashes()
         {
             Random rnd = new Random(15066146);
             byte[] randomBytes = new byte[8];
@@ -70,7 +77,7 @@ namespace Chess
             sideToMove = longRand;
         }
 
-        public static ulong InitializeHashKey()
+        public ulong InitializeHashKey()
         {
             // this will initialize the hash key for the initial position
             ulong ZobristHash = 0;
@@ -89,14 +96,14 @@ namespace Chess
                 }
             }
 
-            if (whiteToMove == false)
+            if (board.posInfo.whiteToMove == false)
             {
                 ZobristHash ^= sideToMove;
             }
 
-            ZobristHash ^= castlingRightsArray[CurrentGameState.castlingRights];
+            ZobristHash ^= castlingRightsArray[board.posInfo.CurrentGameState.castlingRights];
 
-            ZobristHash ^= enPassantFile[CurrentGameState.enPassantFile];
+            ZobristHash ^= enPassantFile[board.posInfo.CurrentGameState.enPassantFile];
 
             return ZobristHash;
 

@@ -995,5 +995,183 @@ namespace Chess
 };
         public static ulong lightSquares = 0x55aa55aa55aa55aa;
         public static ulong darkSquares = 0xaa55aa55aa55aa55;
+
+        private static int GetSquare(int rank, int file)
+        {
+            return rank * 8 + file;
+        }
+
+        // Generates the key, similar to the Java code snippet
+        private static int Transform(ulong blockers, ulong magic, int shift)
+        {
+            return (int)((blockers * magic) >> shift);
+        }
+
+        private static int TrailingZeroCount(ulong value)
+        {
+            if (value == 0) return 64;
+            int count = 0;
+
+            while ((value & 1) == 0)
+            {
+                count++;
+                value >>= 1;
+            }
+
+            return count;
+        }
+
+        private static int PopCount(ulong x)
+        {
+            int count;
+            for (count = 0; x != 0; count++)
+            {
+                x &= x - 1; // Clear the least significant bit set
+            }
+            return count;
+        }
+
+        public static void InitBishopLookup()
+        {
+            for (int square = 0; square < 64; square++)
+            {
+                ulong mask = MoveTables.BishopRelevantOccupancy[square];
+                int permutationCount = 1 << PopCount(mask);
+
+                for (int i = 0; i < permutationCount; i++)
+                {
+                    ulong blockers = BlockersPermutation(i, mask);
+                    ulong attacks = 0UL;
+                    int rank = MoveGen.GetRank(square), r;
+                    int file = MoveGen.GetFile(square), f;
+
+                    for (r = rank + 1, f = file + 1; r <= 7 && f <= 7; r++, f++)
+                    {
+                        attacks |= 1UL << GetSquare(r, f);
+                        if ((blockers & (1UL << GetSquare(r, f))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    for (r = rank - 1, f = file + 1; r >= 0 && f <= 7; r--, f++)
+                    {
+                        attacks |= 1UL << GetSquare(r, f);
+                        if ((blockers & (1UL << GetSquare(r, f))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    for (r = rank - 1, f = file - 1; r >= 0 && f >= 0; r--, f--)
+                    {
+                        attacks |= 1UL << GetSquare(r, f);
+                        if ((blockers & (1UL << GetSquare(r, f))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    for (r = rank + 1, f = file - 1; r <= 7 && f >= 0; r++, f--)
+                    {
+                        attacks |= 1UL << GetSquare(r, f);
+                        if ((blockers & (1UL << GetSquare(r, f))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    int key = Transform(blockers, MoveTables.BishopMagics[square], MoveTables.PrecomputedBishopShifts[square]);
+
+                    MoveTables.BishopAttackTable[square, key] = attacks;
+                }
+            }
+        }
+
+        public static void InitRookLookup()
+        {
+            for (int square = 0; square < 64; square++)
+            {
+                ulong mask = MoveTables.RookRelevantOccupancy[square];
+                int permutationCount = 1 << PopCount(mask);
+
+                for (int i = 0; i < permutationCount; i++)
+                {
+                    ulong blockers = BlockersPermutation(i, mask);
+                    ulong attacks = 0UL;
+                    int rank = MoveGen.GetRank(square), r;
+                    int file = MoveGen.GetFile(square), f;
+
+                    // Horizontal attacks to the right
+                    for (f = file + 1; f <= 7; f++)
+                    {
+                        attacks |= 1UL << GetSquare(rank, f);
+                        if ((blockers & (1UL << GetSquare(rank, f))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    // Horizontal attacks to the left
+                    for (f = file - 1; f >= 0; f--)
+                    {
+                        attacks |= 1UL << GetSquare(rank, f);
+                        if ((blockers & (1UL << GetSquare(rank, f))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    // Vertical attacks upwards
+                    for (r = rank + 1; r <= 7; r++)
+                    {
+                        attacks |= 1UL << GetSquare(r, file);
+                        if ((blockers & (1UL << GetSquare(r, file))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    // Vertical attacks downwards
+                    for (r = rank - 1; r >= 0; r--)
+                    {
+                        attacks |= 1UL << GetSquare(r, file);
+                        if ((blockers & (1UL << GetSquare(r, file))) != 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    int key = Transform(blockers, MoveTables.RookMagics[square], MoveTables.PrecomputedRookShifts[square]);
+
+                    MoveTables.RookAttackTable[square, key] = attacks;
+                }
+            }
+        }
+
+
+        private static ulong BlockersPermutation(int iteration, ulong mask)
+        {
+            ulong blockers = 0;
+
+            while (iteration != 0)
+            {
+                if ((iteration & 1) != 0)
+                {
+                    int shift = TrailingZeroCount(mask);
+                    blockers |= 1UL << shift;
+                }
+
+                iteration >>= 1;
+                mask &= mask - 1; // Kernighan's bit count algorithm step
+            }
+
+            return blockers;
+        }
+
+        /*
+         * 
+         * 
+         */
     }
 }
