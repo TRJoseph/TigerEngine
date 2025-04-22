@@ -290,7 +290,7 @@ namespace Chess
                                 }
                             }
                             Console.WriteLine("bestmove " + bestMoveString);
-                            SendCommandToServerAsync("bestmove " + unalteredBestMoveString);
+                            SendCommandToServerAsync("bestmove " + bestMoveString);
                         }
                         else
                         {
