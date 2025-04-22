@@ -6,8 +6,13 @@ using System;
 
 namespace Chess
 {
-    public class Evaluation
+    public class Evaluator
     {
+        private PositionInformation posInfo;
+        public Evaluator(PositionInformation posInfo)
+        {
+            this.posInfo = posInfo;
+        }
 
         //https://www.chessprogramming.org/Simplified_Evaluation_Function
         // starting from square 0 to 63, prioritizing pawn center control
@@ -203,7 +208,7 @@ namespace Chess
             // promote will be worth more, king safety, etc.
             int piecePositionScore = 0;
 
-            int colorIndex = PositionInformation.MoveColorIndex;
+            int colorIndex = posInfo.MoveColorIndex;
             int[] pawnBias = whiteToMove ? whitePawnPushBias : blackPawnPushBias;
             int[] knightBias = whiteToMove ? whiteKnightBias : blackKnightBias;
             int[] bishopBias = whiteToMove ? whiteBishopBias : blackBishopBias;
@@ -225,8 +230,8 @@ namespace Chess
             int[] middleGameBiasArray = whiteToMove ? whiteKingMiddleGameBias : blackKingMiddleGameBias;
             int[] endGameBiasArray = whiteToMove ? whiteKingEndGameBias : blackKingEndGameBias;
 
-            int middleGameBias = EvaluatePiecePositions(InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.King], middleGameBiasArray);
-            int endGameBias = EvaluatePiecePositions(InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.King], endGameBiasArray);
+            int middleGameBias = EvaluatePiecePositions(InternalBoard.Pieces[posInfo.MoveColorIndex, ChessBoard.King], middleGameBiasArray);
+            int endGameBias = EvaluatePiecePositions(InternalBoard.Pieces[posInfo.MoveColorIndex, ChessBoard.King], endGameBiasArray);
 
             return (int)(middleGameBias * middleGameWeight + endGameBias * endGameWeight);
         }
@@ -243,8 +248,8 @@ namespace Chess
         {
             int eval = 0;
 
-            int friendlyKingSquare = BitBoardHelper.GetLSB(ref InternalBoard.Pieces[PositionInformation.MoveColorIndex, ChessBoard.King]);
-            int oppKingSquare = BitBoardHelper.GetLSB(ref InternalBoard.Pieces[PositionInformation.OpponentColorIndex, ChessBoard.King]);
+            int friendlyKingSquare = BitBoardHelper.GetLSB(ref InternalBoard.Pieces[posInfo.MoveColorIndex, ChessBoard.King]);
+            int oppKingSquare = BitBoardHelper.GetLSB(ref InternalBoard.Pieces[posInfo.OpponentColorIndex, ChessBoard.King]);
 
             // Calculate edge distance for opponent king to encourage pushing to the edge of the board
             int oppKingFile = GetFile(oppKingSquare);
@@ -289,7 +294,7 @@ namespace Chess
                 middleGameWeight = 1.0 - endGameWeight;
             }
 
-            eval += ConsiderKingPosition(PositionInformation.whiteToMove, middleGameWeight, endGameWeight);
+            eval += ConsiderKingPosition(posInfo.whiteToMove, middleGameWeight, endGameWeight);
             eval += BiasKingPositionForEndgames(endGameWeight);
 
             return eval;
@@ -301,7 +306,7 @@ namespace Chess
             int whiteEvaluation = CountMaterial(ChessBoard.White);
             int blackEvaluation = CountMaterial(ChessBoard.Black);
 
-            bool whiteToMove = PositionInformation.whiteToMove;
+            bool whiteToMove = posInfo.whiteToMove;
 
             // large values favor white, small values favor black
             int evaluation = whiteEvaluation - blackEvaluation;

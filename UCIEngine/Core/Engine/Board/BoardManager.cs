@@ -10,31 +10,31 @@ namespace Chess
 {
     public class BoardManager
     {
-
-
-        //private static readonly string FENString = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // starting position in chess
-
-
-        public static void InitializeLookupTables()
+        public Board board;
+        public BoardManager(Board board)
+        {
+            this.board = board;
+        }
+        public void InitializeLookupTables()
         {
             // initializes bishop and rook move lookup tables (every possible permutation of blocking pieces)
-            InitBishopLookup();
-            InitRookLookup();
+            MoveTables.InitBishopLookup();
+            MoveTables.InitRookLookup();
         }
 
-        public static void InitializeBoard(string FENString)
+        public void InitializeBoard(string FENString)
         {
             InitializeLookupTables();
             LoadFENString(FENString);
         }
 
 
-        public static void LoadFENString(string FENString)
+        public void LoadFENString(string FENString)
         {
             // ensure bitboards are cleared when loading in the FEN string
             InternalBoard.ResetBitboards();
 
-            GameStartFENString = FENString;
+            board.posInfo.GameStartFENString = FENString;
 
             // start at 7th rank and 0th file (top left of board)
             // (7th rank is actually 8th rank on board, 0th file is the a file)
@@ -96,11 +96,11 @@ namespace Chess
             // parse active color
             if (activeColorField[0] == 'w')
             {
-                whiteToMove = true;
+                board.posInfo.whiteToMove = true;
             }
             else
             {
-                whiteToMove = false;
+                board.posInfo.whiteToMove = false;
             }
 
             // parse castling rights
@@ -109,16 +109,16 @@ namespace Chess
                 switch (castlingRightsField[i])
                 {
                     case 'K':
-                        CastlingRights |= (int)CastlingRightsFlags.WhiteKingSide;
+                        board.posInfo.CastlingRights |= (int)CastlingRightsFlags.WhiteKingSide;
                         break;
                     case 'Q':
-                        CastlingRights |= (int)CastlingRightsFlags.WhiteQueenSide;
+                        board.posInfo.CastlingRights |= (int)CastlingRightsFlags.WhiteQueenSide;
                         break;
                     case 'k':
-                        CastlingRights |= (int)CastlingRightsFlags.BlackKingSide;
+                        board.posInfo.CastlingRights |= (int)CastlingRightsFlags.BlackKingSide;
                         break;
                     case 'q':
-                        CastlingRights |= (int)CastlingRightsFlags.BlackQueenSide;
+                        board.posInfo.CastlingRights |= (int)CastlingRightsFlags.BlackQueenSide;
                         break;
                     default:
                         // case where there are no castling rights ('-')
@@ -127,11 +127,11 @@ namespace Chess
             }
             if (enPassantTargetsField[0] == '-')
             {
-                EnPassantFile = 0;
+                board.posInfo.EnPassantFile = 0;
             }
             else
             {
-                EnPassantFile = enPassantTargetsField[0] - 'a' + 1;
+                board.posInfo.EnPassantFile = enPassantTargetsField[0] - 'a' + 1;
             }
 
             if (halfMoveClockField[0] == '-')
@@ -140,7 +140,7 @@ namespace Chess
             }
             else
             {
-                halfMoveAccumulator = int.Parse(halfMoveClockField[0].ToString());
+                board.posInfo.halfMoveAccumulator = int.Parse(halfMoveClockField[0].ToString());
             }
 
             if (fullMoveNumberField[0] == '-')
@@ -149,7 +149,7 @@ namespace Chess
             }
             else
             {
-                fullMoveAccumulator = int.Parse(halfMoveClockField[0].ToString());
+                board.posInfo.fullMoveAccumulator = int.Parse(halfMoveClockField[0].ToString());
             }
 
             // Initializes the initial physical locations of all the white pieces, black pieces, and every piece on the board

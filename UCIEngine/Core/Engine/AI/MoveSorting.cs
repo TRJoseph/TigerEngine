@@ -7,6 +7,8 @@ namespace Chess
 {
     public class MoveSorting
     {
+        public Board board;
+        public MoveGen moveGenerator;
 
         public const int maxDepth = 10;
 
@@ -26,8 +28,10 @@ namespace Chess
             public int Score;
         }
 
-        public MoveSorting()
+        public MoveSorting(Board board, MoveGen moveGenerator)
         {
+            this.board = board;
+            this.moveGenerator = moveGenerator;
             // max depth x number of moves stored
             killerMoves = new Move[maxDepth+1, 2];
         }
@@ -56,8 +60,8 @@ namespace Chess
 
                 int pieceMoveToSquare = BitBoardHelper.GetLSB(ref moves[i].toSquare);
 
-                int capturedPieceType = GetPieceAtSquare(PositionInformation.OpponentColorIndex, moves[i].toSquare);
-                int movePieceType = GetPieceAtSquare(PositionInformation.MoveColorIndex, moves[i].fromSquare);
+                int capturedPieceType = GetPieceAtSquare(board.posInfo.OpponentColorIndex, moves[i].toSquare);
+                int movePieceType = GetPieceAtSquare(board.posInfo.MoveColorIndex, moves[i].fromSquare);
 
                 bool isCapture = capturedPieceType != ChessBoard.None;
                 bool isPromotion = moves[i].IsPawnPromotion;
@@ -67,7 +71,7 @@ namespace Chess
                     int capturedPieceValue = GetPieceValue(capturedPieceType);
                     int movedPieceValue = GetPieceValue(movePieceType);
                     int materialDelta = capturedPieceValue - movedPieceValue;
-                    bool opponentCanRecapture = MoveGen.SquareAttackedBy(pieceMoveToSquare);
+                    bool opponentCanRecapture = moveGenerator.SquareAttackedBy(pieceMoveToSquare);
 
                     if (opponentCanRecapture)
                     {
@@ -87,7 +91,7 @@ namespace Chess
                 if (IsKillerMove(moves[i], currentDepth)) currentScore += killerBias;
 
                 //penalize a move for moving a piece where it can be attacked by an opponent pawn
-                if (MoveGen.SquareAttackedByPawn(pieceMoveToSquare))
+                if (moveGenerator.SquareAttackedByPawn(pieceMoveToSquare))
                 {
                     currentScore -= GetPieceValue(movePieceType);
                 }
