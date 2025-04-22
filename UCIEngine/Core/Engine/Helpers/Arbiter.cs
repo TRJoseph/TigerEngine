@@ -1,100 +1,97 @@
 using System.Linq;
-using static Chess.Board;
-using static Chess.PositionInformation;
-using static Chess.MoveGen;
 using System.Diagnostics;
 using System.Collections;
 using System.Xml.Serialization;
+using static Chess.Board;
 
 namespace Chess
 {
 
     public class Arbiter
     {
+        // Forsyth-Edwards Notation representing the starting position in a chess game
         public static readonly string StartFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-        // this struct holds what engine version the computer will play using as well as the side it will play on (white or black)
-        public struct ComputerPlayer
-        {
-            public Engine Engine;
+        public bool positionLoaded = false;
+
+        public MoveGen moveGenerator;
+        public Board board;
+
+        public Arbiter(MoveGen moveGenerator, Board board) {
+            this.moveGenerator = moveGenerator;
+            this.board = board;
         }
 
-        // these will be the default search settings
-        public static SearchSettings SearchSettings = new()
+
+        // represents the current status of the game
+        public enum GameResult
         {
-            Depth = 4,
-            SearchTime = TimeSpan.FromMilliseconds(200),
-            SearchType = SearchType.IterativeDeepening
-        };
-
-        /* when setting multiple computer players for a computer versus computer matchup,
-         make sure that they are playing as opposite sides!! */
-        public static ComputerPlayer ComputerPlayer1 = new()
-        {
-            Engine = new Engine(SearchSettings),
-        };
-
-        public static bool positionLoaded = false;
-
-
-        public static void InitializeGame(string FENString)
+            InProgress,
+            Stalemate,
+            Checkmate,
+            ThreeFold,
+            FiftyMoveRule,
+            InsufficientMaterial
+        }
+       
+        public void InitializeGame(string FENString)
         {
             // reset game status
-            currentStatus = GameResult.InProgress;
+            board.posInfo.currentStatus = GameResult.InProgress;
 
             // reset the game state and position hashes
-            GameStateHistory.Clear();
-            PositionHashes.Clear();
-            EnPassantFile = 0;
-            CastlingRights = 0;
+            board.posInfo.GameStateHistory.Clear();
+            board.posInfo.PositionHashes.Clear();
+            board.posInfo.EnPassantFile = 0;
+            board.posInfo.CastlingRights = 0;
 
-            BoardManager.InitializeBoard(FENString);
+            board.boardManager.InitializeBoard(FENString);
 
             // generates zobrist hash key
-            ZobristHashing.GenerateZobristHashes();
+            board.zobristHashing.GenerateZobristHashes();
 
             // Set game state (note: calculating zobrist key relies on current game state)
-            CurrentGameState = new GameState(0, PositionInformation.EnPassantFile, PositionInformation.CastlingRights, PositionInformation.halfMoveAccumulator, 0);
-            ulong zobristHashKey = ZobristHashing.InitializeHashKey();
-            CurrentGameState = new GameState(0, PositionInformation.EnPassantFile, PositionInformation.CastlingRights, PositionInformation.halfMoveAccumulator, zobristHashKey);
-            GameStateHistory.Push(CurrentGameState);
+            board.posInfo.CurrentGameState = new GameState(0, (byte)board.posInfo.EnPassantFile, (byte)board.posInfo.CastlingRights, (byte)board.posInfo.halfMoveAccumulator, 0);
+            ulong zobristHashKey = board.zobristHashing.InitializeHashKey();
+            board.posInfo.CurrentGameState = new GameState(0, (byte)board.posInfo.EnPassantFile, (byte)board.posInfo.CastlingRights, (byte)board.posInfo.halfMoveAccumulator, zobristHashKey);
+            board.posInfo.GameStateHistory.Push(board.posInfo.CurrentGameState);
 
-            legalMoves = GenerateMoves();
+            moveGenerator.legalMoves = moveGenerator.GenerateMoves();
 
             //UICLI.PrintBoard(InternalBoard, whiteToMove);
 
             positionLoaded = true;
         }
 
-        public static void DoTurn(Move move)
+        public void DoTurn(MoveGen.Move move)
         {
-            ExecuteMove(move);
+            board.ExecuteMove(ref move);
 
-            legalMoves = GenerateMoves();
+            moveGenerator.legalMoves = moveGenerator.GenerateMoves();
 
-            bool playerInCheck = IsPlayerInCheck();
             // check for game over rules
-            currentStatus = CheckForGameOverRules(playerInCheck);
+            bool playerInCheck = IsPlayerInCheck(board.posInfo);
+            board.posInfo.currentStatus = CheckForGameOverRules(moveGenerator, board.posInfo, playerInCheck);
 
             //UICLI.PrintBoard(InternalBoard, whiteToMove);
 
             // Handle game over scenarios, if necessary
-            if (currentStatus != GameResult.InProgress)
+            if (board.posInfo.currentStatus != GameResult.InProgress)
             {
-                HandleGameOver();
-                Array.Clear(legalMoves, 0, legalMoves.Length);
+                HandleGameOver(board.posInfo);
+                Array.Clear(moveGenerator.legalMoves, 0, moveGenerator.legalMoves.Length);
             }
         }
 
-        public static void HandleGameOver()
+        public static void HandleGameOver(PositionInformation posInfo)
         {
-            switch(currentStatus)
+            switch(posInfo.currentStatus)
             {
                 case GameResult.Stalemate:
                     Console.WriteLine("Stalemate!");
                     break;
                 case GameResult.Checkmate:
-                    Console.WriteLine("Checkmate, " + (whiteToMove ? "black wins." : "white wins"));
+                    Console.WriteLine("Checkmate, " + (posInfo.whiteToMove ? "black wins." : "white wins"));
                     break;
                 case GameResult.ThreeFold:
                     Console.WriteLine("Draw by Threefold Repititon!");
@@ -110,34 +107,34 @@ namespace Chess
             }
         }
 
-        public static bool IsPlayerInCheck()
+        public static bool IsPlayerInCheck(PositionInformation posInfo)
         {
-            int currentKingSquare = whiteToMove ? BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]) : BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]);
+            int currentKingSquare = posInfo.whiteToMove ? BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.White, ChessBoard.King]) : BitBoardHelper.GetLSB(ref InternalBoard.Pieces[ChessBoard.Black, ChessBoard.King]);
             // Check for pawn attacks
-            ulong pawnAttacks = whiteToMove ?
+            ulong pawnAttacks = posInfo.whiteToMove ?
                 MoveTables.PrecomputedWhitePawnCaptures[currentKingSquare] :
                 MoveTables.PrecomputedBlackPawnCaptures[currentKingSquare];
-            if ((pawnAttacks & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Pawn]) != 0) return true;
+            if ((pawnAttacks & InternalBoard.Pieces[posInfo.OpponentColorIndex, ChessBoard.Pawn]) != 0) return true;
 
             // Check for knight attacks
             ulong knightAttacks = MoveTables.PrecomputedKnightMoves[currentKingSquare];
-            if ((knightAttacks & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Knight]) != 0) return true;
+            if ((knightAttacks & InternalBoard.Pieces[posInfo.OpponentColorIndex, ChessBoard.Knight]) != 0) return true;
 
             // Check for sliding pieces (bishops, rooks, queens)
-            ulong bishopQueenAttacks = GetBishopAttacks(InternalBoard.AllPieces, currentKingSquare);
-            ulong rookQueenAttacks = GetRookAttacks(InternalBoard.AllPieces, currentKingSquare);
+            ulong bishopQueenAttacks = MoveGen.GetBishopAttacks(InternalBoard.AllPieces, currentKingSquare);
+            ulong rookQueenAttacks = MoveGen.GetRookAttacks(InternalBoard.AllPieces, currentKingSquare);
 
-            ulong bishopsQueens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Bishop] |
-                                  InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen];
-            ulong rooksQueens = InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Rook] |
-                                InternalBoard.Pieces[OpponentColorIndex, ChessBoard.Queen];
+            ulong bishopsQueens = InternalBoard.Pieces[posInfo.OpponentColorIndex, ChessBoard.Bishop] |
+                                  InternalBoard.Pieces[posInfo.OpponentColorIndex, ChessBoard.Queen];
+            ulong rooksQueens = InternalBoard.Pieces[posInfo.OpponentColorIndex, ChessBoard.Rook] |
+                                InternalBoard.Pieces[posInfo.OpponentColorIndex, ChessBoard.Queen];
 
             if ((bishopQueenAttacks & bishopsQueens) != 0) return true;
             if ((rookQueenAttacks & rooksQueens) != 0) return true;
 
             // Check for king attacks (useful in edge cases and avoids self-check scenarios)
             ulong kingAttacks = MoveTables.PrecomputedKingMoves[currentKingSquare];
-            if ((kingAttacks & InternalBoard.Pieces[OpponentColorIndex, ChessBoard.King]) != 0) return true;
+            if ((kingAttacks & InternalBoard.Pieces[posInfo.OpponentColorIndex, ChessBoard.King]) != 0) return true;
 
             return false;
         }
@@ -145,19 +142,19 @@ namespace Chess
         private static bool CheckForInsufficientMaterial()
         {
             // if any pawns on the board, not insufficient material
-            if (CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn] | InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn]) > 0)
+            if (Board.CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Pawn] | InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Pawn]) > 0)
             {
                 return false;
             }
 
             // if rooks on the board, not insufficient material
-            if (CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook] | InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook]) > 0)
+            if (Board.CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Rook] | InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Rook]) > 0)
             {
                 return false;
             }
 
             // if queens on the board, not insufficient material
-            if (CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Queen] | InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Queen]) > 0)
+            if (Board.CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Queen] | InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Queen]) > 0)
             {
                 return false;
             }
@@ -166,10 +163,10 @@ namespace Chess
             ulong blackBishops = InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Bishop];
 
             // count knights and bishops
-            int numOfWhiteKnights = CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight]);
-            int numOfBlackKnights = CountBits(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight]);
-            int numOfWhiteBishops = CountBits(whiteBishops);
-            int numOfBlackBishops = CountBits(blackBishops);
+            int numOfWhiteKnights = Board.CountBits(InternalBoard.Pieces[ChessBoard.White, ChessBoard.Knight]);
+            int numOfBlackKnights = Board.CountBits(InternalBoard.Pieces[ChessBoard.Black, ChessBoard.Knight]);
+            int numOfWhiteBishops = Board.CountBits(whiteBishops);
+            int numOfBlackBishops = Board.CountBits(blackBishops);
 
             int whiteMinorPieces = numOfWhiteKnights + numOfWhiteBishops;
             int blackMinorPieces = numOfBlackKnights + numOfBlackBishops;
@@ -196,21 +193,21 @@ namespace Chess
         }
 
 
-        public static GameResult CheckForGameOverRules(bool playerInCheck, bool inSearch = false)
+        public static GameResult CheckForGameOverRules(MoveGen moveGenerator, PositionInformation posInfo, bool playerInCheck, bool inSearch = false)
         {
 
-            if (legalMoveCount == 0 && playerInCheck)
+            if (moveGenerator.currentMoveIndex == 0 && playerInCheck)
             {
                 return GameResult.Checkmate;
             }
 
-            if (legalMoveCount == 0 && !playerInCheck)
+            if (moveGenerator.currentMoveIndex == 0 && !playerInCheck)
             {
                 return GameResult.Stalemate;
             }
 
             // a "move" consists of a player completing a turn followed by the opponent completing a turn, hence checking when this reaches 100, 50 moves have been made
-            if (CurrentGameState.fiftyMoveCounter >= 100)
+            if (posInfo.CurrentGameState.fiftyMoveCounter >= 100)
             {
                 return GameResult.FiftyMoveRule;
             }
@@ -218,7 +215,7 @@ namespace Chess
             if(inSearch)
             {
                 // if engine search, consider a single repeat of the position to be a draw for simplicity, this helps to avoid repeating positions over and over
-                if (PositionHashes.Count(x => x == ZobristHashKey) >= 2)
+                if (posInfo.PositionHashes.Count(x => x == posInfo.ZobristHashKey) >= 2)
                 {
                     return GameResult.ThreeFold;
                 }
@@ -226,7 +223,7 @@ namespace Chess
             } else
             {
                 // threefold repetition rule (position repeats three times is a draw)
-                if (PositionHashes.Count(x => x == ZobristHashKey) >= 3)
+                if (posInfo.PositionHashes.Count(x => x == posInfo.ZobristHashKey) >= 3)
                 {
                     return GameResult.ThreeFold;
                 }

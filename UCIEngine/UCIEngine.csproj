@@ -13,8 +13,6 @@
 
   <ItemGroup>
     <Folder Include="Core\Engine\Board\" />
-    <Folder Include="Core\Engine\Misc\" />
-    <Folder Include="Core\Engine\MoveGen\" />
   </ItemGroup>
 
 </Project>

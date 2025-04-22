@@ -1,15 +1,15 @@
-﻿using System.IO.Pipes;
+﻿using Chess;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
-using System.Reflection.PortableExecutable;
-using System.Runtime.InteropServices;
-using System.Threading;
-using static Chess.Arbiter;
+using System.Text;
+using System.Threading.Tasks;
 using static Chess.MoveGen;
 
 namespace Chess
 {
-
-    public class UCIEngine
+    public class UCIProtocol
     {
 
         // These facilitate interaction with the Engine Matchup Application when debugging/testing engine strength
@@ -20,28 +20,14 @@ namespace Chess
         private static int serverPort = 49152;
         //
 
-        public static void Main(string[] args)
+        private TigerEngine tigerEngine;
+
+        public UCIProtocol(TigerEngine tigerEngine)
         {
-
-            Console.WriteLine("TigerEngine Running...");
-            Console.WriteLine("Enter A Command To Continue.");
-            SendUCIResponse();
-
-
-            string command;
-            while ((command = Console.ReadLine()) != null)
-            {
-                if (command == "quit")
-                {
-                    break;  // Exit the loop and terminate the engine on "quit"
-                }
-                ProcessCommand(command);
-            }
-
+            this.tigerEngine = tigerEngine;
         }
 
-
-        public static void ProcessCommand(string command)
+        public void ProcessCommand(string command)
         {
             string[] tokens = command.Split(' ');
 
@@ -57,7 +43,7 @@ namespace Chess
                     SetOptions(tokens);
                     break;
                 case "ucinewgame":
-                    Arbiter.InitializeGame(Arbiter.StartFEN);
+                    tigerEngine.arbiter.InitializeGame(Arbiter.StartFEN);
                     Console.WriteLine("readyok");
                     break;
                 case "position":
@@ -68,11 +54,13 @@ namespace Chess
                     bool verbose = tokens.Length > 1 && (tokens[1].ToLower() == "verbose" || tokens[1].ToLower() == "-v");
                     StartEngine(verbose);
                     break;
-                case "stop":
-                    ComputerPlayer1.Engine.searchCancelled = true;
-                    ComputerPlayer1.Engine.searchedOneDepth = true;
+                case "halt":
+                    tigerEngine.engine.searchCancelled = true;
+                    tigerEngine.engine.searchedOneDepth = true;
                     break;
                 case "quit":
+                case "stop":
+                case "exit":
                     Console.WriteLine("TigerEngine shutting down...");
                     Environment.Exit(0);
                     break;
@@ -84,7 +72,7 @@ namespace Chess
                     Disconnect();
                     break;
                 case "runbenchmark":
-                    Verification.RunBenchmark(tokens);
+                    tigerEngine.performanceTester.RunBenchmark(tokens);
                     break;
                 case "help":
                     PrintHelpSection();
@@ -105,28 +93,36 @@ namespace Chess
                 "setoption - User can tweak configuration parameters of the engine such as the search type, depth, etc\nUsage: setoption <option> <extra parameters>\n\n" +
                 "ucinewgame - Initializes a fresh board state and begins a new game from the default chess starting position.\nUsage: ucinewgame\n\n" +
                 "position - Lets the user initialize a custom position with a FEN string and can also optionally provide a move history from said position\nUsage: position [fen <fenstring> | startpos ]  moves <move1> .... <movei>\n\n" +
-                "go - Starts engine analysis on the current position and replies with the best move\nUsage: go <-v | verbose>\n\n" +
+                "go - Starts engine analysis on the current position and replies with the best move\nUsage: go -v | verbose>\n\n" +
                 "runbenchmark - runs perft to a certain depth to determine engine performance\nUsage: runbenchmark <depth>\n\n" +
-                "quit - Stops the TigerEngine executable\nUsage: quit\n\n" +
-                "help - Displays this help section\nUsage: help\n\n"); 
+                "quit/stop/exit - Stops the TigerEngine executable\nUsage: quit\n\n" +
+                "help - Displays this help section\nUsage: help\n\n");
             Console.WriteLine("--------------------------------");
         }
 
-        public static void ConnectToServer()
+        public void ConnectToServer()
         {
+            Console.WriteLine("Attempting to connect, please wait...");
+            try
+            {
+                client = new TcpClient(serverIp, serverPort);
+                Console.WriteLine("Connected to server.");
 
-            client = new TcpClient(serverIp, serverPort);
-            Console.WriteLine("Connected to server.");
+                var networkStream = client.GetStream();
+                reader = new StreamReader(networkStream);
+                writer = new StreamWriter(networkStream) { AutoFlush = true };
 
-            var networkStream = client.GetStream();
-            reader = new StreamReader(networkStream);
-            writer = new StreamWriter(networkStream) { AutoFlush = true };
+                // Start listening to the server messages asynchronously
+                Task.Run(() => ListenToServerAsync());
+            }
+            catch
+            {
+                Console.WriteLine("Failed to connect to server.");
+            }
 
-            // Start listening to the server messages asynchronously
-            Task.Run(() => ListenToServerAsync());
         }
 
-        private static async Task ListenToServerAsync()
+        private async Task ListenToServerAsync()
         {
             try
             {
@@ -206,81 +202,91 @@ namespace Chess
         }
 
 
-        public static void StartEngine(bool verbose = false)
+        public void StartEngine(bool verbose = false)
         {
-            if (Arbiter.positionLoaded)
+            if (tigerEngine.arbiter.positionLoaded)
             {
                 // starts thread to keep UI responsive
                 new Thread(() =>
                 {
-                    Arbiter.ComputerPlayer1.Engine.StartSearch();
+                    tigerEngine.engine.StartSearch();
 
-                    Move bestMove = ComputerPlayer1.Engine.bestMove;
+                    Move bestMove = tigerEngine.engine.bestMove;
 
-                    string bestMoveString = BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(Arbiter.ComputerPlayer1.Engine.bestMove.toSquare);
-
-                    if (Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag != PromotionFlags.None)
+                    // if the position is a mate or for some other reason a move is failed at being selected (the latter should not happen)
+                    if (bestMove.IsDefault())
                     {
-                        bestMoveString += ConvertPromotionFlagToChar(Arbiter.ComputerPlayer1.Engine.bestMove.promotionFlag);
+                        Console.WriteLine("bestmove (none)");
+                        SendCommandToServerAsync("bestmove (none)");
                     }
-
-                    // if the engine is operating in verbose mode, provide extra detail to the move
-                    if (verbose)
+                    else
                     {
-                        string unalteredBestMoveString = bestMoveString;
-                        bestMoveString += $"|movedPiece:{bestMove.movedPiece}";
+                        string bestMoveString = BoardHelper.GetStringFromSquareBitboard(tigerEngine.engine.bestMove.fromSquare) + BoardHelper.GetStringFromSquareBitboard(tigerEngine.engine.bestMove.toSquare);
 
-                        if (bestMove.capturedPieceType != -1)
+                        if (tigerEngine.engine.bestMove.promotionFlag != PromotionFlags.None)
                         {
-                            bestMoveString += $"|capturedPiece:{bestMove.capturedPieceType}";
-                        }
-                        
-                        // append a special move flag if applicable
-                        switch (bestMove.specialMove)
-                        {
-                            case SpecialMove.KingSideCastleMove:
-                                bestMoveString += "|specialMove:KingSideCastle";
-                                break;
-                            case SpecialMove.QueenSideCastleMove:
-                                bestMoveString += "|specialMove:QueenSideCastle";
-                                break;
-                            case SpecialMove.EnPassant:
-                                bestMoveString += "|specialMove:EnPassant";
-                                break;
-                            case SpecialMove.None:
-                            default:
-                                // no special move; do nothing
-                                break;
+                            bestMoveString += ConvertPromotionFlagToChar(tigerEngine.engine.bestMove.promotionFlag);
                         }
 
-                        if(bestMove.IsPawnPromotion)
+                        // if the engine is operating in verbose mode, provide extra detail to the move
+                        if (verbose)
                         {
-                            bestMoveString += "|promotion:";
-                            switch (bestMove.promotionFlag)
+                            string unalteredBestMoveString = bestMoveString;
+                            bestMoveString += $"|movedPiece:{bestMove.movedPiece}";
+
+                            if (bestMove.capturedPieceType != -1)
                             {
-                                case PromotionFlags.PromoteToQueenFlag:
-                                    bestMoveString += "queen";
+                                bestMoveString += $"|capturedPiece:{bestMove.capturedPieceType}";
+                            }
+
+                            // append a special move flag if applicable
+                            switch (bestMove.specialMove)
+                            {
+                                case SpecialMove.KingSideCastleMove:
+                                    bestMoveString += "|specialMove:KingSideCastle";
                                     break;
-                                case PromotionFlags.PromoteToRookFlag:
-                                    bestMoveString += "rook";
+                                case SpecialMove.QueenSideCastleMove:
+                                    bestMoveString += "|specialMove:QueenSideCastle";
                                     break;
-                                case PromotionFlags.PromoteToKnightFlag:
-                                    bestMoveString += "knight";
+                                case SpecialMove.EnPassant:
+                                    bestMoveString += "|specialMove:EnPassant";
                                     break;
-                                case PromotionFlags.PromoteToBishopFlag:
-                                    bestMoveString += "bishop";
-                                    break;
-                                case PromotionFlags.None:
+                                case SpecialMove.None:
                                 default:
+                                    // no special move; do nothing
                                     break;
                             }
+
+                            if (bestMove.IsPawnPromotion)
+                            {
+                                bestMoveString += "|promotion:";
+                                switch (bestMove.promotionFlag)
+                                {
+                                    case PromotionFlags.PromoteToQueenFlag:
+                                        bestMoveString += "queen";
+                                        break;
+                                    case PromotionFlags.PromoteToRookFlag:
+                                        bestMoveString += "rook";
+                                        break;
+                                    case PromotionFlags.PromoteToKnightFlag:
+                                        bestMoveString += "knight";
+                                        break;
+                                    case PromotionFlags.PromoteToBishopFlag:
+                                        bestMoveString += "bishop";
+                                        break;
+                                    case PromotionFlags.None:
+                                    default:
+                                        break;
+                                }
+                            }
+                            Console.WriteLine("bestmove " + bestMoveString);
+                            SendCommandToServerAsync("bestmove " + bestMoveString);
                         }
-                        Console.WriteLine("bestmove " + bestMoveString);
-                        SendCommandToServerAsync("bestmove " + unalteredBestMoveString);
-                    } else
-                    {
-                        Console.WriteLine("bestmove " + bestMoveString);
-                        SendCommandToServerAsync("bestmove " + bestMoveString);
+                        else
+                        {
+                            Console.WriteLine("bestmove " + bestMoveString);
+                            SendCommandToServerAsync("bestmove " + bestMoveString);
+                        }
                     }
                 })
                 { IsBackground = true }.Start();
@@ -291,14 +297,14 @@ namespace Chess
             }
         }
 
-        public static void SetPosition(string[] tokens)
+        public void SetPosition(string[] tokens)
         {
 
             try
             {
                 if (tokens[1] == "startpos")
                 {
-                    Arbiter.InitializeGame(Arbiter.StartFEN);
+                    tigerEngine.arbiter.InitializeGame(Arbiter.StartFEN);
 
                     if (tokens.Length > 2 && tokens[2] == "moves")
                     {
@@ -315,7 +321,7 @@ namespace Chess
                 else if (tokens[1] == "fen")
                 {
                     string fen = string.Join(" ", tokens.Skip(2).TakeWhile(token => token != "moves"));
-                    Arbiter.InitializeGame(fen);
+                    tigerEngine.arbiter.InitializeGame(fen);
                     int movesIndex = Array.IndexOf(tokens, "moves");
                     if (movesIndex != -1 && movesIndex + 1 < tokens.Length)
                     {
@@ -336,7 +342,7 @@ namespace Chess
 
         }
 
-        public static void ApplyMoves(string[] moves)
+        public void ApplyMoves(string[] moves)
         {
             foreach (string move in moves)
             {
@@ -344,7 +350,7 @@ namespace Chess
                 if (move.Length < 4)
                 {
                     Console.WriteLine("Invalid move format, moves were not applied: " + move);
-                    continue; 
+                    continue;
                 }
 
                 string fromSquare = move[..2];
@@ -367,13 +373,13 @@ namespace Chess
                 }
 
                 // executes the move if a valid move was found
-                Arbiter.DoTurn(selectedMove);
+                tigerEngine.arbiter.DoTurn(selectedMove);
             }
         }
 
-        private static Move FindMatchingMove(ulong fromBitboard, ulong toBitboard, char? promotionChar)
+        private Move FindMatchingMove(ulong fromBitboard, ulong toBitboard, char? promotionChar)
         {
-            IEnumerable<Move> candidateMoves = legalMoves.Where(x =>
+            IEnumerable<Move> candidateMoves = tigerEngine.moveGenerator.legalMoves.Where(x =>
                 x.fromSquare == fromBitboard && x.toSquare == toBitboard);
 
             if (promotionChar.HasValue)
@@ -418,9 +424,9 @@ namespace Chess
         }
 
 
-        public static void SendUCIResponse()
+        public void SendUCIResponse()
         {
-            Console.WriteLine("id name TigerEngine - Version 6 with second TT implementation");
+            Console.WriteLine("id name TigerEngine - Version 7 with replaced pseudolegal movegen");
             Console.WriteLine("id author Thomas R. Joseph");
 
             // TODO: Actually implement these options 
@@ -438,7 +444,7 @@ namespace Chess
             Console.WriteLine("uciok");
         }
 
-        public static void SetOptions(string[] tokens)
+        public void SetOptions(string[] tokens)
         {
             // here we will need to set a variety of options
             // hash - represents the maximum allowable size of the transposition table for this version of the engine
@@ -450,11 +456,11 @@ namespace Chess
                     case "searchtype":
                         if (tokens[2].Contains("iterative"))
                         {
-                            Arbiter.SearchSettings.SearchType = SearchType.IterativeDeepening;
+                            tigerEngine.engine.searchSettings.SearchType = SearchType.IterativeDeepening;
                         }
                         else if (tokens[2].Contains("fixed"))
                         {
-                            Arbiter.SearchSettings.SearchType = SearchType.FixedDepth;
+                            tigerEngine.engine.searchSettings.SearchType = SearchType.FixedDepth;
                         }
                         else
                         {
@@ -464,7 +470,7 @@ namespace Chess
                     case "searchtime":
                         try
                         {
-                            Arbiter.SearchSettings.SearchTime = TimeSpan.FromMilliseconds(double.Parse(tokens[2]));
+                            tigerEngine.engine.searchSettings.SearchTime = TimeSpan.FromMilliseconds(double.Parse(tokens[2]));
                         }
                         catch (Exception ex)
                         {
@@ -483,7 +489,5 @@ namespace Chess
             }
 
         }
-
     }
-
 }

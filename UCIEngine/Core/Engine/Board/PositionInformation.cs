@@ -3,53 +3,58 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Collections;
 using static Chess.Board;
+using static Chess.Arbiter;
 
 namespace Chess
 {
-    public static class PositionInformation
+    public class PositionInformation
     {
 
         public enum CastlingRightsFlags
         {
-            WhiteKingSide = 0b0010,
-            WhiteQueenSide = 0b0001,
-            BlackKingSide = 0b1000,
-            BlackQueenSide = 0b0100
+            WhiteKingSide = 0b0001,
+            WhiteQueenSide = 0b0010,
+            BlackKingSide = 0b0100,
+            BlackQueenSide = 0b1000
         }
 
-        public static int CastlingRights;
+        public int CastlingRights;
 
-        public static int EnPassantFile;
+        public int EnPassantFile;
 
 
         /* Game ending conditions */
 
-        public static bool kingInCheck;
-        public static int halfMoveAccumulator;
+        public bool kingInCheck;
+        public int halfMoveAccumulator;
 
-        public static int fullMoveAccumulator;
+        public int fullMoveAccumulator;
 
         /* Game State information */
-        public static GameState CurrentGameState;
+        public GameState CurrentGameState;
 
-        public static ulong ZobristHashKey => CurrentGameState.zobristHashKey;
+        public ulong ZobristHashKey => CurrentGameState.zobristHashKey;
 
-        public static string GameStartFENString;
+        public string GameStartFENString;
 
-        public static GameResult currentStatus;
+        public GameResult currentStatus;
+
+        public ulong[] pinMasks = new ulong[64];
 
         /* Side to move information */
-        public static bool whiteToMove;
-        public static int MoveColorIndex => whiteToMove ? Board.ChessBoard.White : Board.ChessBoard.Black;
-        public static int OpponentColorIndex => whiteToMove ? Board.ChessBoard.Black : Board.ChessBoard.White;
+        public bool whiteToMove;
+        public int MoveColorIndex => whiteToMove ? Board.ChessBoard.White : Board.ChessBoard.Black;
+        public int OpponentColorIndex => whiteToMove ? Board.ChessBoard.Black : Board.ChessBoard.White;
 
+        public ulong MoveColorPieces => whiteToMove ? InternalBoard.AllWhitePieces : InternalBoard.AllBlackPieces;
+        public ulong OpponentColorPieces => whiteToMove ? InternalBoard.AllBlackPieces : InternalBoard.AllWhitePieces;
 
         /* Move history information */
 
         // PositionHashes is for efficient checking of repeated positions (three fold repetition)
-        public static Stack<ulong> PositionHashes = new();
+        public Stack<ulong> PositionHashes = new();
 
-        public static Stack<GameState> GameStateHistory = new();
+        public Stack<GameState> GameStateHistory = new();
 
     }
 
