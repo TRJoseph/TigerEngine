@@ -105,7 +105,7 @@ namespace Chess
                 "setoption - User can tweak configuration parameters of the engine such as the search type, depth, etc\nUsage: setoption <option> <extra parameters>\n\n" +
                 "ucinewgame - Initializes a fresh board state and begins a new game from the default chess starting position.\nUsage: ucinewgame\n\n" +
                 "position - Lets the user initialize a custom position with a FEN string and can also optionally provide a move history from said position\nUsage: position [fen <fenstring> | startpos ]  moves <move1> .... <movei>\n\n" +
-                "go - Starts engine analysis on the current position and replies with the best move\nUsage: go <-v | verbose>\n\n" +
+                "go - Starts engine analysis on the current position and replies with the best move\nUsage: go -v | verbose>\n\n" +
                 "runbenchmark - runs perft to a certain depth to determine engine performance\nUsage: runbenchmark <depth>\n\n" +
                 "quit - Stops the TigerEngine executable\nUsage: quit\n\n" +
                 "help - Displays this help section\nUsage: help\n\n"); 
@@ -114,16 +114,23 @@ namespace Chess
 
         public static void ConnectToServer()
         {
+            Console.WriteLine("Attempting to connect, please wait...");
+            try
+            {
+                client = new TcpClient(serverIp, serverPort);
+                Console.WriteLine("Connected to server.");
 
-            client = new TcpClient(serverIp, serverPort);
-            Console.WriteLine("Connected to server.");
+                var networkStream = client.GetStream();
+                reader = new StreamReader(networkStream);
+                writer = new StreamWriter(networkStream) { AutoFlush = true };
 
-            var networkStream = client.GetStream();
-            reader = new StreamReader(networkStream);
-            writer = new StreamWriter(networkStream) { AutoFlush = true };
+                // Start listening to the server messages asynchronously
+                Task.Run(() => ListenToServerAsync());
+            } catch
+            {
+                Console.WriteLine("Failed to connect to server.");
+            }
 
-            // Start listening to the server messages asynchronously
-            Task.Run(() => ListenToServerAsync());
         }
 
         private static async Task ListenToServerAsync()
