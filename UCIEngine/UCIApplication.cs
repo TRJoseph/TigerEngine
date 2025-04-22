@@ -142,7 +142,9 @@ namespace Chess
 
                     if (serverMessage.StartsWith("go"))
                     {
-                        StartEngine();
+                        string[] tokens = serverMessage.Split(' ');
+                        bool verbose = tokens.Length > 1 && (tokens[1].ToLower() == "verbose" || tokens[1].ToLower() == "-v");
+                        StartEngine(verbose);
                     }
                 }
             }
