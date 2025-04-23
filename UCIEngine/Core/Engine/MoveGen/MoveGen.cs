@@ -989,7 +989,7 @@ namespace Chess
 
                 } else // double check, only king moves are legal
                 {
-                    GenerateKingMoves(ref moves, InternalBoard.AllWhitePieces, InternalBoard.AllBlackPieces, king, kingIndex, onlyGenerateCaptures, kingInCheck: kingInCheck);
+                    GenerateKingMoves(ref moves, board.posInfo.MoveColorPieces, board.posInfo.OpponentColorPieces, king, kingIndex, onlyGenerateCaptures, kingInCheck: kingInCheck);
                 }
               
             } else
